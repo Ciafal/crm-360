@@ -4,6 +4,7 @@ import {
   Building2,
   Phone,
   MessageSquare,
+  Mail,
   Sparkles,
   Calendar,
   DollarSign,
@@ -28,6 +29,7 @@ import {
   FileSpreadsheet,
   BadgeAlert,
   Loader2,
+  Filter,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -63,6 +65,9 @@ export default function Cliente360() {
   const [deliveries, setDeliveries] = useState<DeliveryERPData[]>([])
   const [biSummary, setBiSummary] = useState<any>(null)
   const [aiRecommendation, setAiRecommendation] = useState<any>(null)
+  const [timelineFilter, setTimelineFilter] = useState<
+    'all' | 'whatsapp' | 'phone' | 'email' | 'sap' | 'tasks' | 'visits'
+  >('all')
 
   useEffect(() => {
     async function loadData() {
@@ -107,12 +112,26 @@ export default function Cliente360() {
     })
   }
 
-  // Timeline Omnichannel Unificada
-  const timelineEvents = useMemo(() => {
+  // Timeline Omnichannel Unificada com suporte ao canal E-mail (Microsoft Graph)
+  const allTimelineEvents = useMemo(() => {
     return [
+      {
+        id: 't-email-1',
+        type: 'email',
+        category: 'email',
+        title: 'E-mail Comercial: Solicitação de Cotação Tubos Inox',
+        summary:
+          'compras@santarita.ind.br solicitou cotação para 3 toneladas de Tubo Inox AISI 304 Redondo SCH 10 com frete CIF para Campinas.',
+        date: 'Hoje às 08:30',
+        channel: 'E-mail (Outlook 365)',
+        origin: 'Microsoft Graph 365',
+        badgeColor: 'bg-sky-50 text-sky-700 border-sky-300',
+        conversationId: 'AAQkAGI2TGFiYWNhLWNvbnYtMDAx',
+      },
       {
         id: 't-1',
         type: 'whatsapp',
+        category: 'whatsapp',
         title: 'Mensagem de Negociação WhatsApp',
         summary:
           'Comprador solicitou confirmação de frete CIF para entrega de 3t Tubos Inox 304 em Campinas.',
@@ -122,8 +141,22 @@ export default function Cliente360() {
         badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-300',
       },
       {
+        id: 't-email-2',
+        type: 'email',
+        category: 'email',
+        title: 'E-mail Enviado: Proposta Comercial COT-SAP-98104',
+        summary:
+          'Envio da cotação formal COT-SAP-98104 (R$ 54.000,00) via Microsoft 365 com tabela de preços anexa.',
+        date: 'Hoje às 11:15',
+        channel: 'E-mail (Outlook 365)',
+        origin: 'Microsoft Graph 365',
+        badgeColor: 'bg-blue-50 text-blue-700 border-blue-300',
+        conversationId: 'AAQkAGI2TGFiYWNhLWNvbnYtMDAx',
+      },
+      {
         id: 't-2',
         type: 'cotacao',
+        category: 'sap',
         title: 'Cotação SAP COT-SAP-98104 Emitida',
         summary:
           'Proposta comercial de R$ 54.000,00 (6.8t Tubos SCH 10) enviada com validade de 15 dias.',
@@ -135,6 +168,7 @@ export default function Cliente360() {
       {
         id: 't-3',
         type: 'ligacao',
+        category: 'phone',
         title: 'Ligação Telefônica Comercial (VoIP)',
         summary: 'Alinhamento com Gerente de Compras sobre expansão da linha de tanques.',
         date: '14/10/2024 às 11:30',
@@ -145,6 +179,7 @@ export default function Cliente360() {
       {
         id: 't-4',
         type: 'faturamento',
+        category: 'sap',
         title: 'Faturamento NF-0091823 Emitido',
         summary: 'Emissão de nota fiscal de R$ 48.500,00 referente ao pedido PED-SAP-77410.',
         date: '14/08/2024 às 14:30',
@@ -155,6 +190,7 @@ export default function Cliente360() {
       {
         id: 't-5',
         type: 'visita',
+        category: 'visits',
         title: 'Visita Técnica Realizada',
         summary:
           'Apresentação da nova linha de Tubos Sanitários e certificação de qualidade CIAFAL.',
@@ -165,6 +201,11 @@ export default function Cliente360() {
       },
     ]
   }, [])
+
+  const filteredTimelineEvents = useMemo(() => {
+    if (timelineFilter === 'all') return allTimelineEvents
+    return allTimelineEvents.filter((ev) => ev.category === timelineFilter)
+  }, [allTimelineEvents, timelineFilter])
 
   if (loading) {
     return (
@@ -493,36 +534,102 @@ export default function Cliente360() {
         {/* 2. TIMELINE OMNICHANNEL */}
         <TabsContent value="timeline" className="mt-4">
           <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
                   Linha do Tempo Unificada
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  WhatsApp, ligações, visitas, cotações SAP, pedidos, faturamentos e tarefas.
+                  WhatsApp, ligações, e-mails Microsoft 365, visitas, cotações SAP e faturamentos.
                 </p>
+              </div>
+
+              {/* Filtros da Timeline */}
+              <div className="flex items-center gap-1.5 flex-wrap bg-slate-100/80 p-1 rounded-full border border-border/40">
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'all' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3"
+                  onClick={() => setTimelineFilter('all')}
+                >
+                  Todos
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'whatsapp' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3"
+                  onClick={() => setTimelineFilter('whatsapp')}
+                >
+                  WhatsApp
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'phone' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3"
+                  onClick={() => setTimelineFilter('phone')}
+                >
+                  Telefone
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'email' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3 bg-sky-600 text-white hover:bg-sky-500"
+                  onClick={() => setTimelineFilter('email')}
+                >
+                  <Mail className="w-3 h-3 mr-1" /> E-mail
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'sap' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3"
+                  onClick={() => setTimelineFilter('sap')}
+                >
+                  SAP
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineFilter === 'visits' ? 'default' : 'ghost'}
+                  className="rounded-full text-xs h-7 px-3"
+                  onClick={() => setTimelineFilter('visits')}
+                >
+                  Visitas
+                </Button>
               </div>
             </div>
 
             <div className="relative pl-6 border-l-2 border-primary/20 space-y-6">
-              {timelineEvents.map((ev) => (
-                <div key={ev.id} className="relative group">
-                  <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white" />
-                  <div className="bg-white p-4 rounded-2xl border border-border/60 shadow-sm flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-primary">{ev.title}</span>
-                        <Badge variant="outline" className={cn('text-[10px]', ev.badgeColor)}>
-                          {ev.channel}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{ev.date}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{ev.summary}</p>
-                    <span className="text-[10px] text-slate-400 mt-1">Origem: {ev.origin}</span>
-                  </div>
+              {filteredTimelineEvents.length === 0 ? (
+                <div className="py-8 text-center text-xs text-muted-foreground">
+                  Nenhuma interação encontrada para o filtro selecionado.
                 </div>
-              ))}
+              ) : (
+                filteredTimelineEvents.map((ev) => (
+                  <div key={ev.id} className="relative group">
+                    <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white" />
+                    <div className="bg-white p-4 rounded-2xl border border-border/60 shadow-sm flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-primary">{ev.title}</span>
+                          <Badge variant="outline" className={cn('text-[10px]', ev.badgeColor)}>
+                            {ev.channel}
+                          </Badge>
+                          {ev.conversationId && (
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] bg-slate-50 text-slate-500 font-mono"
+                            >
+                              Thread Microsoft
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{ev.date}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{ev.summary}</p>
+                      <span className="text-[10px] text-slate-400 mt-1">Origem: {ev.origin}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </TabsContent>

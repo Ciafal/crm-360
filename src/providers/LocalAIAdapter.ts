@@ -232,6 +232,103 @@ export class LocalAIAdapter implements AIProvider {
     }
   }
 
+  async extractEmailContext(
+    emailContent: string,
+    subject = '',
+  ): Promise<{
+    intent: string
+    product?: string
+    quantity?: string
+    price?: string
+    deadline?: string
+    competitor?: string
+    objection?: string
+    nextAction: string
+    confidence: number
+  }> {
+    const combined = `${subject} ${emailContent}`.toLowerCase()
+    let intent = 'cotação'
+    let objection: string | undefined = undefined
+    let nextAction = 'Elaborar cotação formal'
+
+    if (combined.includes('caro') || combined.includes('preço') || combined.includes('desconto')) {
+      objection = 'preço'
+      intent = 'negociação'
+      nextAction = 'Revisar condição comercial e margem com supervisor'
+    } else if (
+      combined.includes('procur') &&
+      (combined.includes('mês') || combined.includes('mes'))
+    ) {
+      intent = 'follow_up'
+      nextAction = 'Agendar ação de contato para o próximo ciclo mensal'
+    } else if (
+      combined.includes('pedido') ||
+      combined.includes('fechar') ||
+      combined.includes('aprov')
+    ) {
+      intent = 'fechamento'
+      nextAction = 'Emitir ordem de venda no SAP S/4HANA'
+    }
+
+    return {
+      intent,
+      product: combined.includes('tubo')
+        ? 'Tubo Inox AISI 304 SCH 10'
+        : combined.includes('chapa')
+          ? 'Chapa Inox AISI 304/316L'
+          : 'Linha Inox CIAFAL',
+      quantity:
+        combined.includes('tonelada') || combined.includes(' t') ? '3 a 15 toneladas' : undefined,
+      price: combined.includes('r$') ? 'Conforme tabela regional' : undefined,
+      competitor: combined.includes('concorrente') ? 'Distribuidor Regional' : undefined,
+      objection,
+      nextAction,
+      confidence: 0.93,
+    }
+  }
+
+  async generateCommercialEmailDraft(request: {
+    recipientEmail: string
+    recipientName: string
+    customerName: string
+    intent: 'QUOTE_SENT' | 'FOLLOW_UP' | 'NEGOTIATION' | 'PRICE_TABLE' | 'RECONNECT'
+    quoteId?: string
+    quoteValue?: number
+    productsMentioned?: string[]
+    specialConditions?: string
+    sellerName?: string
+  }): Promise<{
+    subject: string
+    body: string
+    suggestedAttachments?: string[]
+    confidence: number
+    generatedAt: string
+  }> {
+    const seller = request.sellerName || 'Carlos Mendonça'
+    const quote = request.quoteId ? ` ${request.quoteId}` : ''
+    let subject = `CIAFAL — Proposta Comercial${quote} para ${request.customerName}`
+    let body = `Olá ${request.recipientName},\n\n`
+
+    if (request.intent === 'QUOTE_SENT') {
+      subject = `Proposta Comercial CIAFAL${quote} — ${request.customerName}`
+      body += `Conforme alinhado, segue anexa a nossa cotação${quote} com condições diferenciadas para pronta-entrega.\n\n`
+      body += `Condição de entrega: Frete CIF direto na sua fábrica.\nValidade: 10 dias.\n\nFico à disposição para fecharmos o pedido.\n\nAtenciosamente,\n${seller}\nCIAFAL Aços Inox & Tubos`
+    } else if (request.intent === 'NEGOTIATION') {
+      subject = `Revisão de Condições — Proposta${quote} — CIAFAL`
+      body += `Analisamos sua solicitação sobre a proposta${quote}. Conseguimos alinhar com a nossa gerência uma condição de ${request.specialConditions || '28/42 DDL com frete bonificado'} para viabilizar o pedido ainda esta semana.\n\nPodemos confirmar?\n\nUm abraço,\n${seller}`
+    } else {
+      body += `Agradecemos a parceria com a ${request.customerName}. Temos lotes com disponibilidade imediata para pronta entrega.\n\nAtenciosamente,\n${seller}`
+    }
+
+    return {
+      subject,
+      body,
+      suggestedAttachments: request.quoteId ? [`${request.quoteId}_CIAFAL.pdf`] : undefined,
+      confidence: 0.95,
+      generatedAt: new Date().toISOString(),
+    }
+  }
+
   async generateRecommendation(
     customerId: string,
     context?: Record<string, unknown>,

@@ -329,6 +329,16 @@ export default function Home() {
     },
   ]
 
+  const myCommercialCalendar = [
+    {
+      id: 'cal-1',
+      title: 'Reunião Comercial Safra — Metalúrgica Santa Rita',
+      time: '14:30 - 15:30',
+      type: 'Microsoft Teams',
+      customer: 'Metalúrgica Santa Rita Ltda',
+    },
+  ]
+
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'BOM DIA'
@@ -789,6 +799,39 @@ export default function Home() {
                 </Button>
               )}
             </CardContent>
+          </Card>
+
+          {/* Compromisso Comercial do Dia (Microsoft 365) */}
+          <Card className="border-sky-200 bg-sky-50/40 backdrop-blur-md shadow-sm rounded-2xl flex flex-col p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-sky-600 text-white rounded-lg">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <span className="font-serif font-bold text-sm text-sky-950">
+                  Agenda Comercial do Dia
+                </span>
+              </div>
+              <Badge variant="outline" className="text-[9px] bg-white text-sky-700 border-sky-300">
+                Microsoft 365
+              </Badge>
+            </div>
+            {myCommercialCalendar.map((evt) => (
+              <div
+                key={evt.id}
+                className="bg-white p-3 rounded-xl border border-sky-100 shadow-xs flex flex-col gap-1 text-xs mt-1"
+              >
+                <div className="flex justify-between items-start">
+                  <span className="font-bold text-sky-900">{evt.title}</span>
+                  <Badge className="bg-sky-100 text-sky-800 text-[9px] border-none">
+                    {evt.type}
+                  </Badge>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  Horário: <strong>{evt.time}</strong> · Conta: {evt.customer}
+                </span>
+              </div>
+            ))}
           </Card>
 
           <div className="flex flex-col gap-4">

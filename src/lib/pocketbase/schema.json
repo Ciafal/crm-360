@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T22:29:01.048Z",
+  "generatedAt": "2026-08-26T22:47:23.685Z",
   "collections": [
     {
       "name": "users",
@@ -763,6 +763,12 @@
         },
         {
           "name": "stage",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ms_contact_id",
           "type": "text",
           "required": false,
           "system": false
@@ -2823,6 +2829,78 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email_from",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email_to",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email_cc",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "body_preview",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "body_reference",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "message_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conversation_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "internet_message_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "has_attachments",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "email_classification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quote_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -2984,6 +3062,149 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "contact_update_suggestions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "contact_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "crm_contacts"
+        },
+        {
+          "name": "field_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "ms_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "crm_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["PENDING", "ACCEPTED", "REJECTED"]
+        },
+        {
+          "name": "resolved_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_contact_sugg_contact ON contact_update_suggestions (contact_id)",
+        "CREATE INDEX idx_contact_sugg_status ON contact_update_suggestions (status)"
+      ]
+    },
+    {
+      "name": "ms_sync_state",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "resource_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["contacts", "emails", "calendar"]
+        },
+        {
+          "name": "last_synced_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_subscription_renewal",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sync_status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["idle", "syncing", "success", "error"]
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_ms_sync_resource ON ms_sync_state (resource_type)"]
     }
   ]
 }

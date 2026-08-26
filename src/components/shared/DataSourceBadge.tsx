@@ -26,6 +26,18 @@ export function DataSourceBadge({ source, className }: DataSourceBadgeProps) {
       label: 'ReactivationAgent',
       class: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
     },
+    ms365: {
+      label: 'Microsoft 365',
+      class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
+    },
+    email: {
+      label: 'Outlook 365 E-mail',
+      class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
+    },
+    microsoft_graph: {
+      label: 'Microsoft Graph 365',
+      class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
+    },
   }
 
   const item = config[sourceLower] || {

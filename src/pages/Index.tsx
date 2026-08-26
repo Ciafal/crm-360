@@ -35,8 +35,8 @@ const loginSchema = z.object({
 const FEATURES = [
   {
     icon: 'whatsapp',
-    title: 'Inbox WhatsApp',
-    desc: 'Conversas em tempo real com histórico e mídias',
+    title: 'Inbox Omnichannel',
+    desc: 'WhatsApp, Microsoft 365 e histórico unificado',
     color: 'text-blue-400',
     dot: 'bg-blue-400',
     glow: '0 0 16px rgba(96,165,250,0.6)',
@@ -44,8 +44,8 @@ const FEATURES = [
   },
   {
     icon: Sparkles,
-    title: 'Agentes de IA',
-    desc: 'OpenAI, Claude, Gemini e Skip AI integrados',
+    title: 'Inteligência Comercial com IA',
+    desc: 'Análise de intenções, cotações e recomendações',
     color: 'text-sky-400',
     dot: 'bg-sky-400',
     glow: '0 0 16px rgba(56,189,248,0.6)',
@@ -54,7 +54,7 @@ const FEATURES = [
   {
     icon: Milestone,
     title: 'CRM 360º',
-    desc: 'Pipeline completo e visão unificada do cliente',
+    desc: 'Pipeline completo e visão 360º do cliente',
     color: 'text-indigo-400',
     dot: 'bg-indigo-400',
     glow: '0 0 16px rgba(129,140,248,0.6)',
@@ -62,17 +62,17 @@ const FEATURES = [
   },
   {
     icon: Kanban,
-    title: 'Tarefas Kanban',
-    desc: 'Demandas da equipe com drag & drop',
-    color: 'text-amber-400',
-    dot: 'bg-amber-400',
-    glow: '0 0 16px rgba(251,191,36,0.6)',
+    title: 'Execução Comercial',
+    desc: 'Meu Dia, Gestão do Dia e automações',
+    color: 'text-blue-300',
+    dot: 'bg-blue-300',
+    glow: '0 0 16px rgba(147,197,253,0.6)',
     idleDelay: '0.2s',
   },
   {
     icon: UsersRound,
-    title: 'Multi-usuário',
-    desc: 'Equipe inteira no mesmo número',
+    title: 'Equipe Comercial',
+    desc: 'Gestão de carteiras, metas e alçadas',
     color: 'text-cyan-400',
     dot: 'bg-cyan-400',
     glow: '0 0 16px rgba(34,211,238,0.6)',
@@ -80,11 +80,11 @@ const FEATURES = [
   },
   {
     icon: Tags,
-    title: 'Categorias',
-    desc: 'Etiquetas coloridas por conversa',
-    color: 'text-rose-400',
-    dot: 'bg-rose-400',
-    glow: '0 0 16px rgba(251,113,133,0.6)',
+    title: 'Integração Corporativa',
+    desc: 'SAP ECC, Qlik Cloud e Microsoft 365',
+    color: 'text-slate-300',
+    dot: 'bg-slate-300',
+    glow: '0 0 16px rgba(203,213,225,0.6)',
     idleDelay: '1s',
   },
 ]
@@ -208,13 +208,11 @@ export default function Index() {
 
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-5">
-            <h1 className="font-serif text-6xl xl:text-7xl font-bold text-white leading-[1.02] tracking-tight">
-              Plataforma completa de <span className="text-blue-400">CRM 360º</span> e WhatsApp com
-              IA
+            <h1 className="font-serif text-5xl xl:text-6xl font-bold text-white leading-[1.08] tracking-tight">
+              CRM 360º
             </h1>
-            <p className="text-white/45 text-lg leading-relaxed max-w-lg">
-              Sistema corporativo de atendimento integrado, inteligência artificial, CRM 360º e
-              gestão de equipe comercial.
+            <p className="text-white/70 text-lg leading-relaxed max-w-lg">
+              Relacionamento, inteligência comercial e execução de vendas em uma única plataforma.
             </p>
           </div>
 
@@ -268,7 +266,9 @@ export default function Index() {
           </div>
         </div>
 
-        <p className="text-white/18 text-xs tracking-wide">CRM 360º · Skip Cloud · PocketBase</p>
+        <p className="text-white/30 text-xs tracking-wide">
+          CRM 360º · CIAFAL Gestão Comercial Integrada
+        </p>
       </div>
 
       {/* RIGHT */}

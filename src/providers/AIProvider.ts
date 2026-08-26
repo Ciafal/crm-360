@@ -117,6 +117,23 @@ export interface SalesSupervisorAgent {
   identifyBottlenecks(teamId?: string): Promise<string[]>
 }
 
+import type {
+  CommercialEmailDraftRequest,
+  CommercialEmailDraftResult,
+} from './Microsoft365Provider'
+
+export interface EmailExtractionResult {
+  intent: string
+  product?: string
+  quantity?: string
+  price?: string
+  deadline?: string
+  competitor?: string
+  objection?: string
+  nextAction: string
+  confidence: number
+}
+
 export interface AIProvider {
   readonly name: string
   analyze(request: AIAnalysisRequest): Promise<AIAnalysisResult>
@@ -132,6 +149,10 @@ export interface AIProvider {
     deadline?: string
     confidence: number
   }>
+  extractEmailContext?(emailContent: string, subject?: string): Promise<EmailExtractionResult>
+  generateCommercialEmailDraft?(
+    request: CommercialEmailDraftRequest,
+  ): Promise<CommercialEmailDraftResult>
   getHealth(): Promise<ProviderHealth>
   readonly copilot?: SellerCopilotAgent
   readonly reactivation?: ReactivationAgent

@@ -258,6 +258,64 @@ export default function Equipe() {
         </div>
       </div>
 
+      {/* SEÇÃO DE INTEGRAÇÃO MICROSOFT 365 / OBSERVABILIDADE */}
+      <div className="bg-card rounded-xl border shadow-sm p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-sky-50 text-sky-700 rounded-lg">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-lg text-primary">
+                Integrações Corporativas · Microsoft 365
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Status do conector Microsoft Graph, e-mails comerciais e calendário.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-300 font-medium">
+              Modo Demonstração (MOCK)
+            </span>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border font-medium">
+              Pendente de Admin Consent
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          <div className="p-3 bg-muted/30 rounded-xl space-y-1">
+            <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] block">
+              Auth Status
+            </span>
+            <span className="font-bold text-emerald-600 block">Conector Ativo / Fallback Mock</span>
+            <span className="text-[11px] text-muted-foreground">ID Hub: ms-graph-ciafal</span>
+          </div>
+          <div className="p-3 bg-muted/30 rounded-xl space-y-1">
+            <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] block">
+              Subscriptions Ativas
+            </span>
+            <span className="font-bold text-primary block">2 webhooks de escuta</span>
+            <span className="text-[11px] text-muted-foreground">Renovação: a cada 3 dias</span>
+          </div>
+          <div className="p-3 bg-muted/30 rounded-xl space-y-1">
+            <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] block">
+              Sincronização Contatos
+            </span>
+            <span className="font-bold text-primary block">3 contatos monitorados</span>
+            <span className="text-[11px] text-muted-foreground">1 sugestão de divergência</span>
+          </div>
+          <div className="p-3 bg-muted/30 rounded-xl space-y-1">
+            <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] block">
+              Último E-mail Processado
+            </span>
+            <span className="font-bold text-primary block">COT-SAP-98104 (Outbound)</span>
+            <span className="text-[11px] text-muted-foreground">Latência média: 52ms</span>
+          </div>
+        </div>
+      </div>
+
       {/* Confirmação: remover membro */}
       <AlertDialog open={!!memberToRemove} onOpenChange={(o) => !o && setMemberToRemove(null)}>
         <AlertDialogContent>

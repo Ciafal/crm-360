@@ -73,11 +73,24 @@ routerAdd('POST', '/actions/auto-complete', (e) => {
     const interaction = new Record(interactionsCol)
     interaction.set('customer_id', customerId || 'UNKNOWN')
     if (sellerId) interaction.set('seller_id', sellerId)
-    interaction.set('channel', channel === 'call' ? 'phone' : channel)
-    interaction.set('direction', body.direction || 'outbound')
+    const mappedChannel =
+      channel === 'call'
+        ? 'phone'
+        : channel === 'email_sent' || channel === 'email_received'
+          ? 'email'
+          : channel
+    interaction.set('channel', mappedChannel)
+    interaction.set(
+      'direction',
+      body.direction || (channel === 'email_received' ? 'inbound' : 'outbound'),
+    )
     interaction.set('occurred_at', occurredAt)
     interaction.set('source', body.source || 'crm_auto')
     interaction.set('external_id', externalId)
+    if (body.subject) interaction.set('subject', body.subject)
+    if (body.quote_id) interaction.set('quote_id', body.quote_id)
+    if (body.message_id) interaction.set('message_id', body.message_id)
+    if (body.conversation_id) interaction.set('conversation_id', body.conversation_id)
     interaction.set('summary', body.summary || 'Interação registrada no canal ' + channel)
     interaction.set('created_by_system', true)
     if (body.account_id) interaction.set('account_id', body.account_id)
@@ -85,7 +98,6 @@ routerAdd('POST', '/actions/auto-complete', (e) => {
   } catch (intErr) {
     console.log('Error creating interaction record: ' + intErr)
   }
-
   return e.json(200, {
     success: true,
     completed_actions_count: updatedCount,

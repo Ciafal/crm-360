@@ -187,6 +187,30 @@ export default function GestaoDoDia() {
     )
   }, [])
 
+  // Compromissos comerciais do Microsoft 365
+  const commercialMeetings = useMemo(() => {
+    return [
+      {
+        id: 'mtg-1',
+        seller: 'Carlos Mendonça',
+        title: 'Reunião Comercial de Alinhamento Safra - Metalúrgica Santa Rita',
+        time: '14:30 - 15:30',
+        type: 'Microsoft Teams',
+        customer: 'Metalúrgica Santa Rita Ltda',
+        isCommercial: true,
+      },
+      {
+        id: 'mtg-2',
+        seller: 'Carlos Mendonça',
+        title: 'Visita Técnica e Negociação Inox 316L - Tanques Paulista',
+        time: 'Amanhã às 10:00',
+        type: 'Presencial / Sertãozinho',
+        customer: 'Caldeiraria & Tanques Industrial Paulista',
+        isCommercial: true,
+      },
+    ]
+  }, [])
+
   const filteredSellers = useMemo(() => {
     if (!search) return MOCK_SELLERS
     return MOCK_SELLERS.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
@@ -306,8 +330,50 @@ export default function GestaoDoDia() {
         </div>
       </div>
 
+      {/* CALENDÁRIO COMERCIAL MICROSOFT 365 (SUPERVISÃO) */}
+      <Card className="rounded-2xl border-sky-200 bg-sky-50/50 p-4 shadow-xs">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-sky-600 text-white rounded-lg">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <span className="font-serif font-bold text-sm text-sky-950">
+              Compromissos Comerciais da Equipe (Microsoft 365)
+            </span>
+            <Badge variant="outline" className="text-[10px] bg-white text-sky-700 border-sky-300">
+              Filtro de Relevância Comercial Ativo · Compromissos Privados Ocultados
+            </Badge>
+          </div>
+          <span className="text-xs text-sky-700 font-medium">
+            Modo Demonstração Microsoft Graph
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {commercialMeetings.map((m) => (
+            <div
+              key={m.id}
+              className="bg-white p-3 rounded-xl border border-sky-100 flex items-start justify-between text-xs"
+            >
+              <div>
+                <span className="font-bold text-sky-900 block">{m.title}</span>
+                <span className="text-muted-foreground mt-0.5 block">
+                  Vendedor: <strong>{m.seller}</strong> · Cliente: {m.customer}
+                </span>
+              </div>
+              <div className="text-right shrink-0 ml-2">
+                <Badge className="bg-sky-100 text-sky-800 border-none text-[10px]">{m.type}</Badge>
+                <span className="text-[11px] text-muted-foreground mt-1 block font-medium">
+                  {m.time}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* RESUMO GERENCIAL DIÁRIO AUTOMÁTICO (IA SUPERVISOR) */}
       <Card className="rounded-3xl border-primary/20 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 text-white p-6 shadow-xl relative overflow-hidden">
+        {' '}
         <div className="flex items-start gap-4">
           <div className="p-3 bg-white/10 rounded-2xl shrink-0">
             <Sparkles className="w-6 h-6 text-amber-300" />
