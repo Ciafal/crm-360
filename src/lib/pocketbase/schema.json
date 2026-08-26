@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T14:40:45.798Z",
+  "generatedAt": "2026-08-26T22:10:05.085Z",
   "collections": [
     {
       "name": "users",
@@ -37,6 +37,65 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "vendedor",
+            "supervisor",
+            "gerente_comercial",
+            "diretoria",
+            "administrativo",
+            "ti",
+            "administrador",
+            "auditor"
+          ]
+        },
+        {
+          "name": "employee_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "team_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "seller_code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ramal",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "telefone_corporativo",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -1287,6 +1346,1465 @@
       "indexes": [
         "CREATE INDEX idx_crm_stages_account ON crm_stages (account_id)",
         "CREATE UNIQUE INDEX idx_crm_stages_acc_key ON crm_stages (account_id, key)"
+      ]
+    },
+    {
+      "name": "teams",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "parent_team_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_teams_account ON teams (account_id)"]
+    },
+    {
+      "name": "seller_portfolios",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_seller_portfolios_seller_cust ON seller_portfolios (seller_id, customer_id, account_id)"
+      ]
+    },
+    {
+      "name": "daily_commercial_actions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "opportunity_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "action_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "atacar_agora",
+            "follow_up",
+            "recuperar",
+            "resolver_impedimento",
+            "nao_priorizar"
+          ]
+        },
+        {
+          "name": "priority",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recommendation",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rationale",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "pendente",
+            "em_andamento",
+            "concluida",
+            "reagendada",
+            "nao_realizada",
+            "cancelada"
+          ]
+        },
+        {
+          "name": "due_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completed_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "completion_channel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rescheduled_to",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "justification",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "generated_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ai_run_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potential_revenue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potential_tons",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "product_family",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_daily_actions_seller_date_st ON daily_commercial_actions (seller_id, date, status)",
+        "CREATE INDEX idx_daily_actions_account ON daily_commercial_actions (account_id)"
+      ]
+    },
+    {
+      "name": "customer_scores",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "rfm_recency_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_frequency_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_monetary_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_segment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bg_nbd_p_alive",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bg_nbd_expected_frequency",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gamma_gamma_expected_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "predicted_next_purchase_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "reactivation_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calculated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_customer_scores_cust_seller ON customer_scores (customer_id, seller_id)",
+        "CREATE INDEX idx_customer_scores_account ON customer_scores (account_id)"
+      ]
+    },
+    {
+      "name": "purchase_recurrence",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "year_month",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "has_purchase",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "revenue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "tons",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "product_family",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_purchase_rec_cust_ym ON purchase_recurrence (customer_id, year_month)",
+        "CREATE INDEX idx_purchase_rec_account ON purchase_recurrence (account_id)"
+      ]
+    },
+    {
+      "name": "ai_recommendations",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "action_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recommendation",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rationale",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "evidence",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ai_run_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "accepted",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "executed",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_ai_rec_seller_cust ON ai_recommendations (seller_id, customer_id)",
+        "CREATE INDEX idx_ai_rec_account ON ai_recommendations (account_id)"
+      ]
+    },
+    {
+      "name": "bi_sync_state",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "provider",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "entity_type",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_synced_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_updated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["idle", "syncing", "error"]
+        },
+        {
+          "name": "error_message",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "records_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_bi_sync_provider ON bi_sync_state (provider)"]
+    },
+    {
+      "name": "user_hierarchy",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "team_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "teams"
+        },
+        {
+          "name": "hierarchy_level",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valid_from",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "valid_to",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_user_hier_user ON user_hierarchy (user_id)",
+        "CREATE INDEX idx_user_hier_manager ON user_hierarchy (manager_id)",
+        "CREATE INDEX idx_user_hier_account ON user_hierarchy (account_id)"
+      ]
+    },
+    {
+      "name": "reactivation_runs",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "run_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_candidates",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority_candidates",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actions_generated",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "parameters_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pending", "processing", "completed", "failed"]
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_react_runs_account ON reactivation_runs (account_id)"]
+    },
+    {
+      "name": "reactivation_candidates",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "customer_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "days_inactive",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "last_purchase_date",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "historical_revenue",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "historical_tons",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recurrence_frequency_days",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "p_alive",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_segment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "bg_nbd_expected_frequency",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "gamma_gamma_expected_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "stock_compatible",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "credit_available",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recommended_action",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recommended_channel",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contact_window_start",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "contact_window_end",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["elegivel", "em_contato", "recuperado", "descartado", "pendente"]
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_react_cand_seller_cust ON reactivation_candidates (seller_id, customer_id)",
+        "CREATE INDEX idx_react_cand_account ON reactivation_candidates (account_id)"
+      ]
+    },
+    {
+      "name": "rfm_scores",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "recency_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "recency_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequency_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequency_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monetary_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "monetary_score",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rfm_segment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calculated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_rfm_scores_cust ON rfm_scores (customer_id)",
+        "CREATE INDEX idx_rfm_scores_account ON rfm_scores (account_id)"
+      ]
+    },
+    {
+      "name": "customer_predictions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "model_type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["bg_nbd", "gamma_gamma", "hybrid"]
+        },
+        {
+          "name": "p_alive",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expected_frequency",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expected_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "model_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "calculated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_cust_pred_cust ON customer_predictions (customer_id)",
+        "CREATE INDEX idx_cust_pred_account ON customer_predictions (account_id)"
+      ]
+    },
+    {
+      "name": "action_execution_events",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "daily_action_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "daily_commercial_actions"
+        },
+        {
+          "name": "event_type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "whatsapp_sent",
+            "call_made",
+            "quote_created",
+            "order_created",
+            "manual_completion"
+          ]
+        },
+        {
+          "name": "external_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "occurred_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_system",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "metadata_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_action_events_action ON action_execution_events (daily_action_id)",
+        "CREATE INDEX idx_action_events_ext ON action_execution_events (external_id)",
+        "CREATE INDEX idx_action_events_account ON action_execution_events (account_id)"
+      ]
+    },
+    {
+      "name": "interactions",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "customer_id",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "contact_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "opportunity_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "channel",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "whatsapp",
+            "phone",
+            "visit",
+            "email",
+            "sap_quote",
+            "sap_order",
+            "sap_billing",
+            "task",
+            "follow_up",
+            "annotation"
+          ]
+        },
+        {
+          "name": "direction",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["inbound", "outbound", "internal"]
+        },
+        {
+          "name": "occurred_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "external_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "raw_content_reference",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "transcription",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "detected_intent",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sentiment",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "product_mentions",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "quantity_mentions",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "competitor",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "competitor_price",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "objections",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_action",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ai_confidence",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created_by_system",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "audit_metadata_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_interactions_cust ON interactions (customer_id)",
+        "CREATE INDEX idx_interactions_seller ON interactions (seller_id)",
+        "CREATE INDEX idx_interactions_channel ON interactions (channel)",
+        "CREATE INDEX idx_interactions_ext ON interactions (external_id)",
+        "CREATE INDEX idx_interactions_account ON interactions (account_id)"
       ]
     }
   ]

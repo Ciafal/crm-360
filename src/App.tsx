@@ -14,6 +14,7 @@ import CRM from './pages/CRM'
 import Agentes from './pages/Agentes'
 import Tarefas from './pages/Tarefas'
 import Equipe from './pages/Equipe'
+import GestaoInativos from './pages/GestaoInativos'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -38,14 +39,15 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
+                <Route path="/meu-dia" element={<Home />} />
                 <Route path="/conversas" element={<Conversas />} />
                 <Route path="/crm" element={<CRM />} />
+                <Route path="/gestao-inativos" element={<GestaoInativos />} />
                 <Route path="/agentes" element={<Agentes />} />
                 <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="/equipe" element={<Equipe />} />
               </Route>
             </Route>
-
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>

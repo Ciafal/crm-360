@@ -1,6 +1,7 @@
 import pb from '@/lib/pocketbase/client'
+import type { RecordModel } from 'pocketbase'
 
-export interface CrmStage {
+export interface CrmStage extends RecordModel {
   id: string
   account_id: string
   key: string

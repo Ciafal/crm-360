@@ -18,7 +18,9 @@ export type CategoryColor =
   | 'pink'
   | 'rose'
 
-export interface Category {
+import type { RecordModel } from 'pocketbase'
+
+export interface Category extends RecordModel {
   id: string
   account_id: string
   name: string
@@ -57,7 +59,7 @@ export interface AccountInvite {
   updated: string
 }
 
-export interface AiAgent {
+export interface AiAgent extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -67,14 +69,181 @@ export interface AiAgent {
   updated: string
 }
 
+export type CiafalUserRole =
+  | 'vendedor'
+  | 'supervisor'
+  | 'gerente_comercial'
+  | 'diretoria'
+  | 'administrativo'
+  | 'ti'
+  | 'administrador'
+  | 'auditor'
+
 export interface User {
   id: string
   name: string
   email: string
   avatar: string
+  role?: CiafalUserRole
+  employee_id?: string
+  team_id?: string
+  manager_id?: string
+  seller_code?: string
+  ramal?: string
+  telefone_corporativo?: string
+  active?: boolean
 }
 
-export interface WhatsappInstance {
+export interface Team extends RecordModel {
+  id: string
+  account_id?: string
+  name: string
+  manager_id?: string
+  parent_team_id?: string
+  expand?: {
+    manager_id?: User
+  }
+  created: string
+  updated: string
+}
+
+export interface SellerPortfolioRecord extends RecordModel {
+  id: string
+  seller_id: string
+  customer_id: string
+  account_id?: string
+  created: string
+  updated: string
+}
+
+export type CommercialActionType =
+  | 'atacar_agora'
+  | 'follow_up'
+  | 'recuperar'
+  | 'resolver_impedimento'
+  | 'nao_priorizar'
+
+export type CommercialActionStatus =
+  | 'pendente'
+  | 'em_andamento'
+  | 'concluida'
+  | 'reagendada'
+  | 'nao_realizada'
+  | 'cancelada'
+
+export interface DailyCommercialAction extends RecordModel {
+  id: string
+  account_id?: string
+  seller_id: string
+  customer_id: string
+  customer_name?: string
+  opportunity_id?: string
+  date?: string
+  action_type: CommercialActionType
+  priority?: number
+  recommendation?: string
+  rationale?: string
+  source?: string
+  confidence?: number
+  status: CommercialActionStatus
+  due_at?: string
+  completed_at?: string
+  completion_channel?: string
+  result?: string
+  rescheduled_to?: string
+  justification?: string
+  generated_by?: string
+  ai_run_id?: string
+  potential_revenue?: number
+  potential_tons?: number
+  product_family?: string
+  expand?: {
+    seller_id?: User
+  }
+  created: string
+  updated: string
+}
+
+export type RfmSegment =
+  | 'Campeões'
+  | 'Leais'
+  | 'Potenciais'
+  | 'Novos/ocasionais'
+  | 'Precisam de atenção'
+  | 'Em risco'
+  | 'Prestes a hibernar'
+  | 'Hibernando'
+  | 'Perdidos'
+
+export interface CustomerScore extends RecordModel {
+  id: string
+  account_id?: string
+  customer_id: string
+  seller_id?: string
+  rfm_recency_score?: number
+  rfm_frequency_score?: number
+  rfm_monetary_score?: number
+  rfm_segment?: RfmSegment | string
+  bg_nbd_p_alive?: number
+  bg_nbd_expected_frequency?: number
+  gamma_gamma_expected_value?: number
+  predicted_next_purchase_days?: number
+  reactivation_score?: number
+  model_version?: string
+  calculated_at?: string
+  source?: string
+  created: string
+  updated: string
+}
+
+export interface PurchaseRecurrence extends RecordModel {
+  id: string
+  account_id?: string
+  customer_id: string
+  year_month: string
+  has_purchase?: boolean
+  revenue?: number
+  tons?: number
+  product_family?: string
+  created: string
+  updated: string
+}
+
+export interface AIRecommendationRecord extends RecordModel {
+  id: string
+  account_id?: string
+  seller_id?: string
+  customer_id: string
+  action_type?: string
+  recommendation?: string
+  rationale?: string
+  evidence?: any[]
+  confidence?: number
+  source?: string
+  model_version?: string
+  ai_run_id?: string
+  accepted?: boolean
+  executed?: boolean
+  result?: string
+  created: string
+  updated: string
+}
+
+export interface BISyncState extends RecordModel {
+  id: string
+  account_id?: string
+  provider: string
+  entity_type?: string
+  last_synced_at?: string
+  source_updated_at?: string
+  status: 'idle' | 'syncing' | 'error'
+  error_message?: string
+  records_count?: number
+  created: string
+  updated: string
+}
+
+export interface WhatsappInstance extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -96,7 +265,7 @@ export interface WhatsappInstance {
   updated: string
 }
 
-export interface Conversation {
+export interface Conversation extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -123,7 +292,7 @@ export interface Conversation {
   updated: string
 }
 
-export interface CrmContact {
+export interface CrmContact extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -151,7 +320,7 @@ export interface CrmContact {
   updated: string
 }
 
-export interface CrmCompany {
+export interface CrmCompany extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -167,7 +336,7 @@ export interface CrmCompany {
   updated: string
 }
 
-export interface WhatsappMessage {
+export interface WhatsappMessage extends RecordModel {
   id: string
   account_id?: string
   user_id: string
@@ -195,7 +364,7 @@ export interface WhatsappMessage {
   updated: string
 }
 
-export interface Task {
+export interface Task extends RecordModel {
   id: string
   account_id?: string
   user_id: string

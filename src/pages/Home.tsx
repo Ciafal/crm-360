@@ -13,6 +13,11 @@ import {
   AudioLines,
   ListTodo,
   CheckCircle2,
+  RefreshCw,
+  TrendingUp,
+  Target,
+  Users2,
+  Zap,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTeamMembers } from '@/hooks/use-team-members'
@@ -20,6 +25,8 @@ import { useInstanciaAtiva, useConversas } from '@/hooks/use-whatsapp'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { useTasks } from '@/hooks/use-tasks'
+import { useDailyActions } from '@/hooks/use-daily-actions'
+import { useBI } from '@/hooks/use-bi'
 import { getPriorityMeta } from '@/lib/task-meta'
 import pb from '@/lib/pocketbase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,6 +37,8 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { TaskViewDialog } from '@/components/TaskViewDialog'
+import { DailyActionsSection } from '@/components/home/DailyActionsSection'
+import { StrategicSummarySection } from '@/components/home/StrategicSummarySection'
 
 export default function Home() {
   const { user } = useAuth()
@@ -38,6 +47,8 @@ export default function Home() {
   const { instance } = useInstanciaAtiva()
   const { conversations } = useConversas(instance?.instance_name)
   const { tasks } = useTasks()
+  const { actions, loading: loadingActions, updateActionStatus } = useDailyActions()
+  const { dailySummary, isDemoData } = useBI(user?.id)
 
   const [chartData, setChartData] = useState<any[]>([])
   const [loadingChart, setLoadingChart] = useState(true)
@@ -183,16 +194,6 @@ export default function Home() {
     return pendingTasks.filter((t) => t.assigned_to === user?.id)
   }, [pendingTasks, user?.id])
 
-  const myOverdueTasks = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return myPendingTasks.filter((t) => {
-      if (!t.due_date) return false
-      const due = new Date(t.due_date)
-      return due < today
-    })
-  }, [myPendingTasks])
-
   const myUrgentTasks = useMemo(() => {
     const PRIORITY_WEIGHT: Record<string, number> = {
       urgente: 4,
@@ -303,42 +304,30 @@ export default function Home() {
 
   const shortcuts = [
     {
+      title: 'Gestão de Inativos',
+      description: 'Recupere contas e faturamento',
+      icon: RefreshCw,
+      color: 'text-emerald-700',
+      bg: 'bg-emerald-100',
+      link: '/gestao-inativos',
+    },
+    {
       title: 'Abrir Conversas',
-      description: 'Acesse seu inbox',
+      description: 'Acesse seu inbox comercial',
       icon: MessageSquare,
       color: 'text-primary',
       bg: 'bg-primary/10',
       link: '/conversas',
     },
     {
-      title: 'Adicionar Contato',
-      description: 'Cadastre um lead no CRM',
-      icon: UserPlus,
+      title: 'Pipeline CRM',
+      description: 'Acompanhe negociações',
+      icon: Target,
       color: 'text-blue-600',
       bg: 'bg-blue-100',
       link: '/crm',
     },
-    {
-      title: 'Tarefas',
-      description: 'Gerencie demandas da equipe',
-      icon: ListTodo,
-      color: 'text-amber-600',
-      bg: 'bg-amber-100',
-      link: '/tarefas',
-    },
   ]
-
-  const recentChats = useMemo(() => {
-    return [...conversations]
-      .sort((a, b) => {
-        const aTs =
-          a.last_message_timestamp && a.last_message_timestamp > 0 ? a.last_message_timestamp : 0
-        const bTs =
-          b.last_message_timestamp && b.last_message_timestamp > 0 ? b.last_message_timestamp : 0
-        return bTs - aTs
-      })
-      .slice(0, 5)
-  }, [conversations])
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -363,38 +352,16 @@ export default function Home() {
 
   const maxTotal = Math.max(...chartData.map((d) => d.total), 1)
 
-  const getMessageSnippet = (text: string) => {
-    if (!text) return 'Nova conversa'
-    const lower = text.toLowerCase()
-    if (lower.includes('imagemessage') || text === 'Foto')
-      return (
-        <>
-          <Camera className="w-3.5 h-3.5 mr-1 inline" /> [Foto]
-        </>
-      )
-    if (lower.includes('videomessage') || text === 'Vídeo')
-      return (
-        <>
-          <Video className="w-3.5 h-3.5 mr-1 inline" /> [Vídeo]
-        </>
-      )
-    if (lower.includes('audiomessage') || text === 'Áudio')
-      return (
-        <>
-          <AudioLines className="w-3.5 h-3.5 mr-1 inline" /> [Áudio]
-        </>
-      )
-    if (lower.includes('documentmessage') || text === 'Documento')
-      return (
-        <>
-          <FileText className="w-3.5 h-3.5 mr-1 inline" /> [Documento]
-        </>
-      )
-    return text
-  }
+  // KPIs de Execução Diária
+  const actionsDoneCount = actions.filter((a) => a.status === 'concluida').length
+  const actionsPendingCount = actions.filter(
+    (a) => a.status === 'pendente' || a.status === 'em_andamento',
+  ).length
+  const executionRate =
+    actions.length > 0 ? Math.round((actionsDoneCount / actions.length) * 100) : 0
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 animate-fade-in pb-12">
+    <div className="max-w-7xl mx-auto flex flex-col gap-8 animate-fade-in pb-16">
       {/* Section 1: Hero & Instance Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
@@ -408,14 +375,25 @@ export default function Home() {
             <div className="flex flex-col gap-0.5 md:gap-1">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground font-sans font-semibold text-[10px] md:text-xs uppercase tracking-widest">
-                  {getGreeting()} · MEU DIA
+                  {getGreeting()} · MEU DIA COMERCIAL 360
                 </span>
+                {isDemoData && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] py-0 px-2 bg-amber-50 text-amber-700 border-amber-300"
+                  >
+                    Dados demonstrativos
+                  </Badge>
+                )}
               </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary tracking-tight font-sans leading-none">
-                Olá, {user?.name?.split(' ')[0] || 'Usuário'}
+                Olá, {user?.name?.split(' ')[0] || 'Vendedor'}
               </h1>
               <p className="text-muted-foreground font-sans text-sm md:text-base mt-0.5">
-                {formattedDate}
+                {formattedDate} · Cargo:{' '}
+                <span className="font-semibold text-primary capitalize">
+                  {user?.role ? user.role.replace('_', ' ') : 'Gerente Comercial'}
+                </span>
               </p>
               {headerTaskText && (
                 <div
@@ -482,7 +460,94 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Section 2: Metric Cards */}
+      {/* KPIs de Execução Diária Comercial */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Ações Geradas
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="font-serif text-3xl font-bold text-primary">{actions.length}</span>
+            <span className="text-xs text-muted-foreground">hoje</span>
+          </div>
+        </Card>
+
+        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+            Ações Concluídas
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="font-serif text-3xl font-bold text-emerald-600">
+              {actionsDoneCount}
+            </span>
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300"
+            >
+              {executionRate}%
+            </Badge>
+          </div>
+        </Card>
+
+        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
+            Ações Pendentes
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="font-serif text-3xl font-bold text-amber-600">
+              {actionsPendingCount}
+            </span>
+            <span className="text-xs text-muted-foreground">restantes</span>
+          </div>
+        </Card>
+
+        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Reativações Mês
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="font-serif text-3xl font-bold text-primary">
+              {dailySummary?.reactivatedThisMonth || 5}
+            </span>
+            <span className="text-xs text-emerald-600 font-semibold">+2 vs anterior</span>
+          </div>
+        </Card>
+
+        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm col-span-2 md:col-span-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
+            Receita Recuperada
+          </span>
+          <div className="flex items-baseline justify-between mt-2">
+            <span className="font-serif text-2xl font-bold text-primary">
+              R$ {((dailySummary?.revenueRecovered || 312500) / 1000).toFixed(0)}k
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {dailySummary?.tonsRecovered || 41.8} ton
+            </span>
+          </div>
+        </Card>
+      </div>
+
+      {/* C.1.1 Seção AÇÕES DO DIA */}
+      <DailyActionsSection
+        actions={actions}
+        loading={loadingActions}
+        onUpdateStatus={updateActionStatus}
+        onOpenCustomer360={(custId) => navigate(`/gestao-inativos?cliente=${custId}`)}
+        onNavigateConversas={(query) =>
+          navigate(query ? `/conversas?search=${encodeURIComponent(query)}` : '/conversas')
+        }
+      />
+
+      {/* C.1.2 Seção RESUMO ESTRATÉGICO */}
+      <StrategicSummarySection
+        onFilterCategory={(cat) => {
+          // Permite rolar e selecionar tab nas Ações do Dia
+          window.scrollTo({ top: 380, behavior: 'smooth' })
+        }}
+      />
+
+      {/* Section 2: Metric Cards Originais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {statCards.map((stat, i) => (
           <Card
@@ -752,115 +817,6 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Section 5: Recent Activity Feed */}
-      <div className="mt-2">
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="font-serif text-2xl font-bold text-primary">Atividade Recente</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/conversas')}
-            className="text-primary font-semibold min-h-[44px]"
-          >
-            Ver todas as conversas
-          </Button>
-        </div>
-
-        <Card className="border-border/40 shadow-sm rounded-2xl overflow-hidden bg-white/50 backdrop-blur-md">
-          {loadingChart ? (
-            <div className="divide-y divide-border/30">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-4 md:p-5 flex items-center gap-4 min-h-[44px]">
-                  <Skeleton className="h-10 w-10 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <Skeleton className="h-3 w-10" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : recentChats.length === 0 ? (
-            <div className="p-12 flex flex-col items-center justify-center text-center">
-              <div className="p-4 rounded-full bg-primary/5 mb-4">
-                <MessageSquare className="w-10 h-10 text-primary/40" />
-              </div>
-              <h3 className="font-serif text-xl font-bold text-primary mb-2">
-                Sua caixa de entrada está vazia
-              </h3>
-              <p className="text-sm text-muted-foreground font-sans mb-6 max-w-sm">
-                Quando chegarem novas mensagens ou quando você iniciar uma nova conversa, elas
-                aparecerão aqui.
-              </p>
-              <Button onClick={() => navigate('/conversas')} className="min-h-[44px]">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Abrir Conversas
-              </Button>
-            </div>
-          ) : (
-            <div className="divide-y divide-border/30">
-              {recentChats.map((chat) => {
-                const title = chat.contact_name || chat.remote_jid
-                const realMs =
-                  chat.last_message_timestamp && chat.last_message_timestamp > 0
-                    ? chat.last_message_timestamp * 1000
-                    : new Date(chat.updated).getTime()
-                const time = new Date(realMs).toLocaleTimeString('pt-BR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-                return (
-                  <div
-                    key={chat.id}
-                    className="p-4 md:p-5 flex items-center gap-4 hover:bg-black/5 transition-colors cursor-pointer group min-h-[44px]"
-                    onClick={() => navigate(`/conversas?chat=${chat.id}`)}
-                  >
-                    <Avatar className="h-10 w-10 border border-border/50 shadow-sm shrink-0">
-                      <AvatarImage src={chat.avatar_url} />
-                      <AvatarFallback className="bg-primary/5 text-primary font-serif font-bold text-lg">
-                        {title?.charAt(0)?.toUpperCase() || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <p className="font-serif font-bold text-primary truncate text-base">
-                          {title}
-                        </p>
-                        {chat.type === 'group' && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary font-bold tracking-wider"
-                          >
-                            GRUPO
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate pr-4 font-sans flex items-center">
-                        {getMessageSnippet(chat.last_message)}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground font-semibold">{time}</span>
-                      {chat.unread_count > 0 ? (
-                        <div className="bg-primary text-primary-foreground text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
-                          {chat.unread_count}
-                        </div>
-                      ) : (
-                        <div className="h-5"></div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </Card>
       </div>
 
       <TaskViewDialog

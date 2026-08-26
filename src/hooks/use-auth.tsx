@@ -22,17 +22,35 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any>(pb.authStore.record)
+  const [user, setUser] = useState<any>(() => {
+    const rec = pb.authStore.record
+    if (rec && !rec.role) {
+      return { ...rec, role: 'gerente_comercial' }
+    }
+    return rec
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const unsubscribe = pb.authStore.onChange((_token, record) => {
-      setUser(record)
+      if (record && !record.role) {
+        setUser({ ...record, role: 'gerente_comercial' })
+      } else {
+        setUser(record)
+      }
     })
 
     if (pb.authStore.isValid) {
       pb.collection('users')
         .authRefresh()
+        .then((authData) => {
+          const rec = authData.record
+          if (rec && !rec.role) {
+            setUser({ ...rec, role: 'gerente_comercial' })
+          } else {
+            setUser(rec)
+          }
+        })
         .catch(() => pb.authStore.clear())
         .finally(() => setLoading(false))
     } else {

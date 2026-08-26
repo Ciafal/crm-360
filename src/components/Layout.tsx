@@ -18,13 +18,14 @@ import pb from '@/lib/pocketbase/client'
 const NAV_GROUPS = [
   {
     links: [
-      { name: 'Início', path: '/home' },
+      { name: 'Meu Dia', path: '/home' },
       { name: 'Conversas', path: '/conversas' },
       { name: 'CRM', path: '/crm' },
     ],
   },
   {
     links: [
+      { name: 'Inativos', path: '/gestao-inativos' },
       { name: 'Agentes', path: '/agentes' },
       { name: 'Tarefas', path: '/tarefas' },
       { name: 'Equipe', path: '/equipe' },
