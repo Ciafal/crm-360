@@ -463,6 +463,90 @@ export default function GestaoInativos() {
         </Card>
       </div>
 
+      {/* SEÇÃO SUPERVISÃO: TOP OPORTUNIDADES DE REATIVAÇÃO DA EQUIPE */}
+      <Card className="rounded-3xl border-border/60 bg-white/90 shadow-sm p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <h3 className="font-serif text-lg font-bold text-primary">
+                Top Oportunidades de Reativação da Equipe (Visão Supervisor)
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Priorização por score combinado de probabilidade P(vivo), valor esperado e cobertura
+              de estoque.
+            </p>
+          </div>
+          <Badge className="bg-primary/10 text-primary border-primary/20 text-xs w-fit">
+            Feedback Loop Omnichannel Ativo
+          </Badge>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/80 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/40">
+              <tr>
+                <th className="py-2.5 px-3 font-bold">Cliente</th>
+                <th className="py-2.5 px-3 font-bold">Vendedor</th>
+                <th className="py-2.5 px-3 font-bold text-center">Score</th>
+                <th className="py-2.5 px-3 font-bold text-center">P(vivo)</th>
+                <th className="py-2.5 px-3 font-bold text-right">Potencial R$</th>
+                <th className="py-2.5 px-3 font-bold">Ação Recomendada</th>
+                <th className="py-2.5 px-3 font-bold text-center">Status Feedback</th>
+                <th className="py-2.5 px-3 font-bold text-right">360º</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/20">
+              {inactiveCustomers.slice(0, 4).map((c, idx) => (
+                <tr key={c.customerId} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-2.5 px-3 font-semibold text-primary">
+                    {c.customerName}
+                    <span className="text-[10px] text-muted-foreground block">{c.customerId}</span>
+                  </td>
+                  <td className="py-2.5 px-3 text-slate-700">Carlos Mendonça</td>
+                  <td className="py-2.5 px-3 text-center">
+                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold border-none">
+                      {c.reactivationScore}
+                    </Badge>
+                  </td>
+                  <td className="py-2.5 px-3 text-center font-mono font-semibold text-primary">
+                    {Math.round(c.pAlive * 100)}%
+                  </td>
+                  <td className="py-2.5 px-3 text-right font-serif font-bold text-primary">
+                    {formatBRL(c.expectedValue)}
+                  </td>
+                  <td
+                    className="py-2.5 px-3 text-slate-600 max-w-xs truncate"
+                    title={c.recommendedAction}
+                  >
+                    {c.recommendedAction}
+                  </td>
+                  <td className="py-2.5 px-3 text-center">
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-blue-50 text-blue-700 border-blue-200"
+                    >
+                      Recomendado → Proposta
+                    </Badge>
+                  </td>
+                  <td className="py-2.5 px-3 text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs text-primary hover:bg-primary/10"
+                      onClick={() => navigate(`/cliente/${c.customerId}`)}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 mr-1" /> Ver 360º
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       {/* Abas Principais da Subaplicação */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
         <TabsList className="bg-white/70 border border-border/50 p-1 rounded-2xl w-full sm:w-auto flex flex-wrap gap-1">

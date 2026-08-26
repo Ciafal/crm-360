@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T22:10:05.085Z",
+  "generatedAt": "2026-08-26T22:29:01.048Z",
   "collections": [
     {
       "name": "users",
@@ -1637,6 +1637,32 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "manager_note",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manager_note_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "plan_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "daily_commercial_plans"
         }
       ],
       "indexes": [
@@ -2806,6 +2832,158 @@
         "CREATE INDEX idx_interactions_ext ON interactions (external_id)",
         "CREATE INDEX idx_interactions_account ON interactions (account_id)"
       ]
+    },
+    {
+      "name": "daily_commercial_plans",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "seller_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "version",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "generated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "generated_by",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "score_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "ai_model_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "rules_version",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "source_updated_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "strategic_summary",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "actions_snapshot",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "total_actions",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potential_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "potential_tons",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["active", "superseded", "draft", "archived"]
+        },
+        {
+          "name": "superseded_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "superseded_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "account_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "accounts"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

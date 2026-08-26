@@ -88,6 +88,35 @@ export interface ReactivationAgent {
   suggestProducts(customerId: string): Promise<ProductSuggestion[]>
 }
 
+export interface TeamDailySummary {
+  date: string
+  activeSellers: number
+  totalPlannedActions: number
+  totalCompletedActions: number
+  totalPendingActions: number
+  totalOverdueActions: number
+  totalOpportunities: number
+  totalPotentialRevenue: number
+  totalPotentialTons: number
+  highlights: string[]
+  bottlenecks: string[]
+  recommendedFollowUps: string[]
+  confidence: number
+  sources: string[]
+}
+
+export interface SalesSupervisorAgent {
+  summarizeTeamDaily(teamId?: string): Promise<TeamDailySummary>
+  comparePlannedVsExecuted(sellerId: string): Promise<{
+    sellerId: string
+    adherencePercent: number
+    criticalPending: string[]
+    stalledOpportunities: string[]
+    coachingRecommendation: string
+  }>
+  identifyBottlenecks(teamId?: string): Promise<string[]>
+}
+
 export interface AIProvider {
   readonly name: string
   analyze(request: AIAnalysisRequest): Promise<AIAnalysisResult>
@@ -106,4 +135,5 @@ export interface AIProvider {
   getHealth(): Promise<ProviderHealth>
   readonly copilot?: SellerCopilotAgent
   readonly reactivation?: ReactivationAgent
+  readonly supervisor?: SalesSupervisorAgent
 }

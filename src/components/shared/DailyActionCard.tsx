@@ -209,14 +209,26 @@ export function DailyActionCard({
               {onOpenCustomer360 && (
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="h-8 px-2 text-xs text-muted-foreground hover:text-primary"
+                  variant="outline"
+                  className="h-8 px-2.5 text-xs text-primary border-primary/20 hover:bg-primary/10"
                   onClick={() => onOpenCustomer360(action.customer_id)}
                   title="Visão 360 do Cliente"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                  Cliente 360º
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 px-2 text-xs text-blue-600 hover:bg-blue-50"
+                onClick={() => {
+                  window.location.href = '/crm'
+                }}
+                title="Criar Oportunidade"
+              >
+                + Oportunidade
+              </Button>
             </div>
 
             <div className="flex items-center gap-1">

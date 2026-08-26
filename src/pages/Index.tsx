@@ -53,7 +53,7 @@ const FEATURES = [
   },
   {
     icon: Milestone,
-    title: 'CRM Comercial 360',
+    title: 'CRM 360º',
     desc: 'Pipeline completo e visão unificada do cliente',
     color: 'text-indigo-400',
     dot: 'bg-indigo-400',
@@ -105,13 +105,13 @@ function WhatsAppIcon({ className }: { className?: string }) {
 export default function Index() {
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { signIn, signUp, user, loading } = useAuth()
+  const { signIn, user, loading, resetPassword } = useAuth()
 
   const [step, setStep] = useState(1)
-  const [isLoginMode, setIsLoginMode] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isForgotMode, setIsForgotMode] = useState(false)
   const [syncProgress, setSyncProgress] = useState(0)
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [formData, setFormData] = useState({ email: '', password: '' })
 
   const glowRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -140,25 +140,21 @@ export default function Index() {
     e.preventDefault()
     setIsLoading(true)
     try {
-      if (isLoginMode) {
+      if (isForgotMode) {
+        if (!formData.email) throw new Error('Informe seu e-mail institucional')
+        const { error } = await resetPassword(formData.email)
+        if (error) throw new Error('Não foi possível enviar o link de recuperação')
+        toast({
+          title: 'Instruções enviadas',
+          description: 'Se o e-mail existir na base comercial, as instruções foram enviadas.',
+        })
+        setIsForgotMode(false)
+      } else {
         loginSchema.parse(formData)
         const { error } = await signIn(formData.email, formData.password)
         if (error) throw new Error('Credenciais inválidas')
-        toast({ title: 'Login realizado!' })
+        toast({ title: 'Login realizado com sucesso!' })
         navigate('/home')
-      } else {
-        signUpSchema.parse(formData)
-        const { error } = await signUp(formData.name, formData.email, formData.password)
-        if (error) {
-          if (error.status === 400 && error.response?.data?.email?.code === 'validation_not_unique')
-            throw new Error('E-mail já está em uso.')
-          throw new Error('Erro ao criar conta. Verifique os dados e tente novamente.')
-        }
-        toast({
-          title: 'Cadastro realizado!',
-          description: 'Prosseguindo para conexão do WhatsApp.',
-        })
-        setStep(2)
       }
     } catch (err: any) {
       const message =
@@ -207,19 +203,17 @@ export default function Index() {
           <div className="w-9 h-9 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
             <WhatsAppIcon className="w-5 h-5 text-blue-400" />
           </div>
-          <span className="font-serif font-bold text-xl text-white tracking-tight">
-            CIAFAL CRM 360
-          </span>
+          <span className="font-serif font-bold text-xl text-white tracking-tight">CRM 360º</span>
         </div>
 
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-5">
             <h1 className="font-serif text-6xl xl:text-7xl font-bold text-white leading-[1.02] tracking-tight">
-              Plataforma completa de CRM Comercial 360 e{' '}
-              <span className="text-blue-400">WhatsApp com IA</span>
+              Plataforma completa de <span className="text-blue-400">CRM 360º</span> e WhatsApp com
+              IA
             </h1>
             <p className="text-white/45 text-lg leading-relaxed max-w-lg">
-              Sistema corporativo CIAFAL de atendimento integrado, inteligência artificial, CRM e
+              Sistema corporativo de atendimento integrado, inteligência artificial, CRM 360º e
               gestão de equipe comercial.
             </p>
           </div>
@@ -274,9 +268,7 @@ export default function Index() {
           </div>
         </div>
 
-        <p className="text-white/18 text-xs tracking-wide">
-          CIAFAL CRM 360 · Skip Cloud · PocketBase
-        </p>
+        <p className="text-white/18 text-xs tracking-wide">CRM 360º · Skip Cloud · PocketBase</p>
       </div>
 
       {/* RIGHT */}
@@ -285,7 +277,7 @@ export default function Index() {
           <div className="w-8 h-8 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
             <WhatsAppIcon className="w-4 h-4 text-blue-400" />
           </div>
-          <span className="font-serif font-bold text-lg text-white">CIAFAL CRM 360</span>
+          <span className="font-serif font-bold text-lg text-white">CRM 360º</span>
         </div>
 
         <div className="flex lg:hidden gap-2 flex-wrap justify-center mb-6">
@@ -341,67 +333,63 @@ export default function Index() {
             <div className="flex flex-col gap-6">
               <div>
                 <h2 className="font-serif text-2xl font-bold text-white">
-                  {isLoginMode ? 'Bem-vindo de volta' : 'Criar sua conta'}
+                  {isForgotMode ? 'Recuperar Acesso' : 'Acesse o CRM 360º'}
                 </h2>
                 <p className="text-white/40 text-sm mt-1">
-                  {isLoginMode ? 'Acesse sua plataforma CIAFAL' : 'Configure em 3 passos rápidos'}
+                  {isForgotMode
+                    ? 'Informe seu e-mail corporativo cadastrado'
+                    : 'Digite suas credenciais institucionais'}
                 </p>
               </div>
 
               {/* dark-inputs: CSS abaixo garante fundo escuro + texto branco em todos os inputs */}
               <form onSubmit={handleStep1Submit} className="flex flex-col gap-4 dark-inputs">
-                {!isLoginMode && (
-                  <div className="flex flex-col gap-1.5">
-                    <Label
-                      htmlFor="name"
-                      className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                    >
-                      Nome completo
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="João Silva"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
-                    />
-                  </div>
-                )}
                 <div className="flex flex-col gap-1.5">
                   <Label
                     htmlFor="email"
                     className="text-white/60 text-xs font-semibold uppercase tracking-wider"
                   >
-                    E-mail
+                    E-mail Corporativo
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="joao@ciafal.com.br"
+                    placeholder="seu.nome@ciafal.com.br"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
                   />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label
-                    htmlFor="password"
-                    className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                  >
-                    Senha
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
-                  />
-                </div>
+                {!isForgotMode && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="password"
+                        className="text-white/60 text-xs font-semibold uppercase tracking-wider"
+                      >
+                        Senha
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setIsForgotMode(true)}
+                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        Esqueci minha senha
+                      </button>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      required
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
+                    />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   disabled={isLoading}
@@ -409,24 +397,24 @@ export default function Index() {
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : isLoginMode ? (
-                    'Entrar'
+                  ) : isForgotMode ? (
+                    'Enviar link de recuperação'
                   ) : (
-                    'Criar conta e continuar →'
+                    'Entrar no Sistema'
                   )}
                 </Button>
-              </form>
 
-              <p className="text-center text-sm text-white/25">
-                {isLoginMode ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsLoginMode(!isLoginMode)}
-                  className="text-blue-400 font-semibold hover:text-blue-300 transition-colors"
-                >
-                  {isLoginMode ? 'Cadastre-se' : 'Fazer login'}
-                </button>
-              </p>
+                {isForgotMode && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsForgotMode(false)}
+                    className="text-white/50 hover:text-white text-xs h-9"
+                  >
+                    ← Voltar ao login
+                  </Button>
+                )}
+              </form>
             </div>
           )}
 

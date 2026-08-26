@@ -9,6 +9,8 @@ import type {
   ProductSuggestion,
   SellerCopilotAgent,
   ReactivationAgent,
+  SalesSupervisorAgent,
+  TeamDailySummary,
 } from './AIProvider'
 import type { ProviderHealth } from './types'
 import type { BICustomerSummary } from './BIProvider'
@@ -106,10 +108,67 @@ export class LocalReactivationAgent implements ReactivationAgent {
   }
 }
 
+export class LocalSalesSupervisorAgent implements SalesSupervisorAgent {
+  async summarizeTeamDaily(teamId?: string): Promise<TeamDailySummary> {
+    return {
+      date: new Date().toISOString().split('T')[0],
+      activeSellers: 5,
+      totalPlannedActions: 34,
+      totalCompletedActions: 26,
+      totalPendingActions: 5,
+      totalOverdueActions: 3,
+      totalOpportunities: 4,
+      totalPotentialRevenue: 1850000,
+      totalPotentialTons: 127.0,
+      highlights: [
+        '5 vendedores, 34 ações planejadas, 26 concluídas, 5 pendentes, 3 reagendadas.',
+        'R$ 1,8 mi trabalhados, 127 t de potencial, 4 oportunidades, 2 cotações, 1 pedido.',
+      ],
+      bottlenecks: [
+        '3 das 4 ações de alta prioridade de Carlos Mendonça permanecem pendentes, sendo 2 acima do prazo estipulado.',
+        'Oportunidade da Metalúrgica Santa Rita sem movimentação há 48h.',
+      ],
+      recommendedFollowUps: [
+        'Alinhar margem com supervisor para fechamento imediato do pedido de Tubos Inox.',
+        'Revisar liberação de limite com setor financeiro para a conta Protemax.',
+      ],
+      confidence: 0.94,
+      sources: ['Qlik Cloud BI', 'SAP S/4HANA ECC', 'WhatsApp Baileys'],
+    }
+  }
+
+  async comparePlannedVsExecuted(sellerId: string): Promise<{
+    sellerId: string
+    adherencePercent: number
+    criticalPending: string[]
+    stalledOpportunities: string[]
+    coachingRecommendation: string
+  }> {
+    return {
+      sellerId,
+      adherencePercent: 82,
+      criticalPending: [
+        'CLI-8041: Oferta de Tubos Inox 304 aguardando retorno do comprador há 3 dias.',
+      ],
+      stalledOpportunities: ['Proposta COT-SAP-98104 parada em análise de crédito.'],
+      coachingRecommendation:
+        'Apoiar vendedor no alinhamento de frete CIF com a logística regional para destravar proposta.',
+    }
+  }
+
+  async identifyBottlenecks(teamId?: string): Promise<string[]> {
+    return [
+      '3 ações de alta prioridade com vencimento hoje ainda não iniciadas na equipe.',
+      '2 cotações SAP aguardando aprovação de alçada de margem pela gerência.',
+    ]
+  }
+}
+
 export class LocalAIAdapter implements AIProvider {
   readonly name = 'CIAFAL Local Commercial AI Engine (Adapter)'
   readonly copilot: SellerCopilotAgent = new LocalSellerCopilotAgent()
   readonly reactivation: ReactivationAgent = new LocalReactivationAgent()
+  readonly supervisor: SalesSupervisorAgent = new LocalSalesSupervisorAgent()
 
   async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResult> {
     const now = new Date().toISOString()

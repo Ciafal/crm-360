@@ -375,7 +375,7 @@ export default function Home() {
             <div className="flex flex-col gap-0.5 md:gap-1">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground font-sans font-semibold text-[10px] md:text-xs uppercase tracking-widest">
-                  {getGreeting()} · MEU DIA COMERCIAL 360
+                  {getGreeting()} · CRM 360º — MEU DIA
                 </span>
                 {isDemoData && (
                   <Badge
@@ -533,7 +533,7 @@ export default function Home() {
         actions={actions}
         loading={loadingActions}
         onUpdateStatus={updateActionStatus}
-        onOpenCustomer360={(custId) => navigate(`/gestao-inativos?cliente=${custId}`)}
+        onOpenCustomer360={(custId) => navigate(`/cliente/${custId}`)}
         onNavigateConversas={(query) =>
           navigate(query ? `/conversas?search=${encodeURIComponent(query)}` : '/conversas')
         }

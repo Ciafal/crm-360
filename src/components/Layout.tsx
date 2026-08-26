@@ -26,6 +26,7 @@ const NAV_GROUPS = [
   {
     links: [
       { name: 'Inativos', path: '/gestao-inativos' },
+      { name: 'Gestão do Dia', path: '/gestao-do-dia' },
       { name: 'Agentes', path: '/agentes' },
       { name: 'Tarefas', path: '/tarefas' },
       { name: 'Equipe', path: '/equipe' },
@@ -63,10 +64,10 @@ export default function Layout() {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-serif font-bold text-lg text-primary tracking-tight">
-                CIAFAL
+                CRM 360º
               </span>
               <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
-                CRM 360
+                Comercial
               </span>
             </div>
           </Link>
