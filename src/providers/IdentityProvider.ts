@@ -176,6 +176,12 @@ export class LocalIdentityProvider implements IdentityProvider {
       return true
     }
     // Vendedor only sees own portfolio
+    // Representante externo só acessa própria carteira e nunca carteiras de vendedores internos
+    if (userRole === ('representante_externo' as CiafalRole)) {
+      return !customerSellerId || customerSellerId === userId
+    }
+
+    // Vendedor só vê própria carteira
     return !customerSellerId || customerSellerId === userId
   }
 

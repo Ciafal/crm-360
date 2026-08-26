@@ -17,6 +17,7 @@ import Equipe from './pages/Equipe'
 import GestaoInativos from './pages/GestaoInativos'
 import Cliente360 from './pages/Cliente360'
 import GestaoDoDia from './pages/GestaoDoDia'
+import Administracao from './pages/Administracao'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -50,6 +51,7 @@ const App = () => (
                 <Route path="/agentes" element={<Agentes />} />
                 <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="/equipe" element={<Equipe />} />
+                <Route path="/administracao" element={<Administracao />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

@@ -112,6 +112,9 @@ export default function Index() {
   const [isForgotMode, setIsForgotMode] = useState(false)
   const [syncProgress, setSyncProgress] = useState(0)
   const [formData, setFormData] = useState({ email: '', password: '' })
+  const [mfaRequired, setMfaRequired] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [mfaEmail, setMfaEmail] = useState('')
 
   const glowRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -151,6 +154,31 @@ export default function Index() {
         setIsForgotMode(false)
       } else {
         loginSchema.parse(formData)
+        const normalizedEmail = formData.email.trim().toLowerCase()
+
+        // Se for o Representante Externo, exige etapa de MFA
+        if (normalizedEmail === 'representante.teste@crm360.local') {
+          // Solicitar geração de OTP seguro
+          try {
+            await fetch('/api/auth/mfa/request-otp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: normalizedEmail }),
+            })
+          } catch {
+            /* intentionally ignored */
+          }
+
+          setMfaEmail(normalizedEmail)
+          setMfaRequired(true)
+          toast({
+            title: 'Código MFA Enviado',
+            description:
+              'Um código de verificação seguro foi gerado para o seu e-mail corporativo.',
+          })
+          return
+        }
+
         const { error } = await signIn(formData.email, formData.password)
         if (error) throw new Error('Credenciais inválidas')
         toast({ title: 'Login realizado com sucesso!' })
@@ -160,6 +188,47 @@ export default function Index() {
       const message =
         err instanceof z.ZodError ? err.issues[0]?.message || 'Erro de validação' : err.message
       toast({ title: 'Atenção', description: message, variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!otpCode || otpCode.length < 6) {
+      toast({
+        title: 'Código inválido',
+        description: 'Digite o código de 6 dígitos recebido.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const verifyRes = await fetch('/api/auth/mfa/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: mfaEmail, code: otpCode }),
+      })
+
+      const data = await verifyRes.json()
+      if (!verifyRes.ok || !data.valid) {
+        throw new Error(data.error || 'Código OTP incorreto ou expirado.')
+      }
+
+      // Conclui o login com as credenciais salvas
+      const { error } = await signIn(formData.email, formData.password)
+      if (error) throw new Error('Falha na autenticação.')
+
+      toast({ title: 'Acesso autorizado com sucesso!' })
+      navigate('/home')
+    } catch (err: any) {
+      toast({
+        title: 'Falha no MFA',
+        description: err.message || 'Código OTP inválido.',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -331,90 +400,154 @@ export default function Index() {
         <div className="w-full max-w-[360px] rounded-2xl border border-white/10 bg-[#08182B]/85 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
           {step === 1 && (
             <div className="flex flex-col gap-6">
-              <div>
-                <h2 className="font-serif text-2xl font-bold text-white">
-                  {isForgotMode ? 'Recuperar Acesso' : 'Acesse o CRM 360º'}
-                </h2>
-                <p className="text-white/40 text-sm mt-1">
-                  {isForgotMode
-                    ? 'Informe seu e-mail corporativo cadastrado'
-                    : 'Digite suas credenciais institucionais'}
-                </p>
-              </div>
+              {mfaRequired ? (
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold text-white">
+                      Verificação em Duas Etapas (MFA)
+                    </h2>
+                    <p className="text-white/40 text-sm mt-1">
+                      Digite o código de 6 dígitos enviado para o seu e-mail institucional seguro.
+                    </p>
+                  </div>
 
-              {/* dark-inputs: CSS abaixo garante fundo escuro + texto branco em todos os inputs */}
-              <form onSubmit={handleStep1Submit} className="flex flex-col gap-4 dark-inputs">
-                <div className="flex flex-col gap-1.5">
-                  <Label
-                    htmlFor="email"
-                    className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                  >
-                    E-mail Corporativo
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu.nome@ciafal.com.br"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
-                  />
-                </div>
-                {!isForgotMode && (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between">
+                  <form onSubmit={handleMfaSubmit} className="flex flex-col gap-4 dark-inputs">
+                    <div className="flex flex-col gap-1.5">
                       <Label
-                        htmlFor="password"
+                        htmlFor="otp"
                         className="text-white/60 text-xs font-semibold uppercase tracking-wider"
                       >
-                        Senha
+                        Código OTP (6 dígitos)
                       </Label>
-                      <button
-                        type="button"
-                        onClick={() => setIsForgotMode(true)}
-                        className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                      >
-                        Esqueci minha senha
-                      </button>
+                      <Input
+                        id="otp"
+                        type="text"
+                        maxLength={6}
+                        placeholder="123456"
+                        required
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl tracking-widest text-center text-lg font-mono"
+                      />
+                      <p className="text-[11px] text-white/30 text-center mt-1">
+                        Em DEV/HML: O código está disponível na <em>Caixa de E-mail Mock</em> do
+                        Administrador.
+                      </p>
                     </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
-                    />
+
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        'Validar e Entrar'
+                      )}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setMfaRequired(false)
+                        setOtpCode('')
+                      }}
+                      className="text-white/50 hover:text-white text-xs h-9"
+                    >
+                      ← Voltar ao login
+                    </Button>
+                  </form>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  <div>
+                    <h2 className="font-serif text-2xl font-bold text-white">
+                      {isForgotMode ? 'Recuperar Acesso' : 'Acesse o CRM 360º'}
+                    </h2>
+                    <p className="text-white/40 text-sm mt-1">
+                      {isForgotMode
+                        ? 'Informe seu e-mail corporativo cadastrado'
+                        : 'Digite suas credenciais institucionais'}
+                    </p>
                   </div>
-                )}
 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : isForgotMode ? (
-                    'Enviar link de recuperação'
-                  ) : (
-                    'Entrar no Sistema'
-                  )}
-                </Button>
+                  {/* dark-inputs: CSS abaixo garante fundo escuro + texto branco em todos os inputs */}
+                  <form onSubmit={handleStep1Submit} className="flex flex-col gap-4 dark-inputs">
+                    <div className="flex flex-col gap-1.5">
+                      <Label
+                        htmlFor="email"
+                        className="text-white/60 text-xs font-semibold uppercase tracking-wider"
+                      >
+                        E-mail Corporativo
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="seu.nome@ciafal.com.br"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
+                      />
+                    </div>
+                    {!isForgotMode && (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label
+                            htmlFor="password"
+                            className="text-white/60 text-xs font-semibold uppercase tracking-wider"
+                          >
+                            Senha
+                          </Label>
+                          <button
+                            type="button"
+                            onClick={() => setIsForgotMode(true)}
+                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            Esqueci minha senha
+                          </button>
+                        </div>
+                        <Input
+                          id="password"
+                          type="password"
+                          placeholder="••••••••"
+                          required
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
+                        />
+                      </div>
+                    )}
 
-                {isForgotMode && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsForgotMode(false)}
-                    className="text-white/50 hover:text-white text-xs h-9"
-                  >
-                    ← Voltar ao login
-                  </Button>
-                )}
-              </form>
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isForgotMode ? (
+                        'Enviar link de recuperação'
+                      ) : (
+                        'Entrar no Sistema'
+                      )}
+                    </Button>
+
+                    {isForgotMode && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsForgotMode(false)}
+                        className="text-white/50 hover:text-white text-xs h-9"
+                      >
+                        ← Voltar ao login
+                      </Button>
+                    )}
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

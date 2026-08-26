@@ -30,6 +30,7 @@ const NAV_GROUPS = [
       { name: 'Agentes', path: '/agentes' },
       { name: 'Tarefas', path: '/tarefas' },
       { name: 'Equipe', path: '/equipe' },
+      { name: 'Administração', path: '/administracao' },
     ],
   },
 ]
@@ -49,10 +50,26 @@ export default function Layout() {
     ? pb.files.getUrl(user, user.avatar, { thumb: '100x100' })
     : undefined
 
+  const isTestEnvironment =
+    import.meta.env.VITE_ENABLE_TEST_USERS === 'true' ||
+    import.meta.env.MODE !== 'production' ||
+    true // Ativado por padrão em DEV/HML
+
   return (
     <main className="flex flex-col min-h-screen bg-background relative overflow-x-hidden">
       {/* Background Noise */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-multiply bg-noise z-0" />
+
+      {/* Banner Discreto de Ambiente de Teste */}
+      {isTestEnvironment && (
+        <div
+          data-testid="test-environment-banner"
+          className="fixed bottom-2 right-3 z-50 pointer-events-none select-none bg-amber-500/10 text-amber-900 border border-amber-400/30 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium uppercase tracking-wider flex items-center gap-1.5 shadow-xs"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          AMBIENTE DE TESTE / HOMOLOGAÇÃO
+        </div>
+      )}
 
       {/* TopNav */}
       <div className="fixed top-0 inset-x-0 z-50 p-4 flex justify-center">

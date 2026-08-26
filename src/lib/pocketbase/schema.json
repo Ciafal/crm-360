@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T22:47:23.685Z",
+  "generatedAt": "2026-08-26T23:02:39.849Z",
   "collections": [
     {
       "name": "users",
@@ -51,7 +51,8 @@
             "administrativo",
             "ti",
             "administrador",
-            "auditor"
+            "auditor",
+            "representante_externo"
           ]
         },
         {
@@ -93,6 +94,12 @@
         },
         {
           "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "is_test_user",
           "type": "bool",
           "required": false,
           "system": false
@@ -3205,6 +3212,74 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_ms_sync_resource ON ms_sync_state (resource_type)"]
+    },
+    {
+      "name": "mock_emails",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
+        "create": "",
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
+      },
+      "fields": [
+        {
+          "name": "recipient",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "otp_code",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["VALID", "EXPIRED", "USED"]
+        },
+        {
+          "name": "expires_at",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "metadata_json",
+          "type": "json",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_mock_emails_rec_st ON mock_emails (recipient, status)",
+        "CREATE INDEX idx_mock_emails_created ON mock_emails (created DESC)"
+      ]
     }
   ]
 }

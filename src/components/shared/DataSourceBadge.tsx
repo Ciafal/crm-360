@@ -13,12 +13,16 @@ export function DataSourceBadge({ source, className }: DataSourceBadgeProps) {
   const sourceLower = (source || '').toLowerCase()
 
   const config: Record<string, { label: string; class: string }> = {
-    qlik: { label: 'Qlik Cloud', class: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
-    sap: { label: 'SAP S/4HANA', class: 'bg-blue-50 text-blue-800 border-blue-300' },
+    qlik: { label: 'Qlik — MOCK', class: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+    sap: { label: 'SAP — MOCK', class: 'bg-blue-50 text-blue-800 border-blue-300' },
     crm: { label: 'CRM Comercial', class: 'bg-indigo-50 text-indigo-800 border-indigo-300' },
-    meta: { label: 'WhatsApp Meta', class: 'bg-green-50 text-green-800 border-green-300' },
-    voip: { label: 'VoIP Telefonia', class: 'bg-purple-50 text-purple-800 border-purple-300' },
+    meta: { label: 'Meta — MOCK', class: 'bg-green-50 text-green-800 border-green-300' },
+    voip: { label: 'VoIP — MOCK', class: 'bg-purple-50 text-purple-800 border-purple-300' },
     ai: {
+      label: 'CIAFAL AI Agent',
+      class: 'bg-amber-50 text-amber-800 border-amber-300 font-bold',
+    },
+    ai_generated: {
       label: 'CIAFAL AI Agent',
       class: 'bg-amber-50 text-amber-800 border-amber-300 font-bold',
     },
@@ -27,15 +31,15 @@ export function DataSourceBadge({ source, className }: DataSourceBadgeProps) {
       class: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
     },
     ms365: {
-      label: 'Microsoft 365',
+      label: 'Microsoft Graph — MOCK',
       class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
     },
     email: {
-      label: 'Outlook 365 E-mail',
+      label: 'Microsoft Graph — MOCK',
       class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
     },
     microsoft_graph: {
-      label: 'Microsoft Graph 365',
+      label: 'Microsoft Graph — MOCK',
       class: 'bg-sky-50 text-sky-800 border-sky-300 font-bold',
     },
   }
