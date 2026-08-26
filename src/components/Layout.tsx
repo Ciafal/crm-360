@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { MessageCircle, Search, Menu, X, LogOut } from 'lucide-react'
+import { Building2, Search, Menu, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,13 +15,21 @@ import {
 import { Button } from '@/components/ui/button'
 import pb from '@/lib/pocketbase/client'
 
-const NAV_LINKS = [
-  { name: 'Início', path: '/home' },
-  { name: 'Conversas', path: '/conversas' },
-  { name: 'CRM', path: '/crm' },
-  { name: 'Agentes', path: '/agentes' },
-  { name: 'Tarefas', path: '/tarefas' },
-  { name: 'Equipe', path: '/equipe' },
+const NAV_GROUPS = [
+  {
+    links: [
+      { name: 'Início', path: '/home' },
+      { name: 'Conversas', path: '/conversas' },
+      { name: 'CRM', path: '/crm' },
+    ],
+  },
+  {
+    links: [
+      { name: 'Agentes', path: '/agentes' },
+      { name: 'Tarefas', path: '/tarefas' },
+      { name: 'Equipe', path: '/equipe' },
+    ],
+  },
 ]
 
 export default function Layout() {
@@ -47,36 +55,45 @@ export default function Layout() {
       {/* TopNav */}
       <div className="fixed top-0 inset-x-0 z-50 p-4 flex justify-center">
         <nav className="glass-nav w-full max-w-5xl px-4 py-2 flex items-center justify-between transition-all duration-300">
-          {/* Logo */}
-          <Link to="/home" className="flex items-center gap-2 px-2 shrink-0">
-            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm">
-              <MessageCircle className="w-5 h-5 fill-current" />
+          {/* Logo CIAFAL */}
+          <Link to="/home" className="flex items-center gap-2.5 px-2 shrink-0 group">
+            <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm group-hover:bg-primary/90 transition-colors">
+              <Building2 className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-serif font-bold text-lg text-primary tracking-tight">
-              Conectado
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="font-serif font-bold text-lg text-primary tracking-tight">
+                CIAFAL
+              </span>
+              <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
+                CRM 360
+              </span>
+            </div>
           </Link>
 
-          {/* Desktop Links */}
+          {/* Desktop Links with visual separators between groups */}
           <div className="hidden md:flex items-center gap-1 px-4">
-            <div className="w-px h-6 bg-border mx-2" />
-            {NAV_LINKS.map((link) => {
-              const isActive = location.pathname.startsWith(link.path)
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={cn(
-                    'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
-                    isActive
-                      ? 'bg-white shadow-sm text-primary'
-                      : 'text-muted-foreground hover:text-primary hover:bg-white/50',
-                  )}
-                >
-                  {link.name}
-                </Link>
-              )
-            })}
+            {NAV_GROUPS.map((group, groupIdx) => (
+              <React.Fragment key={groupIdx}>
+                <div className="w-px h-6 bg-border mx-2" />
+                {group.links.map((link) => {
+                  const isActive = location.pathname.startsWith(link.path)
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={cn(
+                        'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-white shadow-sm text-primary font-semibold'
+                          : 'text-muted-foreground hover:text-primary hover:bg-white/50',
+                      )}
+                    >
+                      {link.name}
+                    </Link>
+                  )
+                })}
+              </React.Fragment>
+            ))}
             <div className="w-px h-6 bg-border mx-2" />
           </div>
 
@@ -137,7 +154,7 @@ export default function Layout() {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-background/95 backdrop-blur-sm md:hidden pt-24 px-4 flex flex-col gap-4 animate-fade-in-down">
-          {NAV_LINKS.map((link) => (
+          {NAV_GROUPS.flatMap((g) => g.links).map((link) => (
             <Link
               key={link.path}
               to={link.path}
@@ -145,7 +162,7 @@ export default function Layout() {
               className={cn(
                 'p-4 rounded-xl text-lg font-medium transition-colors',
                 location.pathname.startsWith(link.path)
-                  ? 'bg-white shadow-sm text-primary border border-border'
+                  ? 'bg-white shadow-sm text-primary border border-border font-semibold'
                   : 'text-muted-foreground',
               )}
             >

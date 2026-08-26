@@ -85,7 +85,7 @@ export function useQrConnection(
     if (instanceName && pollErrors < 5) {
       interval = setInterval(async () => {
         try {
-          const res = await consultarStatusInstancia(instanceName)
+          const res: any = await consultarStatusInstancia(instanceName)
           if (res.state) {
             setRawState(res.state)
             if (res.state === 'connecting') {

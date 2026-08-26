@@ -237,7 +237,7 @@ export function AddToCrmDialog({
           </div>
 
           {emailDetected && email && (
-            <p className="text-[11px] text-emerald-600 flex items-center gap-1 -mt-2">
+            <p className="text-[11px] text-primary flex items-center gap-1 -mt-2">
               <Sparkles className="w-3 h-3" />
               Email encontrado no histórico de mensagens
             </p>

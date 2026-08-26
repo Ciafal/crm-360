@@ -520,8 +520,6 @@ export default function Conversas() {
                 onSendMessage={handleSendMessage}
                 onSendMedia={handleSendMedia}
                 onLoadOlder={handleLoadOlder}
-                onArchive={(archived) => handleArchive(activeChatWithMessages.id, archived)}
-                isArchived={activeConversation?.archived === true}
                 isMobile={isMobile}
                 highlightMsgId={highlightMsgId}
               />

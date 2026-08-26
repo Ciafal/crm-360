@@ -42,7 +42,7 @@ export function useCrmContatos(instanceName?: string) {
     if (e.record.instance_name !== instanceName) return
 
     if (e.action === 'create') {
-      const rec = e.record as CrmContact
+      const rec = e.record as unknown as CrmContact
       setContacts((prev) => {
         if (prev.some((c) => c.id === rec.id)) return prev
         return [rec, ...prev]
@@ -62,7 +62,7 @@ export function useCrmContatos(instanceName?: string) {
       setContacts((prev) =>
         prev.map((c) => {
           if (c.id !== e.record.id) return c
-          const next = e.record as CrmContact
+          const next = e.record as unknown as CrmContact
           return { ...next, expand: next.expand || c.expand }
         }),
       )

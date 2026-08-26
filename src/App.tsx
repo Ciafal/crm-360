@@ -26,7 +26,7 @@ const ProtectedRoute = () => {
 const App = () => (
   <AuthProvider>
     <AppProvider>
-      <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <BrowserRouter>
         <TooltipProvider>
           <Toaster />
           <Sonner />

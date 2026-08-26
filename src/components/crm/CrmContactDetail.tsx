@@ -83,7 +83,7 @@ export function CrmContactDetail({
   const [showAllMessages, setShowAllMessages] = useState(false)
 
   const [contactName, setContactName] = useState('')
-  const [stage, setStage] = useState('')
+  const [stage, setStage] = useState<CrmContact['stage']>('lead')
   const [notes, setNotes] = useState('')
   const [role, setRole] = useState('')
   const [email, setEmail] = useState('')
@@ -183,7 +183,7 @@ export function CrmContactDetail({
           ? {
               ...prev,
               contact_name: contactName,
-              stage,
+              stage: stage as CrmContact['stage'],
               notes,
               role,
               email,
@@ -436,7 +436,10 @@ export function CrmContactDetail({
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Fase no Funil</Label>
-                  <Select value={stage} onValueChange={setStage}>
+                  <Select
+                    value={stage}
+                    onValueChange={(val) => setStage(val as CrmContact['stage'])}
+                  >
                     <SelectTrigger className="h-9 bg-white/50">
                       <SelectValue />
                     </SelectTrigger>
@@ -542,7 +545,7 @@ export function CrmContactDetail({
                               className={cn(
                                 'flex flex-col max-w-[85%] rounded-2xl px-3 py-2 text-sm relative transition-all group-hover:shadow-md',
                                 isMe
-                                  ? 'bg-emerald-100/80 text-emerald-950 rounded-tr-sm'
+                                  ? 'bg-primary/15 text-primary font-medium rounded-tr-sm'
                                   : 'bg-white border border-border/50 text-foreground rounded-tl-sm shadow-sm',
                               )}
                             >

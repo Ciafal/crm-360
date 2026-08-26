@@ -23,8 +23,10 @@ export type Chat = {
   unread: number
   messages: Message[]
   avatar: string
+  phone?: string
   instance_name?: string
   remote_jid?: string
+  category_ids?: string[]
   groupDetails?: { participants: number; colors: Record<string, string> }
   lastMessage?: { text: string; timestamp: string; fromMe?: boolean; type?: string }
 }

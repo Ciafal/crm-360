@@ -470,7 +470,7 @@ export function ChatArea({
   const [recordingDuration, setRecordingDuration] = useState(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
@@ -831,11 +831,11 @@ export function ChatArea({
 
   return (
     <div className="flex flex-col h-full bg-[#f0f2f5] relative w-full">
-      {/* WhatsApp Pattern Background */}
+      {/* Pattern Background */}
       <div
-        className="absolute inset-0 opacity-40 z-0 pointer-events-none"
+        className="absolute inset-0 opacity-30 z-0 pointer-events-none"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10 L20 20 M30 10 L40 20' stroke='%230f3b21' stroke-width='1' fill='none' opacity='0.2'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10 L20 20 M30 10 L40 20' stroke='%230A2647' stroke-width='1' fill='none' opacity='0.2'/%3E%3C/svg%3E")`,
           backgroundSize: '100px 100px',
         }}
       />
@@ -1048,7 +1048,7 @@ export function ChatArea({
                       localHighlight === msg.id && !isSticker
                         ? 'bg-yellow-100 ring-2 ring-yellow-400 !text-slate-900 z-10 scale-[1.02]'
                         : isMe && !isSticker
-                          ? 'bg-[#0a7c52] text-white rounded-2xl ml-auto'
+                          ? 'bg-primary text-primary-foreground rounded-2xl ml-auto'
                           : !isSticker
                             ? 'bg-white text-foreground rounded-2xl border border-border/50'
                             : 'ml-auto',
@@ -1070,7 +1070,7 @@ export function ChatArea({
                           className={cn(
                             'w-4 h-4 rounded-full absolute -top-1',
                             isMe
-                              ? '-left-1 bg-[#0a7c52]'
+                              ? '-left-1 bg-primary'
                               : '-right-1 bg-white border border-border/50',
                           )}
                         />

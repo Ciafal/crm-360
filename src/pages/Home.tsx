@@ -306,8 +306,8 @@ export default function Home() {
       title: 'Abrir Conversas',
       description: 'Acesse seu inbox',
       icon: MessageSquare,
-      color: 'text-emerald-600',
-      bg: 'bg-emerald-100',
+      color: 'text-primary',
+      bg: 'bg-primary/10',
       link: '/conversas',
     },
     {
@@ -406,9 +406,11 @@ export default function Home() {
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col gap-0.5 md:gap-1">
-              <span className="text-muted-foreground font-sans font-semibold text-[10px] md:text-xs uppercase tracking-widest">
-                {getGreeting()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground font-sans font-semibold text-[10px] md:text-xs uppercase tracking-widest">
+                  {getGreeting()} · MEU DIA
+                </span>
+              </div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary tracking-tight font-sans leading-none">
                 Olá, {user?.name?.split(' ')[0] || 'Usuário'}
               </h1>
@@ -507,14 +509,14 @@ export default function Home() {
                 ) : (
                   <>
                     {stat.trendUp ? (
-                      <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <ArrowUpRight className="w-3.5 h-3.5 text-primary shrink-0" />
                     ) : (
                       <ArrowDownRight className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     )}
                     <span
                       className={cn(
                         'font-medium font-sans',
-                        stat.trendUp ? 'text-emerald-700' : 'text-amber-700',
+                        stat.trendUp ? 'text-primary' : 'text-amber-700',
                       )}
                     >
                       {stat.trend}
@@ -576,11 +578,11 @@ export default function Home() {
                                 {d.total > 0 && (
                                   <>
                                     <div
-                                      className="w-full bg-emerald-500 hover:brightness-110 transition-all"
+                                      className="w-full bg-primary hover:brightness-110 transition-all"
                                       style={{ height: `${receivedPct}%` }}
                                     />
                                     <div
-                                      className="w-full bg-emerald-300 hover:brightness-110 transition-all"
+                                      className="w-full bg-primary/40 hover:brightness-110 transition-all"
                                       style={{ height: `${sentPct}%` }}
                                     />
                                   </>
@@ -600,14 +602,13 @@ export default function Home() {
                             <div className="font-bold text-sm mb-1 text-primary">{d.label}</div>
                             <div className="flex items-center justify-between gap-4">
                               <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-                                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div>{' '}
-                                Recebidas
+                                <div className="w-2.5 h-2.5 rounded-sm bg-primary"></div> Recebidas
                               </span>
                               <span className="font-semibold text-primary">{d.received}</span>
                             </div>
                             <div className="flex items-center justify-between gap-4">
                               <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-                                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-300"></div>{' '}
+                                <div className="w-2.5 h-2.5 rounded-sm bg-primary/40"></div>{' '}
                                 Enviadas
                               </span>
                               <span className="font-semibold text-primary">{d.sent}</span>
@@ -624,13 +625,13 @@ export default function Home() {
                 </div>
                 <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-border/30">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-primary"></div>
                     <span className="text-xs font-medium text-muted-foreground font-sans">
                       Recebidas
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-emerald-300"></div>
+                    <div className="w-3 h-3 rounded-full bg-primary/40"></div>
                     <span className="text-xs font-medium text-muted-foreground font-sans">
                       Enviadas
                     </span>
@@ -785,8 +786,8 @@ export default function Home() {
             </div>
           ) : recentChats.length === 0 ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
-              <div className="p-4 rounded-full bg-emerald-50 mb-4">
-                <MessageSquare className="w-10 h-10 text-emerald-500/40" />
+              <div className="p-4 rounded-full bg-primary/5 mb-4">
+                <MessageSquare className="w-10 h-10 text-primary/40" />
               </div>
               <h3 className="font-serif text-xl font-bold text-primary mb-2">
                 Sua caixa de entrada está vazia
@@ -833,7 +834,7 @@ export default function Home() {
                         {chat.type === 'group' && (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] px-1.5 py-0 h-4 bg-emerald-100 text-emerald-700 font-bold tracking-wider"
+                            className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary font-bold tracking-wider"
                           >
                             GRUPO
                           </Badge>
@@ -847,7 +848,7 @@ export default function Home() {
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground font-semibold">{time}</span>
                       {chat.unread_count > 0 ? (
-                        <div className="bg-emerald-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
+                        <div className="bg-primary text-primary-foreground text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
                           {chat.unread_count}
                         </div>
                       ) : (

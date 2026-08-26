@@ -37,27 +37,27 @@ const FEATURES = [
     icon: 'whatsapp',
     title: 'Inbox WhatsApp',
     desc: 'Conversas em tempo real com histórico e mídias',
-    color: 'text-emerald-400',
-    dot: 'bg-emerald-400',
-    glow: '0 0 16px rgba(52,211,153,0.6)',
+    color: 'text-blue-400',
+    dot: 'bg-blue-400',
+    glow: '0 0 16px rgba(96,165,250,0.6)',
     idleDelay: '0s',
   },
   {
     icon: Sparkles,
     title: 'Agentes de IA',
     desc: 'OpenAI, Claude, Gemini e Skip AI integrados',
-    color: 'text-violet-400',
-    dot: 'bg-violet-400',
-    glow: '0 0 16px rgba(167,139,250,0.6)',
+    color: 'text-sky-400',
+    dot: 'bg-sky-400',
+    glow: '0 0 16px rgba(56,189,248,0.6)',
     idleDelay: '0.4s',
   },
   {
     icon: Milestone,
-    title: 'CRM integrado',
-    desc: 'Pipeline Lead → Atendimento → Cliente',
-    color: 'text-sky-400',
-    dot: 'bg-sky-400',
-    glow: '0 0 16px rgba(56,189,248,0.6)',
+    title: 'CRM Comercial 360',
+    desc: 'Pipeline completo e visão unificada do cliente',
+    color: 'text-indigo-400',
+    dot: 'bg-indigo-400',
+    glow: '0 0 16px rgba(129,140,248,0.6)',
     idleDelay: '0.8s',
   },
   {
@@ -73,9 +73,9 @@ const FEATURES = [
     icon: UsersRound,
     title: 'Multi-usuário',
     desc: 'Equipe inteira no mesmo número',
-    color: 'text-teal-400',
-    dot: 'bg-teal-400',
-    glow: '0 0 16px rgba(45,212,191,0.6)',
+    color: 'text-cyan-400',
+    dot: 'bg-cyan-400',
+    glow: '0 0 16px rgba(34,211,238,0.6)',
     idleDelay: '0.6s',
   },
   {
@@ -161,7 +161,8 @@ export default function Index() {
         setStep(2)
       }
     } catch (err: any) {
-      const message = err instanceof z.ZodError ? err.errors[0].message : err.message
+      const message =
+        err instanceof z.ZodError ? err.issues[0]?.message || 'Erro de validação' : err.message
       toast({ title: 'Atenção', description: message, variant: 'destructive' })
     } finally {
       setIsLoading(false)
@@ -185,39 +186,41 @@ export default function Index() {
   }, [step, navigate])
 
   return (
-    <div className="min-h-screen flex bg-[#021007] overflow-hidden">
+    <div className="min-h-screen flex bg-[#020B17] overflow-hidden">
       <div
         ref={glowRef}
         className="fixed top-0 left-0 w-[500px] h-[500px] pointer-events-none z-0 will-change-transform"
         style={{
-          background: 'radial-gradient(circle, rgba(16,185,129,0.07) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
           transition: 'transform 0.12s ease-out',
         }}
       />
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/3 -left-32 w-[500px] h-[500px] bg-[#1a4a2b] rounded-full mix-blend-screen filter blur-[140px] opacity-30 animate-blob" />
-        <div className="absolute bottom-0 right-0 w-[350px] h-[350px] bg-[#10b981] rounded-full mix-blend-screen filter blur-[120px] opacity-8 animate-blob animation-delay-4000" />
+        <div className="absolute top-1/3 -left-32 w-[500px] h-[500px] bg-[#0A2647] rounded-full mix-blend-screen filter blur-[140px] opacity-40 animate-blob" />
+        <div className="absolute bottom-0 right-0 w-[350px] h-[350px] bg-[#1E3A8A] rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-blob animation-delay-4000" />
       </div>
 
       {/* LEFT */}
       <div className="relative z-10 hidden lg:flex flex-col justify-between w-[55%] px-14 xl:px-20 py-12">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-emerald-500/10 rounded-xl border border-emerald-400/20 flex items-center justify-center">
-            <WhatsAppIcon className="w-5 h-5 text-emerald-400" />
+          <div className="w-9 h-9 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
+            <WhatsAppIcon className="w-5 h-5 text-blue-400" />
           </div>
-          <span className="font-serif font-bold text-xl text-white tracking-tight">Conectado</span>
+          <span className="font-serif font-bold text-xl text-white tracking-tight">
+            CIAFAL CRM 360
+          </span>
         </div>
 
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-5">
             <h1 className="font-serif text-6xl xl:text-7xl font-bold text-white leading-[1.02] tracking-tight">
-              Plataforma completa de atendimento via{' '}
-              <span className="text-emerald-400">WhatsApp com IA</span>
+              Plataforma completa de CRM Comercial 360 e{' '}
+              <span className="text-blue-400">WhatsApp com IA</span>
             </h1>
             <p className="text-white/45 text-lg leading-relaxed max-w-lg">
-              Duplique este template e tenha em minutos um sistema completo de atendimento com IA,
-              CRM e gestão de equipe — pronto para usar.
+              Sistema corporativo CIAFAL de atendimento integrado, inteligência artificial, CRM e
+              gestão de equipe comercial.
             </p>
           </div>
 
@@ -272,17 +275,17 @@ export default function Index() {
         </div>
 
         <p className="text-white/18 text-xs tracking-wide">
-          Powered by Skip Cloud · PocketBase · Evolution API
+          CIAFAL CRM 360 · Skip Cloud · PocketBase
         </p>
       </div>
 
       {/* RIGHT */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full lg:w-[45%] px-6 lg:px-12 py-10">
         <div className="flex lg:hidden items-center gap-2 mb-6">
-          <div className="w-8 h-8 bg-emerald-500/10 rounded-xl border border-emerald-400/20 flex items-center justify-center">
-            <WhatsAppIcon className="w-4 h-4 text-emerald-400" />
+          <div className="w-8 h-8 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
+            <WhatsAppIcon className="w-4 h-4 text-blue-400" />
           </div>
-          <span className="font-serif font-bold text-lg text-white">Conectado</span>
+          <span className="font-serif font-bold text-lg text-white">CIAFAL CRM 360</span>
         </div>
 
         <div className="flex lg:hidden gap-2 flex-wrap justify-center mb-6">
@@ -312,9 +315,9 @@ export default function Index() {
                   className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300',
                     step > s
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-primary text-white'
                       : step === s
-                        ? 'bg-emerald-500 text-white ring-4 ring-emerald-500/20'
+                        ? 'bg-primary text-white ring-4 ring-primary/30'
                         : 'bg-white/8 text-white/25',
                   )}
                 >
@@ -324,7 +327,7 @@ export default function Index() {
                   <div
                     className={cn(
                       'flex-1 h-px transition-all duration-500',
-                      step > s ? 'bg-emerald-500' : 'bg-white/10',
+                      step > s ? 'bg-primary' : 'bg-white/10',
                     )}
                   />
                 )}
@@ -333,7 +336,7 @@ export default function Index() {
           </div>
         )}
 
-        <div className="w-full max-w-[360px] rounded-2xl border border-white/10 bg-[#0c1f12]/80 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
+        <div className="w-full max-w-[360px] rounded-2xl border border-white/10 bg-[#08182B]/85 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
           {step === 1 && (
             <div className="flex flex-col gap-6">
               <div>
@@ -341,7 +344,7 @@ export default function Index() {
                   {isLoginMode ? 'Bem-vindo de volta' : 'Criar sua conta'}
                 </h2>
                 <p className="text-white/40 text-sm mt-1">
-                  {isLoginMode ? 'Acesse sua plataforma' : 'Configure em 3 passos rápidos'}
+                  {isLoginMode ? 'Acesse sua plataforma CIAFAL' : 'Configure em 3 passos rápidos'}
                 </p>
               </div>
 
@@ -361,7 +364,7 @@ export default function Index() {
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="border-white/15 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/50 h-11 rounded-xl"
+                      className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
                     />
                   </div>
                 )}
@@ -375,11 +378,11 @@ export default function Index() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="joao@empresa.com"
+                    placeholder="joao@ciafal.com.br"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="border-white/15 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/50 h-11 rounded-xl"
+                    className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -396,13 +399,13 @@ export default function Index() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="border-white/15 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/50 h-11 rounded-xl"
+                    className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
                   />
                 </div>
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold mt-1 shadow-lg shadow-emerald-900/50 transition-all active:scale-[.98]"
+                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -419,7 +422,7 @@ export default function Index() {
                 <button
                   type="button"
                   onClick={() => setIsLoginMode(!isLoginMode)}
-                  className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
+                  className="text-blue-400 font-semibold hover:text-blue-300 transition-colors"
                 >
                   {isLoginMode ? 'Cadastre-se' : 'Fazer login'}
                 </button>
@@ -436,8 +439,8 @@ export default function Index() {
               <div className="w-52 h-52 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-black/50">
                 {isGenerating ? (
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-                    <p className="text-xs text-emerald-600 font-medium animate-pulse">Gerando...</p>
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="text-xs text-primary font-medium animate-pulse">Gerando...</p>
                   </div>
                 ) : qrCodeBase64 ? (
                   <img
@@ -471,8 +474,8 @@ export default function Index() {
           {step === 3 && (
             <div className="flex flex-col items-center gap-6">
               <div className="text-center">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-4">
-                  <RefreshCcw className="w-6 h-6 text-emerald-400 animate-spin" />
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center mx-auto mb-4">
+                  <RefreshCcw className="w-6 h-6 text-blue-400 animate-spin" />
                 </div>
                 <h2 className="font-serif text-2xl font-bold text-white">Sincronizando</h2>
                 <p className="text-white/40 text-sm mt-1">Puxando seu histórico de conversas</p>
@@ -480,11 +483,11 @@ export default function Index() {
               <div className="w-full flex flex-col gap-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-white/40 font-medium">Importando conversas...</span>
-                  <span className="text-emerald-400 font-bold tabular-nums">{syncProgress}%</span>
+                  <span className="text-blue-400 font-bold tabular-nums">{syncProgress}%</span>
                 </div>
                 <Progress
                   value={syncProgress}
-                  className="h-1.5 bg-white/8 [&>div]:bg-emerald-500 [&>div]:transition-all"
+                  className="h-1.5 bg-white/8 [&>div]:bg-primary [&>div]:transition-all"
                 />
               </div>
               <p className="text-center text-xs text-white/20 leading-relaxed">
@@ -507,7 +510,7 @@ export default function Index() {
 
         /* Inputs escuros com texto branco — override confiável via CSS */
         .dark-inputs input {
-          background-color: rgba(8, 24, 14, 0.7) !important;
+          background-color: rgba(6, 20, 36, 0.7) !important;
           color: rgba(255, 255, 255, 0.9) !important;
           border-color: rgba(255, 255, 255, 0.15) !important;
         }
@@ -519,7 +522,7 @@ export default function Index() {
         .dark-inputs input:-webkit-autofill:hover,
         .dark-inputs input:-webkit-autofill:focus {
           -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
-          -webkit-box-shadow: 0 0 0 1000px #08180e inset !important;
+          -webkit-box-shadow: 0 0 0 1000px #061424 inset !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>

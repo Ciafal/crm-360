@@ -315,9 +315,7 @@ export function ChatList({
                       <span
                         className={cn(
                           'text-xs whitespace-nowrap ml-2 shrink-0',
-                          unreadCount > 0
-                            ? 'text-emerald-600 font-semibold'
-                            : 'text-muted-foreground',
+                          unreadCount > 0 ? 'text-primary font-semibold' : 'text-muted-foreground',
                         )}
                       >
                         {formatChatListTimestamp(chat.lastMessage?.timestamp || lastMsg?.timestamp)}
@@ -370,7 +368,7 @@ export function ChatList({
                         </span>
                       </div>
                       {unreadCount > 0 && (
-                        <div className="bg-emerald-500 text-white text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shrink-0">
+                        <div className="bg-primary text-primary-foreground text-[10px] font-bold h-5 min-w-[20px] px-1.5 rounded-full flex items-center justify-center shrink-0 shadow-sm">
                           {unreadCount}
                         </div>
                       )}
