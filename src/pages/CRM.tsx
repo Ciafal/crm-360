@@ -92,6 +92,7 @@ export default function CRM() {
   const [cidadeFilter, setCidadeFilter] = useState('todos')
   const [abcHistoricoFilter, setAbcHistoricoFilter] = useState('todos')
   const [abcPotencialFilter, setAbcPotencialFilter] = useState('todos')
+  const [archetypeFilter, setArchetypeFilter] = useState('todos')
   const [diasContatoMax, setDiasContatoMax] = useState<number | ''>('')
 
   // Ordenação da Tabela
@@ -161,6 +162,8 @@ export default function CRM() {
       const matchCidade = cidadeFilter === 'todos' || c.cidade === cidadeFilter
       const matchAbcHist = abcHistoricoFilter === 'todos' || c.abcHistorico === abcHistoricoFilter
       const matchAbcPot = abcPotencialFilter === 'todos' || c.abcPotencial === abcPotencialFilter
+      const matchArchetype =
+        archetypeFilter === 'todos' || (c.arquetipoComercial || 'INDÚSTRIA') === archetypeFilter
       const matchDiasContato = diasContatoMax === '' || c.diasSemContato <= Number(diasContatoMax)
 
       return (
@@ -171,6 +174,7 @@ export default function CRM() {
         matchCidade &&
         matchAbcHist &&
         matchAbcPot &&
+        matchArchetype &&
         matchDiasContato
       )
     })
@@ -183,8 +187,20 @@ export default function CRM() {
     cidadeFilter,
     abcHistoricoFilter,
     abcPotencialFilter,
+    archetypeFilter,
     diasContatoMax,
   ])
+
+  // Total de Toneladas para cálculo de Representatividade %
+  const totalCarteiraTons = useMemo(() => {
+    return filteredClientes.reduce((acc, c) => acc + c.toneladas12m, 0) || 1
+  }, [filteredClientes])
+
+  // Ranking ordenado de toneladas
+  const rankedTonsMap = useMemo(() => {
+    const list = [...filteredClientes].sort((a, b) => b.toneladas12m - a.toneladas12m)
+    return new Map(list.map((c, i) => [c.id, i + 1]))
+  }, [filteredClientes])
 
   // Ordenação da Gestão de Carteira
   const sortedClientes = useMemo(() => {
@@ -580,6 +596,22 @@ export default function CRM() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Arquétipo Comercial */}
+              <div>
+                <Select value={archetypeFilter} onValueChange={setArchetypeFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Arquétipo Comercial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos Arquétipos</SelectItem>
+                    <SelectItem value="INDÚSTRIA">Indústria</SelectItem>
+                    <SelectItem value="REVENDA">Revenda</SelectItem>
+                    <SelectItem value="SERRALHERIA">Serralheria</SelectItem>
+                    <SelectItem value="CONSUMIDOR_FINAL">Consumidor Final</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </Card>
 
@@ -626,13 +658,13 @@ export default function CRM() {
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
                         </div>
                       </th>
+                      <th className="py-3 px-2 font-bold text-center">Arquétipo</th>
                       <th className="py-3 px-2 font-bold text-center">ABC Hist.</th>
                       <th className="py-3 px-2 font-bold text-center">ABC Pot.</th>
                       <th className="py-3 px-2 font-bold">Cidade/UF</th>
-                      <th className="py-3 px-2 font-bold">Segmento</th>
                       <th className="py-3 px-2 font-bold text-center font-mono">Ton 12m</th>
-                      <th className="py-3 px-2 font-bold text-center font-mono">Ton YTD</th>
-                      <th className="py-3 px-2 font-bold text-center font-mono">Média t/m</th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">% Carteira (t)</th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">Ranking (t)</th>
                       {commercialMetric === 'REVENUE' && (
                         <th
                           className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
@@ -690,6 +722,16 @@ export default function CRM() {
                             </div>
                           </td>
 
+                          {/* Arquétipo */}
+                          <td className="py-3 px-2 text-center">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] bg-slate-50 font-semibold text-slate-700"
+                            >
+                              {c.arquetipoComercial || 'INDÚSTRIA'}
+                            </Badge>
+                          </td>
+
                           {/* ABC Histórico */}
                           <td className="py-3 px-2 text-center">
                             <ABCBadge category={c.abcHistorico} type="carteira" />
@@ -705,26 +747,19 @@ export default function CRM() {
                             {c.cidade}/{c.uf}
                           </td>
 
-                          {/* Segmento */}
-                          <td className="py-3 px-2">
-                            <span className="text-[11px] font-medium text-slate-800 block">
-                              {c.segmento}
-                            </span>
-                          </td>
-
                           {/* Toneladas 12m */}
                           <td className="py-3 px-2 text-center font-mono font-bold text-primary">
                             {c.toneladas12m} t
                           </td>
 
-                          {/* Toneladas YTD */}
-                          <td className="py-3 px-2 text-center font-mono text-slate-700">
-                            {c.toneladasYtd || (c.toneladas12m * 0.75).toFixed(1)} t
+                          {/* % Carteira Toneladas */}
+                          <td className="py-3 px-2 text-center font-mono font-bold text-primary">
+                            {((c.toneladas12m / totalCarteiraTons) * 100).toFixed(1)}%
                           </td>
 
-                          {/* Média Mensal Tons */}
-                          <td className="py-3 px-2 text-center font-mono text-slate-600">
-                            {c.mediaMensalTons || (c.toneladas12m / 12).toFixed(1)} t
+                          {/* Ranking Toneladas */}
+                          <td className="py-3 px-2 text-center font-mono text-xs text-muted-foreground">
+                            {rankedTonsMap.get(c.id) || 1}º
                           </td>
 
                           {/* Faturamento 12m (quando métrica for REVENUE) */}

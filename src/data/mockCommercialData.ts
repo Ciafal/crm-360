@@ -65,6 +65,9 @@ export interface ClienteCarteira {
   abcHistorico: ABCCategory // Baseado em Toneladas 12m (Pareto 70/90)
   abcPotencial: ABCCategory // Considera Purchase Moment + Pipeline + Potencial t
   abcReativacao?: ABCCategory // Para Inativos (A: Prioritária, B: Potencial, C: Monitorar)
+  arquetipoComercial?: 'INDÚSTRIA' | 'REVENDA' | 'SERRALHERIA' | 'CONSUMIDOR_FINAL'
+  cnae?: string
+  purchaseMomentScore?: number // 0-100
 }
 
 export interface MembroEquipe {
@@ -465,6 +468,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 11.3,
     pipelineTons: 16.5,
     potencialTons12m: 155.0,
+    arquetipoComercial: 'INDÚSTRIA',
+    cnae: '25.11-0-00 - Fabricação de estruturas metálicas',
+    purchaseMomentScore: 94,
     abcHistorico: 'A',
     abcPotencial: 'A',
     recorrencia: 'Mensal',
@@ -514,6 +520,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 11.9,
     pipelineTons: 22.0,
     potencialTons12m: 165.0,
+    arquetipoComercial: 'INDÚSTRIA',
+    cnae: '25.13-6-00 - Fabricação de obras de caldeiraria pesada',
+    purchaseMomentScore: 91,
     abcHistorico: 'A',
     abcPotencial: 'A',
     recorrencia: 'Mensal',
@@ -563,6 +572,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 5.0,
     pipelineTons: 11.2,
     potencialTons12m: 80.0,
+    arquetipoComercial: 'REVENDA',
+    cnae: '46.79-6-99 - Comércio atacadista de materiais de construção em geral',
+    purchaseMomentScore: 82,
     abcHistorico: 'B',
     abcPotencial: 'A',
     recorrencia: 'Bimestral',
@@ -609,6 +621,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 13.75,
     pipelineTons: 21.0,
     potencialTons12m: 190.0,
+    arquetipoComercial: 'INDÚSTRIA',
+    cnae: '28.33-0-00 - Fabricação de máquinas e equipamentos para a agricultura',
+    purchaseMomentScore: 79,
     abcHistorico: 'A',
     abcPotencial: 'A',
     recorrencia: 'Trimestral',
@@ -793,6 +808,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 2.9,
     pipelineTons: 5.8,
     potencialTons12m: 45.0,
+    arquetipoComercial: 'SERRALHERIA',
+    cnae: '25.42-0-00 - Fabricação de artigos de serralheria',
+    purchaseMomentScore: 48,
     abcHistorico: 'C',
     abcPotencial: 'B',
     abcReativacao: 'A', // Reativação prioritária
@@ -1071,6 +1089,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 2.08,
     pipelineTons: 4.2,
     potencialTons12m: 32.0,
+    arquetipoComercial: 'REVENDA',
+    cnae: '47.44-0-01 - Comércio varejista de ferragens e ferramentas',
+    purchaseMomentScore: 32,
     abcHistorico: 'C',
     abcPotencial: 'C',
     abcReativacao: 'B',
@@ -1211,6 +1232,9 @@ export const mockClientes: ClienteCarteira[] = [
     mediaMensalTons: 1.33,
     pipelineTons: 4.5,
     potencialTons12m: 24.0,
+    arquetipoComercial: 'SERRALHERIA',
+    cnae: '25.42-0-00 - Fabricação de artigos de serralheria',
+    purchaseMomentScore: 52,
     abcHistorico: 'C',
     abcPotencial: 'C',
     abcReativacao: 'B',

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   mockClientes,
@@ -11,7 +11,20 @@ import {
   ProdutoCliente,
   NFCliente,
 } from '@/data/mockCommercialData'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  initialCommercialPlaybooks,
+  mockComplaints,
+  initialCPQQuotes,
+} from '@/data/mockPlaybooksAndWorkflows'
+import { sapCreditProvider } from '@/providers/SAPCreditProvider'
+import { tmsProvider } from '@/providers/TMSProvider'
+import type {
+  SAPCreditData,
+  TMSDeliveryLoad,
+  CustomerComplaint,
+  CommercialPlaybook,
+} from '@/types/models'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -41,18 +54,55 @@ import {
   Flame,
   ShieldCheck,
   ShieldAlert,
+  BarChart3,
+  ExternalLink,
+  BookOpen,
+  HelpCircle,
+  Check,
+  AlertCircle,
+  FileCheck,
 } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  Legend,
+  CartesianGrid,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts'
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
-import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { ABCBadge } from '@/components/shared/ABCBadge'
+import { CommercialMetricToggle } from '@/components/shared/CommercialMetricToggle'
+import { useAppStore } from '@/stores/useAppStore'
+import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+
+const COLORS = ['#003A70', '#00A3E0', '#10B981', '#F59E0B', '#6366F1', '#EC4899']
 
 export default function Cliente360() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const { commercialMetric } = useAppStore()
 
-  const [activeTab, setActiveTab] = useState('timeline')
+  const [activeTab, setActiveTab] = useState('indicadores')
   const [wmsConfirmed, setWmsConfirmed] = useState<Record<string, boolean>>({})
+
+  // Estado SAP Crédito F.35
+  const [creditData, setCreditData] = useState<SAPCreditData | null>(null)
+  const [loadingCredit, setLoadingCredit] = useState(false)
+
+  // Estado TMS Entregas
+  const [tmsLoads, setTmsLoads] = useState<TMSDeliveryLoad[]>([])
+  const [loadingTMS, setLoadingTMS] = useState(false)
 
   // Localizar cliente nos mocks
   const cliente = useMemo(() => {
@@ -60,6 +110,109 @@ export default function Cliente360() {
       mockClientes.find((c) => c.id === id || c.sapCode === id) || mockClientes[0] // fallback seguro
     )
   }, [id])
+
+  // Identificar se o usuário tem permissão para visualizar faturamento/margem
+  const userRole = (user?.role || '').toLowerCase()
+  const canViewFinancials =
+    userRole === 'gerente_comercial' ||
+    userRole === 'diretoria' ||
+    userRole === 'administrador' ||
+    userRole === 'supervisor' ||
+    commercialMetric === 'REVENUE'
+
+  // Cálculos de Representatividade na Carteira do Vendedor
+  const {
+    sellerTotalTons,
+    sellerTotalRevenue,
+    sellerTotalPotential,
+    shareTonsPercent,
+    shareRevenuePercent,
+    sharePotentialPercent,
+    rankTons,
+    totalSellerClients,
+  } = useMemo(() => {
+    const sellerClients = mockClientes.filter((c) => c.vendedorId === cliente.vendedorId)
+    const totalT = sellerClients.reduce((acc, c) => acc + c.toneladas12m, 0) || 1
+    const totalR = sellerClients.reduce((acc, c) => acc + c.faturamento12m, 0) || 1
+    const totalPot =
+      sellerClients.reduce((acc, c) => acc + (c.potencialTons12m || c.toneladas12m * 1.2), 0) || 1
+
+    const sortedByTons = [...sellerClients].sort((a, b) => b.toneladas12m - a.toneladas12m)
+    const rank = sortedByTons.findIndex((c) => c.id === cliente.id) + 1
+
+    const shareT = (cliente.toneladas12m / totalT) * 100
+    const shareR = (cliente.faturamento12m / totalR) * 100
+    const clientPot = cliente.potencialTons12m || cliente.toneladas12m * 1.2
+    const shareP = (clientPot / totalPot) * 100
+
+    return {
+      sellerTotalTons: totalT,
+      sellerTotalRevenue: totalR,
+      sellerTotalPotential: totalPot,
+      shareTonsPercent: shareT.toFixed(1),
+      shareRevenuePercent: shareR.toFixed(1),
+      sharePotentialPercent: shareP.toFixed(1),
+      rankTons: rank > 0 ? rank : 1,
+      totalSellerClients: sellerClients.length,
+    }
+  }, [cliente])
+
+  // Buscar Playbook Comercial do Arquétipo
+  const archetype = cliente.arquetipoComercial || 'INDÚSTRIA'
+  const playbook = useMemo(() => {
+    return (
+      initialCommercialPlaybooks.find((p) => p.customer_archetype === archetype) ||
+      initialCommercialPlaybooks[0]
+    )
+  }, [archetype])
+
+  // Buscar Reclamações de Qualidade
+  const complaints = useMemo(() => {
+    return mockComplaints[cliente.id] || mockComplaints['cli-100001'] || []
+  }, [cliente.id])
+
+  const openComplaintsCount = complaints.filter(
+    (c) => c.status === 'ABERTA' || c.status === 'EM_ANALISE' || c.status === 'PLANO_DE_ACAO',
+  ).length
+  const recurrentComplaintsCount = complaints.filter((c) => c.isRecurrent).length
+
+  // Carregar dados de crédito SAP ECC (F.35)
+  const fetchCredit = async (forceRefresh = false) => {
+    setLoadingCredit(true)
+    try {
+      const data = await sapCreditProvider.getCreditPosition(
+        cliente.id,
+        cliente.sapCode,
+        forceRefresh,
+      )
+      setCreditData(data)
+      if (forceRefresh) {
+        toast.success('Posição de crédito SAP ECC F.35 atualizada em tempo real!')
+      }
+    } catch {
+      toast.error('Não foi possível consultar a posição de crédito SAP.')
+    } finally {
+      setLoadingCredit(false)
+    }
+  }
+
+  // Carregar cargas do TMS
+  const fetchTMSLoads = async () => {
+    setLoadingTMS(true)
+    try {
+      const loads = await tmsProvider.getCustomerLoads(cliente.id)
+      setTmsLoads(loads)
+    } catch {
+      toast.error('Erro ao carregar dados do TMS.')
+    } finally {
+      setLoadingTMS(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCredit(false)
+    fetchTMSLoads()
+  }, [cliente.id])
 
   // Dados das abas com fallback seguro
   const timeline = useMemo(() => {
@@ -78,7 +231,51 @@ export default function Cliente360() {
     return mockFunilOportunidades.filter((op) => op.clienteId === cliente.id)
   }, [cliente.id])
 
-  const formatBRL = (val: number) => {
+  // Gráficos Recharts: Histórico Mensal 12 Meses (Toneladas & Faturamento)
+  const monthlyData24m = useMemo(() => {
+    const months = [
+      'Out/23',
+      'Nov/23',
+      'Dez/23',
+      'Jan/24',
+      'Fev/24',
+      'Mar/24',
+      'Abr/24',
+      'Mai/24',
+      'Jun/24',
+      'Jul/24',
+      'Ago/24',
+      'Set/24',
+    ]
+    const baseTon = cliente.toneladas12m / 12
+    const baseRev = cliente.faturamento12m / 12
+
+    return months.map((m, idx) => {
+      const factor = 0.8 + ((idx * 7) % 5) * 0.1
+      const tons = Math.round(baseTon * factor * 10) / 10
+      const rev = Math.round(baseRev * factor)
+      const metaTon = Math.round(baseTon * 1.1 * 10) / 10
+
+      return {
+        month: m,
+        toneladas: tons,
+        metaToneladas: metaTon,
+        faturamento: rev,
+      }
+    })
+  }, [cliente])
+
+  // Gráficos Mix de Famílias
+  const familyMixData = useMemo(() => {
+    const map: Record<string, number> = {}
+    produtos.forEach((p) => {
+      map[p.familia] = (map[p.familia] || 0) + p.volume12mTon
+    })
+    return Object.entries(map).map(([name, value]) => ({ name, value }))
+  }, [produtos])
+
+  const formatBRL = (val?: number) => {
+    if (val === undefined || val === null) return 'R$ 0'
     return val.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -114,39 +311,106 @@ export default function Cliente360() {
     }
   }
 
+  // Estatísticas de Cargas TMS
+  const loadsInTransit = tmsLoads.filter(
+    (l) => l.status === 'LOAD_IN_TRANSIT' || l.status === 'LOAD_DISPATCHED',
+  )
+  const loadsInDispatch = tmsLoads.filter(
+    (l) =>
+      l.status === 'IN_DISPATCH' || l.status === 'ORDER_PREPARATION' || l.status === 'LOAD_FORMED',
+  )
+  const loadsWithException = tmsLoads.filter(
+    (l) => l.hasLogisticsException || l.status === 'LOGISTICS_EXCEPTION',
+  )
+  const tonsInTransit = loadsInTransit.reduce((acc, l) => acc + l.tons, 0)
+  const tonsInDispatch = loadsInDispatch.reduce((acc, l) => acc + l.tons, 0)
+
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
       {/* NAVEGAÇÃO DE VOLTA */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate('/crm')}
-          className="gap-1.5 text-xs text-muted-foreground hover:text-primary pl-0"
+          className="gap-1.5 text-xs text-muted-foreground hover:text-primary pl-0 w-fit"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar para Gestão de Carteira
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <CommercialMetricToggle />
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.info('Atualizando ficha cadastral via SAP RFC...')}
+            onClick={() => fetchCredit(true)}
+            disabled={loadingCredit}
             className="h-8 gap-1.5 text-xs text-muted-foreground"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Sincronizar SAP
+            <RefreshCw className={cn('w-3.5 h-3.5', loadingCredit && 'animate-spin')} /> Atualizar
+            Crédito SAP (F.35)
           </Button>
           <Button
             size="sm"
-            onClick={() => toast.info('Nova cotação gerada no SAP para ' + cliente.razaoSocial)}
+            onClick={() => navigate(`/crm?tab=funil&novo=true&cliente=${cliente.id}`)}
             className="h-8 gap-1.5 text-xs bg-primary text-white"
           >
-            <Plus className="w-3.5 h-3.5" /> Criar Cotação
+            <Plus className="w-3.5 h-3.5" /> Criar Cotação CPQ
           </Button>
         </div>
       </div>
 
-      {/* CABEÇALHO DO CLIENTE 360º */}
+      {/* ALERTAS OPERACIONAIS EM TOPO (QUALIDADE & LOGÍSTICA) */}
+      {(openComplaintsCount > 0 || loadsWithException.length > 0) && (
+        <div className="space-y-2">
+          {loadsWithException.length > 0 && (
+            <div className="bg-amber-500/10 border border-amber-400 text-amber-900 px-4 py-3 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Alerta Logístico TMS:</strong> Carga do cliente{' '}
+                  <strong className="text-amber-950">{cliente.nomeFantasia}</strong> está com
+                  ocorrência em trânsito:{' '}
+                  {loadsWithException[0].exceptionReason ||
+                    'Retenção temporária para conferência fiscal.'}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab('tms')}
+                className="h-7 text-xs bg-white text-amber-800 border-amber-300 shrink-0"
+              >
+                Ver no TMS
+              </Button>
+            </div>
+          )}
+
+          {openComplaintsCount > 0 && (
+            <div className="bg-rose-500/10 border border-rose-300 text-rose-900 px-4 py-3 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>
+                  <strong>Atenção Comercial:</strong> Existem{' '}
+                  <strong>{openComplaintsCount} reclamações de qualidade abertas</strong> na Gestão
+                  de Performance para este cliente. Alinhe a resolução antes de realizar nova
+                  abordagem.
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveTab('qualidade')}
+                className="h-7 text-xs bg-white text-rose-800 border-rose-300 shrink-0"
+              >
+                Ver Reclamações
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CABEÇALHO DO CLIENTE 360º COM REPRESENTATIVIDADE */}
       <Card className="bg-white/95 backdrop-blur-md border-border/40 shadow-sm rounded-3xl p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Informações Principais */}
@@ -162,6 +426,9 @@ export default function Cliente360() {
                 <h1 className="font-serif text-2xl font-bold text-primary tracking-tight">
                   {cliente.razaoSocial}
                 </h1>
+                <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px] font-bold">
+                  {archetype}
+                </Badge>
                 <Badge
                   className={cn(
                     'text-[10px] font-bold border-none',
@@ -178,14 +445,14 @@ export default function Cliente360() {
                   variant="outline"
                   className={cn(
                     'text-[10px] font-bold',
-                    cliente.statusCredito === 'Regular'
+                    creditData?.creditStatus === 'REGULAR'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                      : cliente.statusCredito === 'Restrito'
+                      : creditData?.creditStatus === 'RESTRITO'
                         ? 'bg-amber-50 text-amber-700 border-amber-300'
                         : 'bg-rose-50 text-rose-700 border-rose-300',
                   )}
                 >
-                  Crédito: {cliente.statusCredito}
+                  Crédito SAP: {creditData?.creditStatus || cliente.statusCredito}
                 </Badge>
               </div>
 
@@ -198,9 +465,11 @@ export default function Cliente360() {
                   <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
                   {cliente.cidade} - {cliente.uf}
                 </span>
-                <span>
-                  Segmento: <strong>{cliente.segmento}</strong> ({cliente.subsegmento})
-                </span>
+                {cliente.cnae && (
+                  <span className="text-[11px] text-slate-600">
+                    CNAE: <strong>{cliente.cnae}</strong>
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 text-xs text-slate-600 mt-1">
@@ -214,30 +483,36 @@ export default function Cliente360() {
             </div>
           </div>
 
-          {/* Tag de Segmento RFM & Score */}
+          {/* Destaque de Representatividade na Carteira */}
           <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-border/40 shrink-0">
             <div className="text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                Classificação RFM
+                Representatividade Carteira
               </span>
-              <div className="mt-1">
-                <RFMSegmentBadge segment={cliente.rfmSegmento} />
-              </div>
+              <span className="font-serif text-xl font-bold text-primary block mt-0.5">
+                {shareTonsPercent}% das Toneladas
+              </span>
+              <span className="text-[10px] text-muted-foreground block">
+                {rankTons}º maior cliente de {totalSellerClients} ({sharePotentialPercent}% do
+                potencial)
+              </span>
             </div>
             <div className="h-9 w-px bg-border/60 mx-1" />
             <div className="text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                Score
+                ABC Hist. / Pot.
               </span>
-              <span className="font-serif text-2xl font-bold text-primary block mt-0.5">
-                {cliente.scoreComercial}
-              </span>
+              <div className="flex items-center gap-1 mt-1 justify-center">
+                <ABCBadge category={cliente.abcHistorico} type="carteira" />
+                <span className="text-xs text-muted-foreground">/</span>
+                <ABCBadge category={cliente.abcPotencial} type="potencial" />
+              </div>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* 8 CARDS DE RESUMO OBRIGATÓRIOS (LINHA SUPERIOR) */}
+      {/* 8 CARDS DE RESUMO (LINHA SUPERIOR) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {/* 1. Faturamento 12m */}
         <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
@@ -259,6 +534,9 @@ export default function Cliente360() {
           <div className="mt-1.5">
             <span className="font-serif text-sm font-bold text-primary block">
               {cliente.toneladas12m} ton
+            </span>
+            <span className="text-[9px] text-muted-foreground">
+              Média: {cliente.mediaMensalTons || (cliente.toneladas12m / 12).toFixed(1)} t/m
             </span>
           </div>
         </Card>
@@ -305,7 +583,7 @@ export default function Cliente360() {
           </div>
         </Card>
 
-        {/* 6. Próxima Recompra Estimada */}
+        {/* 6. Próxima Recompra */}
         <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             Próx. Recompra
@@ -320,17 +598,17 @@ export default function Cliente360() {
           </div>
         </Card>
 
-        {/* 7. P(vivo) & Potencial */}
+        {/* 7. P(vivo) & Purchase Moment */}
         <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            P(vivo) / Potencial
+            P(vivo) / Score
           </span>
           <div className="mt-1.5">
             <span className="font-mono text-xs font-bold text-emerald-600 block">
               {cliente.pVivo}% ativo
             </span>
             <span className="text-[10px] text-muted-foreground block">
-              {formatBRL(cliente.potencial12m)}
+              Score: {cliente.purchaseMomentScore || cliente.scoreComercial}/100
             </span>
           </div>
         </Card>
@@ -345,110 +623,729 @@ export default function Cliente360() {
               {formatBRL(cliente.pipelineValor)}
             </span>
             <span className="text-[10px] text-slate-500 block">
-              Contato: {cliente.ultimoContatoData}
+              {cliente.pipelineTons || (cliente.pipelineValor / 6000).toFixed(1)}t em aberto
             </span>
           </div>
         </Card>
       </div>
 
-      {/* 6 ABAS DETALHADAS DO CLIENTE 360º */}
+      {/* ABAS DETALHADAS DO CLIENTE 360º */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
         <div className="border-b border-border/40 pb-px">
           <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap">
             <TabsTrigger
-              value="timeline"
+              value="indicadores"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <Clock className="w-3.5 h-3.5" /> 1. Timeline & Visitas ({timeline.length})
+              <BarChart3 className="w-3.5 h-3.5" /> 1. Indicadores do Cliente
             </TabsTrigger>
             <TabsTrigger
-              value="produtos"
+              value="playbook"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <Package className="w-3.5 h-3.5" /> 2. Produtos & Abandonados ({produtos.length})
+              <BookOpen className="w-3.5 h-3.5" /> 2. Playbook Comercial ({archetype})
+            </TabsTrigger>
+            <TabsTrigger
+              value="tms"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <Truck className="w-3.5 h-3.5" /> 3. Entregas & TMS ({tmsLoads.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="qualidade"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" /> 4. Qualidade & Reclamações (
+              {complaints.length})
             </TabsTrigger>
             <TabsTrigger
               value="financeiro"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <CreditCard className="w-3.5 h-3.5" /> 3. Financeiro & Crédito
+              <CreditCard className="w-3.5 h-3.5" /> 5. Crédito SAP (F.35)
             </TabsTrigger>
             <TabsTrigger
-              value="nfs"
+              value="produtos"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <FileText className="w-3.5 h-3.5" /> 4. Últimas NFs ({nfs.length})
+              <Package className="w-3.5 h-3.5" /> 6. Produtos & Abandonados ({produtos.length})
             </TabsTrigger>
             <TabsTrigger
-              value="estoque"
+              value="timeline"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <Warehouse className="w-3.5 h-3.5" /> 5. Estoque & WMS
+              <Clock className="w-3.5 h-3.5" /> 7. Timeline & Visitas ({timeline.length})
             </TabsTrigger>
             <TabsTrigger
               value="oportunidades"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <TrendingUp className="w-3.5 h-3.5" /> 6. Oportunidades ({oportunidades.length})
+              <TrendingUp className="w-3.5 h-3.5" /> 8. Oportunidades ({oportunidades.length})
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* ABA 1: TIMELINE */}
-        <TabsContent value="timeline" className="space-y-4 m-0">
-          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
+        {/* ABA 1: PAINEL DE INDICADORES DO CLIENTE (5 CATEGORIAS + GRÁFICOS) */}
+        <TabsContent value="indicadores" className="space-y-6 m-0">
+          {/* 5 CATEGORIAS DE INDICADORES */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* 1. Indicadores Comerciais */}
+            <Card className="bg-white/95 border-border/50 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-primary border-b pb-2">
+                <ShoppingBag className="w-4 h-4" />
+                <h4 className="font-serif font-bold text-xs uppercase tracking-wider">
+                  Comerciais
+                </h4>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ton 12m:</span>
+                  <strong className="text-primary font-mono">{cliente.toneladas12m} t</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ton YTD:</span>
+                  <span className="font-mono">
+                    {cliente.toneladasYtd || (cliente.toneladas12m * 0.75).toFixed(1)} t
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Média mensal:</span>
+                  <span className="font-mono">
+                    {cliente.mediaMensalTons || (cliente.toneladas12m / 12).toFixed(1)} t
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fat. 12m:</span>
+                  <strong className="text-slate-900 font-serif">
+                    {formatBRL(cliente.faturamento12m)}
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ticket Médio:</span>
+                  <span className="font-serif">{formatBRL(cliente.ticketMedio)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">P(vivo):</span>
+                  <strong className="text-emerald-600 font-mono">{cliente.pVivo}%</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Purchase Moment:</span>
+                  <Badge className="bg-primary/10 text-primary text-[10px] font-bold border-none">
+                    {cliente.purchaseMomentScore || 90}/100
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Potencial 12m:</span>
+                  <span className="font-serif">{formatBRL(cliente.potencial12m)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Pipeline Aberto:</span>
+                  <span className="text-emerald-600 font-bold">
+                    {formatBRL(cliente.pipelineValor)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            {/* 2. Indicadores de Relacionamento */}
+            <Card className="bg-white/95 border-border/50 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-indigo-700 border-b pb-2">
+                <Users className="w-4 h-4" />
+                <h4 className="font-serif font-bold text-xs uppercase tracking-wider">
+                  Relacionamento
+                </h4>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Último contato:</span>
+                  <strong>
+                    {cliente.ultimoContatoData} ({cliente.ultimoContatoCanal})
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dias sem contato:</span>
+                  <Badge
+                    className={cn(
+                      'text-[10px] border-none',
+                      cliente.diasSemContato <= 7
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-amber-100 text-amber-800',
+                    )}
+                  >
+                    {cliente.diasSemContato}d
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Última visita:</span>
+                  <span>{cliente.ultimaVisitaData || 'Há 12 dias'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dias sem visita:</span>
+                  <span>{cliente.diasSemVisita || 12}d</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Contatos 30/60/90d:</span>
+                  <span className="font-mono">8 / 14 / 22</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">WhatsApp enviados:</span>
+                  <span className="font-mono">18 mensagens</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ligações VoIP:</span>
+                  <span className="font-mono">6 chamadas</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tempo resp. cliente:</span>
+                  <span className="font-mono">~1.5 horas</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tempo resp. vendedor:</span>
+                  <span className="font-mono">~25 min</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* 3. Indicadores Financeiros */}
+            <Card className="bg-white/95 border-border/50 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-emerald-700 border-b pb-2">
+                <CreditCard className="w-4 h-4" />
+                <h4 className="font-serif font-bold text-xs uppercase tracking-wider">
+                  Financeiros
+                </h4>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Limite Crédito:</span>
+                  <strong className="font-serif">
+                    {formatBRL(creditData?.creditLimit || cliente.limiteCredito)}
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Crédito Utilizado:</span>
+                  <span className="font-serif text-slate-800">
+                    {formatBRL(
+                      creditData?.creditExposure ||
+                        cliente.limiteCredito - cliente.creditoDisponivel,
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Crédito Disponível:</span>
+                  <strong className="font-serif text-emerald-700">
+                    {formatBRL(creditData?.creditAvailable || cliente.creditoDisponivel)}
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">% Utilizado:</span>
+                  <span className="font-mono">{creditData?.utilizationPercent || 45}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">A Vencer:</span>
+                  <span className="font-serif">
+                    {formatBRL(creditData?.receivablesOpenNotDue || 120000)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Vencido:</span>
+                  <span
+                    className={cn(
+                      'font-serif font-bold',
+                      (creditData?.receivablesOverdue || 0) > 0
+                        ? 'text-rose-600'
+                        : 'text-slate-800',
+                    )}
+                  >
+                    {formatBRL(creditData?.receivablesOverdue || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Maior Atraso:</span>
+                  <span>{creditData?.maxDelayDays || 0} dias</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Condição Pgto:</span>
+                  <span className="text-[11px] font-semibold">28 / 35 DDL</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* 4. Indicadores Logísticos */}
+            <Card className="bg-white/95 border-border/50 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-sky-700 border-b pb-2">
+                <Truck className="w-4 h-4" />
+                <h4 className="font-serif font-bold text-xs uppercase tracking-wider">
+                  Logísticos (TMS)
+                </h4>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cargas em Trânsito:</span>
+                  <strong className="text-primary font-mono">
+                    {loadsInTransit.length} ({tonsInTransit.toFixed(1)} t)
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Em Expedição:</span>
+                  <span className="font-mono">
+                    {loadsInDispatch.length} ({tonsInDispatch.toFixed(1)} t)
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Entregues no mês:</span>
+                  <span className="font-mono">8 cargas (112.5 t)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Prazo médio entrega:</span>
+                  <span className="font-mono">1.8 dias</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Atrasos de entrega:</span>
+                  <span className="font-mono">0 atrasos</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">OTIF Médio:</span>
+                  <strong className="text-emerald-700 font-mono">98.2%</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ocorrências:</span>
+                  <Badge
+                    className={cn(
+                      'text-[10px] border-none',
+                      loadsWithException.length > 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-emerald-100 text-emerald-800',
+                    )}
+                  >
+                    {loadsWithException.length}
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+
+            {/* 5. Indicadores de Qualidade */}
+            <Card className="bg-white/95 border-border/50 rounded-2xl p-4 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-amber-700 border-b pb-2">
+                <ShieldCheck className="w-4 h-4" />
+                <h4 className="font-serif font-bold text-xs uppercase tracking-wider">Qualidade</h4>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reclamações abertas:</span>
+                  <strong
+                    className={cn(openComplaintsCount > 0 ? 'text-rose-600' : 'text-emerald-700')}
+                  >
+                    {openComplaintsCount}
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Concluídas:</span>
+                  <span className="font-mono">
+                    {complaints.filter((c) => c.status === 'CONCLUIDA').length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Reincidentes:</span>
+                  <span className="font-mono text-amber-700 font-bold">
+                    {recurrentComplaintsCount}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Última reclamação:</span>
+                  <span>{complaints[0]?.openedAt || '15/06/2024'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Dias s/ reclamação:</span>
+                  <span className="font-mono">6 dias</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Índice Reclamação:</span>
+                  <strong className="text-emerald-700 font-mono">0.4% das NFs</strong>
+                </div>
+                <div className="pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setActiveTab('qualidade')}
+                    className="w-full h-7 text-[10px] text-primary"
+                  >
+                    Abrir Qualidade & Gestão Performance
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* GRÁFICOS RECHARTS: EVOLUÇÃO 12 MESES & MIX DE PRODUTOS */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2 bg-white/95 border-border/50 rounded-3xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-primary">
+                    Evolução Histórica de Compras (
+                    {commercialMetric === 'TONS' ? 'Toneladas Mensais' : 'Faturamento Mensal'})
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Comparativo dos últimos 12 meses vs Meta/Expectativa programada
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-xs bg-slate-50">
+                  {commercialMetric === 'TONS' ? 'Foco: Toneladas' : 'Foco: Faturamento R$'}
+                </Badge>
+              </div>
+
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {commercialMetric === 'TONS' ? (
+                    <BarChart data={monthlyData24m}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} unit=" t" />
+                      <RechartsTooltip formatter={(value: any) => [`${value} t`, 'Volume']} />
+                      <Legend />
+                      <Bar
+                        dataKey="toneladas"
+                        name="Toneladas Faturadas"
+                        fill="#003A70"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="metaToneladas"
+                        name="Meta Mensal"
+                        fill="#94A3B8"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  ) : (
+                    <LineChart data={monthlyData24m}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        tick={{ fontSize: 11 }}
+                        tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
+                      />
+                      <RechartsTooltip
+                        formatter={(value: any) => [formatBRL(value), 'Faturamento']}
+                      />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="faturamento"
+                        name="Faturamento Realizado"
+                        stroke="#003A70"
+                        strokeWidth={3}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card className="bg-white/95 border-border/50 rounded-3xl p-6 flex flex-col justify-between">
               <div>
-                <h3 className="font-serif text-lg font-bold text-primary">
-                  Linha do Tempo de Interações & Movimentações
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Feed unificado com WhatsApp, E-mails Microsoft 365, Visitas, Cotações e Pedidos
-                  SAP.
+                <h3 className="font-serif text-lg font-bold text-primary mb-1">Mix de Famílias</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Participação por volume (t) no cliente
+                </p>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={familyMixData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={70}
+                        label
+                      >
+                        {familyMixData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip formatter={(val: any) => [`${val} t`, 'Volume']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 pt-3 border-t text-xs">
+                {familyMixData.map((f, i) => (
+                  <div key={f.name} className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                      />
+                      {f.name}
+                    </span>
+                    <strong className="font-mono text-primary">{f.value} t</strong>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ABA 2: PLAYBOOK COMERCIAL POR ARQUÉTIPO */}
+        <TabsContent value="playbook" className="space-y-6 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-white font-bold text-xs">
+                    {playbook.customer_archetype}
+                  </Badge>
+                  <h3 className="font-serif text-xl font-bold text-primary">{playbook.name}</h3>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Diretrizes estratégicas e consultivas parametrizadas pela diretoria comercial para
+                  clientes do arquétipo <strong>{archetype}</strong>.
                 </p>
               </div>
+              <div className="text-right text-xs text-muted-foreground">
+                <span>
+                  Versão: <strong>{playbook.version}</strong>
+                </span>
+                <span className="block">Atualizado em: {playbook.updated_at}</span>
+              </div>
+            </div>
+
+            {/* Abordagem Recomendada & Objetivos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary block">
+                  Abordagem Comercial Recomendada
+                </span>
+                <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                  {playbook.recommended_approach}
+                </p>
+                <div className="pt-2 text-[11px] text-muted-foreground">
+                  <strong>Cadência Sugerida:</strong> {playbook.recommended_cadence}
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 block">
+                  Objetivos Estratégicos com o Cliente
+                </span>
+                <ul className="space-y-1.5 text-xs text-slate-700">
+                  {playbook.objectives.map((obj, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span>{obj}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Perguntas a Fazer & Sinais de Atenção */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <HelpCircle className="w-4 h-4 text-blue-600" /> Perguntas Chave para Qualificação
+                  & Diagnóstico
+                </span>
+                <ul className="space-y-2 text-xs text-slate-800">
+                  {playbook.questions_to_ask.map((q, i) => (
+                    <li key={i} className="p-2.5 bg-white rounded-xl border border-border/40">
+                      "{q}"
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-600" /> Sinais de Compra & Alertas para
+                  Observar
+                </span>
+                <ul className="space-y-2 text-xs text-slate-800">
+                  {playbook.signals_to_watch.map((s, i) => (
+                    <li key={i} className="p-2.5 bg-white rounded-xl border border-border/40">
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Objeções e Como Responder */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
+                Matriz de Objeções Típicas & Respostas Recomendadas
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {playbook.objections.map((obj, i) => (
+                  <div
+                    key={i}
+                    className="p-3.5 bg-white rounded-2xl border border-border/60 space-y-2 shadow-2xs"
+                  >
+                    <div className="text-xs font-bold text-rose-800">
+                      Objeção: "{obj.objection}"
+                    </div>
+                    <div className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-border/40">
+                      <strong className="text-emerald-700">Resposta Recomendada:</strong>{' '}
+                      {obj.recommended_response}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Padrões Proibidos */}
+            <div className="p-4 bg-rose-50/60 rounded-2xl border border-rose-200 text-xs text-rose-900 space-y-1.5">
+              <span className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 text-rose-600" /> Padrões Proibidos para este
+                Arquétipo (Anti-Patterns):
+              </span>
+              <ul className="list-disc pl-5 space-y-1 text-[11px]">
+                {playbook.forbidden_patterns.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 3: ENTREGAS & TMS */}
+        <TabsContent value="tms" className="space-y-6 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-lg font-bold text-primary">
+                    Monitoramento de Entregas & Cargas (TMS Rodoviário)
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="bg-sky-50 text-sky-700 border-sky-300 text-[10px]"
+                  >
+                    Provedor TMS Conectado (Mock)
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Rastreamento em tempo real de pedidos em preparação, expedição, trânsito e
+                  comprovantes de entrega.
+                </p>
+              </div>
+
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => toast.info('Registro rápido de interação aberto.')}
+                onClick={() => toast.info('Link externo do portal TMS aberto em nova guia.')}
                 className="h-8 gap-1.5 text-xs text-primary"
               >
-                <Plus className="w-3.5 h-3.5" /> Registrar Contato
+                <ExternalLink className="w-3.5 h-3.5" /> Abrir no TMS
               </Button>
             </div>
 
-            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
-              {timeline.map((item) => (
-                <div key={item.id} className="relative group">
-                  <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-xs">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            {/* CARDS DE RESUMO TMS */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-800 block">
+                  Em Trânsito
+                </span>
+                <span className="font-serif text-2xl font-bold text-sky-900 block mt-1">
+                  {loadsInTransit.length} cargas — {tonsInTransit.toFixed(1)} t
+                </span>
+                <span className="text-[11px] text-sky-700">Rastreamento GPS telemetria ativo</span>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-border/60 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Em Expedição / CD
+                </span>
+                <span className="font-serif text-2xl font-bold text-slate-800 block mt-1">
+                  {loadsInDispatch.length} cargas — {tonsInDispatch.toFixed(1)} t
+                </span>
+                <span className="text-[11px] text-muted-foreground">Pátio CD Contagem / Betim</span>
+              </div>
+
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                  Próxima Entrega Prevista
+                </span>
+                <span className="font-serif text-xl font-bold text-emerald-900 block mt-1">
+                  {tmsLoads[0]?.estimatedDeliveryDate || 'Hoje 16:30'}
+                </span>
+                <span className="text-[11px] text-emerald-700">
+                  Transportadora: TransAço Logística
+                </span>
+              </div>
+            </div>
+
+            {/* LISTA DE CARGAS COM TIMELINE */}
+            <div className="space-y-4">
+              {tmsLoads.map((load) => (
+                <div
+                  key={load.id}
+                  className="p-4 bg-slate-50 hover:bg-slate-100/70 transition-colors rounded-2xl border border-border/40 space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-primary text-xs">
+                          {load.orderNumber}
+                        </span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          ({load.nfNumber})
+                        </span>
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-bold border-none',
+                            load.status === 'LOAD_DELIVERED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : load.status === 'LOGISTICS_EXCEPTION'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800',
+                          )}
+                        >
+                          {load.status.replace(/_/g, ' ')}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-slate-700 font-medium block mt-0.5">
+                        {load.itemsDescription} ({load.tons} toneladas)
+                      </span>
+                    </div>
+
+                    <div className="text-right text-xs">
+                      <span className="text-muted-foreground block">
+                        Motorista: {load.driverName} ({load.vehiclePlate})
+                      </span>
+                      <span className="font-semibold text-primary block">
+                        Origem: {load.originCD} → Destino: {load.destinationCity}/
+                        {load.destinationUF}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="bg-slate-50 hover:bg-slate-100/80 transition-colors p-4 rounded-2xl border border-border/40 space-y-1.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-white rounded-lg border border-border/40 shadow-2xs">
-                          {getTimelineIcon(item.tipo)}
-                        </div>
-                        <span className="font-bold text-xs text-slate-900">{item.titulo}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {item.valor && (
-                          <span className="font-serif font-bold text-xs text-emerald-600">
-                            {formatBRL(item.valor)}
-                          </span>
-                        )}
-                        <Badge variant="outline" className="text-[10px] bg-white text-slate-600">
-                          {item.canal}
-                        </Badge>
-                        <span className="text-[10px] text-muted-foreground">{item.data}</span>
-                      </div>
+                  {/* Exceção Logística se houver */}
+                  {load.hasLogisticsException && (
+                    <div className="p-2.5 bg-amber-100/60 border border-amber-300 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        <strong>Ocorrência Logística:</strong> {load.exceptionReason}
+                      </span>
                     </div>
+                  )}
 
-                    <p className="text-xs text-slate-700 font-medium pl-8">{item.descricao}</p>
-                    <div className="pl-8 text-[10px] text-muted-foreground">
-                      Registrado por: <strong>{item.autor}</strong>
-                    </div>
+                  {/* Timeline de Eventos da Carga */}
+                  <div className="pt-2 border-t flex items-center gap-3 overflow-x-auto text-[11px]">
+                    {load.timelineEvents.map((ev, idx) => (
+                      <div key={ev.id} className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 text-slate-700">
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="font-semibold">{ev.description}</span>
+                          <span className="text-muted-foreground">({ev.timestamp})</span>
+                        </div>
+                        {idx < load.timelineEvents.length - 1 && (
+                          <span className="text-slate-300">→</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -456,7 +1353,260 @@ export default function Cliente360() {
           </Card>
         </TabsContent>
 
-        {/* ABA 2: PRODUTOS & PRODUTOS ABANDONADOS */}
+        {/* ABA 4: QUALIDADE & RECLAMAÇÕES (GESTAO DE PERFORMANCE) */}
+        <TabsContent value="qualidade" className="space-y-6 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Gestão de Performance — Qualidade & Não Conformidades
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  CRM apenas resume e consulta dados mestres da Gestão de Performance (fonte única
+                  da verdade).
+                </p>
+              </div>
+
+              <Button
+                size="sm"
+                onClick={() =>
+                  toast.info(
+                    `Navegando para Gestão de Performance filtrado por customer_id=${cliente.id}`,
+                  )
+                }
+                className="h-8 gap-1.5 text-xs bg-primary text-white"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Ver Reclamações na Gestão de Performance
+              </Button>
+            </div>
+
+            {/* Cards de Resumo de Reclamações */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-border/40">
+                <span className="text-[10px] font-bold uppercase text-muted-foreground block">
+                  Total NCs
+                </span>
+                <span className="font-serif text-xl font-bold text-slate-800">
+                  {complaints.length}
+                </span>
+              </div>
+              <div className="p-3 bg-rose-50/60 rounded-2xl border border-rose-200">
+                <span className="text-[10px] font-bold uppercase text-rose-800 block">
+                  Em Aberto / Análise
+                </span>
+                <span className="font-serif text-xl font-bold text-rose-600">
+                  {openComplaintsCount}
+                </span>
+              </div>
+              <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-200">
+                <span className="text-[10px] font-bold uppercase text-amber-800 block">
+                  Planos de Ação
+                </span>
+                <span className="font-serif text-xl font-bold text-amber-700">
+                  {complaints.filter((c) => c.status === 'PLANO_DE_ACAO').length}
+                </span>
+              </div>
+              <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                <span className="text-[10px] font-bold uppercase text-emerald-800 block">
+                  Concluídas
+                </span>
+                <span className="font-serif text-xl font-bold text-emerald-700">
+                  {complaints.filter((c) => c.status === 'CONCLUIDA').length}
+                </span>
+              </div>
+              <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-200">
+                <span className="text-[10px] font-bold uppercase text-purple-800 block">
+                  Reincidentes
+                </span>
+                <span className="font-serif text-xl font-bold text-purple-700">
+                  {recurrentComplaintsCount}
+                </span>
+              </div>
+            </div>
+
+            {/* Tabela de Reclamações */}
+            <div className="space-y-3">
+              {complaints.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-primary text-xs">
+                        {c.protocolNumber}
+                      </span>
+                      <h4 className="font-bold text-xs text-slate-900">{c.title}</h4>
+                      {c.isRecurrent && (
+                        <Badge className="bg-purple-100 text-purple-800 text-[9px] font-bold border-none">
+                          Reincidente ({c.recurrentCount}x)
+                        </Badge>
+                      )}
+                    </div>
+                    <Badge
+                      className={cn(
+                        'text-[10px] font-bold border-none',
+                        c.status === 'CONCLUIDA'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : c.status === 'PLANO_DE_ACAO'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800',
+                      )}
+                    >
+                      {c.status.replace(/_/g, ' ')}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-600">
+                    <div>
+                      Categoria: <strong>{c.category}</strong>
+                    </div>
+                    <div>
+                      Técnico Responsável: <strong>{c.assignedTechnician}</strong>
+                    </div>
+                    <div>
+                      Abertura: <strong>{c.openedAt}</strong>{' '}
+                      {c.concludedAt ? `· Conclusão: ${c.concludedAt}` : ''}
+                    </div>
+                  </div>
+
+                  {c.actionPlanSummary && (
+                    <div className="bg-white p-2.5 rounded-xl border border-border/40 text-xs text-slate-700">
+                      <strong className="text-primary">Plano de Ação:</strong> {c.actionPlanSummary}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 5: FINANCEIRO & CRÉDITO SAP ECC (F.35) */}
+        <TabsContent value="financeiro" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-lg font-bold text-primary">
+                    Posição de Crédito SAP ECC (Transação F.35)
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs font-semibold"
+                  >
+                    SAP ECC Integrado
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Consulta de limite, exposição de risco, títulos a vencer e vencidos da conta do
+                  cliente no SAP ECC.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-muted-foreground">
+                  Última atualização: {creditData?.lastCheckedAt || 'Agora'}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fetchCredit(true)}
+                  disabled={loadingCredit}
+                  className="h-8 gap-1.5 text-xs text-primary"
+                >
+                  <RefreshCw className={cn('w-3.5 h-3.5', loadingCredit && 'animate-spin')} />{' '}
+                  Atualizar Crédito
+                </Button>
+              </div>
+            </div>
+
+            {/* CARDS FINANCEIROS F.35 */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Limite de Crédito
+                </span>
+                <span className="font-serif text-lg font-bold text-slate-900 block">
+                  {formatBRL(creditData?.creditLimit || cliente.limiteCredito)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Exposição / Uso
+                </span>
+                <span className="font-serif text-lg font-bold text-primary block">
+                  {formatBRL(
+                    creditData?.creditExposure || cliente.limiteCredito - cliente.creditoDisponivel,
+                  )}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                  Crédito Disponível
+                </span>
+                <span className="font-serif text-lg font-bold text-emerald-700 block">
+                  {formatBRL(creditData?.creditAvailable || cliente.creditoDisponivel)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  % Utilização
+                </span>
+                <span className="font-serif text-lg font-bold text-slate-800 block">
+                  {creditData?.utilizationPercent || 45}%
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 block">
+                  A Vencer (A Receber)
+                </span>
+                <span className="font-serif text-lg font-bold text-blue-700 block">
+                  {formatBRL(creditData?.receivablesOpenNotDue || 120000)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
+                  Títulos Vencidos
+                </span>
+                <span className="font-serif text-lg font-bold text-rose-600 block">
+                  {formatBRL(creditData?.receivablesOverdue || 0)}
+                </span>
+              </div>
+            </div>
+
+            {/* Aviso de Bloqueio ou Condições */}
+            {creditData?.creditBlockReason ? (
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900 flex items-center gap-2 mb-4">
+                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>
+                  <strong>Aviso de Trava SAP ECC:</strong> {creditData.creditBlockReason}
+                </span>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/60 text-xs text-muted-foreground flex items-center justify-between mb-4">
+                <span>
+                  Condição padrão de pagamento negociada:{' '}
+                  <strong>{creditData?.paymentTerms || '28 / 35 DDL via Boleto'}</strong>
+                </span>
+                <span className="text-[11px] text-emerald-600 font-semibold">
+                  Cliente adimplente no SAP ECC
+                </span>
+              </div>
+            )}
+
+            <div className="text-[10px] text-muted-foreground text-right">
+              * Sistema mestre: SAP ECC (Transação F.35 / FD33). Migração futura para S/4HANA
+              preparada.
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 6: PRODUTOS DO CLIENTE & ABANDONADOS */}
         <TabsContent value="produtos" className="space-y-6 m-0">
           {/* Seção Destacada: Produtos Abandonados */}
           {produtos.some((p) => p.status === 'Parou') && (
@@ -464,7 +1614,7 @@ export default function Cliente360() {
               <div className="flex items-center gap-2.5 text-rose-800">
                 <Flame className="w-5 h-5 text-rose-600 animate-pulse" />
                 <h4 className="font-serif font-bold text-sm">
-                  Alerta de Produtos Abandonados (Oportunidade de Recuperação)
+                  Alerta de Produtos Abandonados (Oportunidade de Recuperação de Mix)
                 </h4>
               </div>
               <p className="text-xs text-rose-700">
@@ -509,11 +1659,11 @@ export default function Cliente360() {
           {/* Grid de Todos os Produtos */}
           <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <h3 className="font-serif text-lg font-bold text-primary mb-1">
-              Catálogo de Materiais & Histórico de Compras
+              Catálogo Analítico de Materiais & Histórico de Compras
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Comportamento de compra por família de produtos, preço médio praticado e status de
-              recompra.
+              Comportamento de compra por família de produtos, preço médio praticado, volume 12m e
+              status de recompra.
             </p>
 
             <div className="overflow-x-auto">
@@ -578,271 +1728,86 @@ export default function Cliente360() {
           </Card>
         </TabsContent>
 
-        {/* ABA 3: FINANCEIRO & CRÉDITO */}
-        <TabsContent value="financeiro" className="space-y-4 m-0">
+        {/* ABA 7: TIMELINE & VISITAS */}
+        <TabsContent value="timeline" className="space-y-4 m-0">
           <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  Posição Financeira & Linha de Crédito SAP
+                  Linha do Tempo de Interações & Movimentações
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Informações sincronizadas com o módulo financeiro do SAP S/4HANA (Contas a
-                  Receber).
+                  Feed unificado com WhatsApp, E-mails Microsoft 365, Visitas, Cotações e Pedidos
+                  SAP.
                 </p>
               </div>
-              <Badge
+              <Button
+                size="sm"
                 variant="outline"
-                className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs font-semibold"
+                onClick={() => toast.info('Registro rápido de interação aberto.')}
+                className="h-8 gap-1.5 text-xs text-primary"
               >
-                Consulta Serasa & SAP OK
-              </Badge>
+                <Plus className="w-3.5 h-3.5" /> Registrar Contato
+              </Button>
             </div>
 
-            {/* CARDS FINANCEIROS OBRIGATÓRIOS */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Limite de Crédito
-                </span>
-                <span className="font-serif text-lg font-bold text-slate-900 block">
-                  {formatBRL(cliente.limiteCredito)}
-                </span>
-              </div>
+            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+              {timeline.map((item) => (
+                <div key={item.id} className="relative group">
+                  <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  </div>
 
-              <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
-                  Crédito Disponível
-                </span>
-                <span className="font-serif text-lg font-bold text-emerald-700 block">
-                  {formatBRL(cliente.creditoDisponivel)}
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  % Utilizado
-                </span>
-                <span className="font-serif text-lg font-bold text-primary block">
-                  {(
-                    ((cliente.limiteCredito - cliente.creditoDisponivel) / cliente.limiteCredito) *
-                    100
-                  ).toFixed(0)}
-                  %
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 block">
-                  A Receber (A Vencer)
-                </span>
-                <span className="font-serif text-lg font-bold text-blue-700 block">
-                  {formatBRL(cliente.limiteCredito - cliente.creditoDisponivel)}
-                </span>
-              </div>
-
-              <div className="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
-                  Títulos Vencidos
-                </span>
-                <span className="font-serif text-lg font-bold text-rose-600 block">R$ 0,00</span>
-              </div>
-
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Maior Atraso
-                </span>
-                <span className="font-serif text-lg font-bold text-slate-800 block">0 dias</span>
-              </div>
-            </div>
-
-            <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/60 text-xs text-muted-foreground flex items-center justify-between">
-              <span>
-                Condição padrão de pagamento negociada:{' '}
-                <strong>28 / 35 DDL via Boleto Bancário</strong>
-              </span>
-              <span className="text-[11px] text-emerald-600 font-semibold">Cliente adimplente</span>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* ABA 4: ÚLTIMAS NOTAS FISCAIS */}
-        <TabsContent value="nfs" className="space-y-4 m-0">
-          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div>
-                <h3 className="font-serif text-lg font-bold text-primary">
-                  Histórico de Faturamento & Notas Fiscais Eletrônicas
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Documentos fiscais emitidos pela CIAFAL integrados com a SEFAZ MG.
-                </p>
-              </div>
-              <Badge className="bg-primary text-white text-xs">
-                {nfs.length} NFs no histórico recente
-              </Badge>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
-                  <tr>
-                    <th className="py-3 px-3">Número NF</th>
-                    <th className="py-3 px-3">Data de Emissão</th>
-                    <th className="py-3 px-3 text-right">Valor Total R$</th>
-                    <th className="py-3 px-3 text-center">Toneladas</th>
-                    <th className="py-3 px-3">Transportadora</th>
-                    <th className="py-3 px-3 text-center">Status Entrega</th>
-                    <th className="py-3 px-3 text-center">DANFE / XML</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {nfs.map((nf) => (
-                    <tr key={nf.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-primary">{nf.numeroNF}</td>
-                      <td className="py-3 px-3 text-slate-800">{nf.dataEmissao}</td>
-                      <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
-                        {formatBRL(nf.valorTotal)}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-semibold">
-                        {nf.toneladas} t
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">{nf.transportadora}</td>
-                      <td className="py-3 px-3 text-center">
-                        <Badge
-                          className={cn(
-                            'text-[10px] font-bold border-none',
-                            nf.statusEntrega === 'Entregue'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-blue-100 text-blue-800',
-                          )}
-                        >
-                          {nf.statusEntrega}
+                  <div className="bg-slate-50 hover:bg-slate-100/80 transition-colors p-4 rounded-2xl border border-border/40 space-y-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-white rounded-lg border border-border/40 shadow-2xs">
+                          {getTimelineIcon(item.tipo)}
+                        </div>
+                        <span className="font-bold text-xs text-slate-900">{item.titulo}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.valor && (
+                          <span className="font-serif font-bold text-xs text-emerald-600">
+                            {formatBRL(item.valor)}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-[10px] bg-white text-slate-600">
+                          {item.canal}
                         </Badge>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toast.info(`Download do DANFE da NF ${nf.numeroNF}...`)}
-                          className="h-7 text-xs text-primary hover:bg-primary/10"
-                        >
-                          Visualizar
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <span className="text-[10px] text-muted-foreground">{item.data}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-700 font-medium pl-8">{item.descricao}</p>
+                    <div className="pl-8 text-[10px] text-muted-foreground">
+                      Registrado por: <strong>{item.autor}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
         </TabsContent>
 
-        {/* ABA 5: ESTOQUE & WMS */}
-        <TabsContent value="estoque" className="space-y-4 m-0">
-          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div>
-                <h3 className="font-serif text-lg font-bold text-primary">
-                  Estoque Disponível em Pátio (CD Contagem / Betim)
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Saldos físicos atualizados com conferência de lotes e alertas de estoque crítico.
-                </p>
-              </div>
-              <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-300 text-xs">
-                WMS Conectado
-              </Badge>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
-                  <tr>
-                    <th className="py-3 px-3">Código</th>
-                    <th className="py-3 px-3">Descrição do Material</th>
-                    <th className="py-3 px-3 text-center">Saldo Estoque (ton)</th>
-                    <th className="py-3 px-3 text-center">Lotes</th>
-                    <th className="py-3 px-3 text-right">Peso Médio (kg)</th>
-                    <th className="py-3 px-3">Alerta WMS</th>
-                    <th className="py-3 px-3 text-center">Ação WMS</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {produtos.map((p) => {
-                    const isLowStock = p.saldoEstoqueTon < 5.0
-                    const isConfirmed = wmsConfirmed[p.codigo]
-
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 px-3 font-mono font-bold text-primary">{p.codigo}</td>
-                        <td className="py-3 px-3 font-medium text-slate-900">{p.descricao}</td>
-                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-800">
-                          {p.saldoEstoqueTon} t
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono">{p.lotes} lotes</td>
-                        <td className="py-3 px-3 text-right font-mono text-slate-600">
-                          {p.pesoMedioKg} kg
-                        </td>
-                        <td className="py-3 px-3">
-                          {isLowStock ? (
-                            <div className="flex items-center gap-1 text-amber-700 font-semibold text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300 w-fit">
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              Solicitar confirmação de saldo (&lt; 5 ton)
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-emerald-700 font-medium text-[11px]">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Saldo seguro pronta-entrega
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          {isLowStock && (
-                            <Button
-                              size="sm"
-                              variant={isConfirmed ? 'outline' : 'default'}
-                              onClick={() => handleRequestWMS(p.codigo)}
-                              disabled={isConfirmed}
-                              className={cn(
-                                'h-7 text-[11px] gap-1',
-                                isConfirmed
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                  : 'bg-amber-600 hover:bg-amber-700 text-white',
-                              )}
-                            >
-                              <Warehouse className="w-3.5 h-3.5" />
-                              {isConfirmed ? 'WMS Solicitado' : 'Solicitar Confirmação WMS'}
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* ABA 6: OPORTUNIDADES DO CLIENTE */}
+        {/* ABA 8: OPORTUNIDADES & PROPOSTAS CPQ */}
         <TabsContent value="oportunidades" className="space-y-4 m-0">
           <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  Oportunidades & Negociações Abertas
+                  Oportunidades & Propostas Comerciais (CPQ)
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Propostas em andamento no funil comercial da CIAFAL para este cliente.
+                  Propostas em andamento com versionamento e workflow de alçadas de desconto.
                 </p>
               </div>
               <Button
                 size="sm"
-                onClick={() => toast.info('Nova oportunidade para este cliente.')}
+                onClick={() => toast.info('Nova cotação CPQ aberta para este cliente.')}
                 className="h-8 gap-1.5 text-xs bg-primary text-white"
               >
-                <Plus className="w-3.5 h-3.5" /> Adicionar Oportunidade
+                <Plus className="w-3.5 h-3.5" /> Adicionar Cotação CPQ
               </Button>
             </div>
 

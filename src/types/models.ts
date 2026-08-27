@@ -104,6 +104,8 @@ export type LeadStage =
 
 export type WhatsAppMode = 'MOCK' | 'CLOUD_API' | 'COEX'
 
+export type CommercialArchetype = 'INDÚSTRIA' | 'REVENDA' | 'SERRALHERIA' | 'CONSUMIDOR_FINAL'
+
 export interface CustomerPersonContact {
   id: string
   customerId: string
@@ -119,6 +121,293 @@ export interface CustomerPersonContact {
   lastContactDate?: string
   status: 'Ativo' | 'Inativo'
   notes?: string
+  birthday_day?: number
+  birthday_month?: number
+  marketing_eligible?: boolean
+  marketing_opt_in?: boolean
+  preferred_marketing_channel?: PreferredContactChannel
+  relationship_tags?: string[]
+}
+
+export interface CommercialPlaybook {
+  id: string
+  customer_archetype: CommercialArchetype
+  name: string
+  objectives: string[]
+  recommended_approach: string
+  questions_to_ask: string[]
+  signals_to_watch: string[]
+  objections: { objection: string; recommended_response: string }[]
+  recommended_channels: PreferredContactChannel[]
+  recommended_cadence: string
+  forbidden_patterns: string[]
+  created_by: string
+  version: string
+  status: 'ATIVO' | 'RASCUNHO' | 'ARQUIVADO'
+  updated_at: string
+  change_reason?: string
+}
+
+export type FeatureStatusClassification =
+  | 'IMPLEMENTADO'
+  | 'MOCK'
+  | 'PREPARADO'
+  | 'PENDENTE DE CREDENCIAL'
+  | 'PENDENTE DE MAPEAMENTO SAP'
+  | 'PENDENTE DE ADMIN CONSENT'
+  | 'PENDENTE DE DECISÃO'
+
+export interface SAPCreditData {
+  customerId: string
+  sapCode: string
+  creditLimit: number
+  creditExposure: number // Crédito utilizado
+  creditAvailable: number
+  utilizationPercent: number
+  receivablesTotal: number
+  receivablesOpenNotDue: number // A vencer
+  receivablesOverdue: number // Vencido
+  maxDelayDays: number
+  creditStatus: 'REGULAR' | 'RESTRITO' | 'BLOQUEADO'
+  creditBlockReason?: string
+  paymentTerms: string
+  lastCheckedAt: string
+  isCached: boolean
+  rawF35Data?: Record<string, any>
+  systemSource: 'SAP ECC' | 'MOCK'
+}
+
+export type TMSLoadStatus =
+  | 'ORDER_PREPARATION'
+  | 'IN_DISPATCH'
+  | 'LOAD_FORMED'
+  | 'LOAD_LOADED'
+  | 'LOAD_DISPATCHED'
+  | 'LOAD_IN_TRANSIT'
+  | 'LOAD_DELIVERED'
+  | 'LOGISTICS_EXCEPTION'
+
+export interface TMSDeliveryLoad {
+  id: string
+  customerId: string
+  orderNumber: string
+  nfNumber: string
+  carrierName: string
+  vehiclePlate: string
+  driverName: string
+  tons: number
+  itemsDescription: string
+  status: TMSLoadStatus
+  originCD: 'CD Contagem' | 'CD Betim' | 'Fábrica'
+  destinationCity: string
+  destinationUF: string
+  estimatedDeliveryDate: string
+  actualDeliveryDate?: string
+  hasLogisticsException: boolean
+  exceptionReason?: string
+  trackingUrl?: string
+  timelineEvents: {
+    id: string
+    event: TMSLoadStatus
+    timestamp: string
+    description: string
+    location?: string
+  }[]
+}
+
+export interface CustomerComplaint {
+  id: string
+  customerId: string
+  customerName: string
+  protocolNumber: string
+  title: string
+  category:
+    | 'DIMENSIONAL'
+    | 'SUPERFICIAL'
+    | 'ENTREGA_ATRASO'
+    | 'DIVERGENCIA_FATURA'
+    | 'AVARIA_TRANSPORTE'
+    | 'OUTROS'
+  severity: 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA'
+  status: 'ABERTA' | 'EM_ANALISE' | 'PLANO_DE_ACAO' | 'CONCLUIDA'
+  isRecurrent: boolean
+  recurrentCount?: number
+  openedAt: string
+  concludedAt?: string
+  assignedTechnician: string
+  actionPlanSummary?: string
+  rootCause?: string
+  performanceManagementId: string
+}
+
+export interface PortfolioAssignment {
+  id: string
+  customerId: string
+  customerName: string
+  customerSap: string
+  previousOwnerId: string
+  previousOwnerName: string
+  newOwnerId: string
+  newOwnerName: string
+  assignmentType: 'TRANSFER' | 'TEMPORARY_ASSIGNMENT' | 'REACTIVATION_ASSIGNMENT'
+  reason:
+    | 'Reativação'
+    | 'Redistribuição de carteira'
+    | 'Mudança de região'
+    | 'Especialização por segmento'
+    | 'Cobertura'
+    | 'Ausência'
+    | 'Outro'
+  assignedBy: string
+  assignedAt: string
+  effectiveFrom: string
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REVOKED'
+  notes?: string
+}
+
+export interface RelationshipEvent {
+  id: string
+  name: string
+  type:
+    | 'ANIVERSARIO_CONTATO'
+    | 'ANIVERSARIO_EMPRESA'
+    | 'DATA_COMEMORATIVA'
+    | 'DATA_SETORIAL'
+    | 'CAMPANHA_COMERCIAL'
+    | 'PROMOCAO'
+    | 'LANCAMENTO_PRODUTO'
+    | 'POS_VENDA'
+    | 'RECOMPRA'
+    | 'OUTROS'
+  date_rule: string
+  audience: string
+  segment?: string
+  archetype?: CommercialArchetype
+  template: string
+  channel: PreferredContactChannel
+  owner: string
+  status: 'ATIVO' | 'PAUSADO' | 'RASCUNHO'
+  requires_approval: boolean
+  lgpd_opt_in_required: boolean
+}
+
+export interface WorkflowStageChecklist {
+  id: string
+  title: string
+  required: boolean
+  isCompleted?: boolean
+}
+
+export interface CommercialWorkflowStage {
+  id: string
+  name: string
+  description: string
+  order: number
+  slaHours: number
+  checklists: WorkflowStageChecklist[]
+  approverRole?: CiafalUserRole
+  autoTransitionOnChecklist?: boolean
+}
+
+export interface CommercialAutomationRule {
+  id: string
+  name: string
+  trigger:
+    | 'CLIENTE_ALTERADO'
+    | 'LEAD_CRIADO'
+    | 'OPORTUNIDADE_CRIADA'
+    | 'STAGE_ALTERADO'
+    | 'COTACAO_CRIADA'
+    | 'PEDIDO_CRIADO'
+    | 'VISITA_CONCLUIDA'
+    | 'INTERACAO_RECEBIDA'
+    | 'CLIENTE_INATIVO'
+    | 'COMPRA_REALIZADA'
+    | 'RECLAMACAO_ABERTA'
+    | 'CARGA_ATRASADA'
+  conditions: {
+    field: string
+    operator: 'equals' | 'greater_than' | 'less_than' | 'contains' | 'in'
+    value: any
+  }[]
+  actions: {
+    type:
+      | 'CREATE_TASK'
+      | 'CREATE_DAILY_ACTION'
+      | 'NOTIFY_USER'
+      | 'ASSIGN_SELLER'
+      | 'REQUEST_APPROVAL'
+      | 'RUN_AI_AGENT'
+      | 'UPDATE_CLASSIFICATION'
+      | 'ADD_RELATIONSHIP_EVENT'
+    payload: Record<string, any>
+  }[]
+  enabled: boolean
+}
+
+export interface DynamicFormField {
+  id: string
+  name: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'textarea' | 'boolean' | 'date'
+  required: boolean
+  conditionalArchetypes?: CommercialArchetype[]
+  options?: string[]
+  helpText?: string
+}
+
+export interface CPQQuoteItem {
+  id: string
+  materialCode: string
+  description: string
+  family: string
+  quantityTons: number
+  basePriceKg: number
+  discountPercent: number
+  finalPriceKg: number
+  totalValue: number
+  marginPercent?: number // Visível apenas com permissão
+  leadTimeDays: number
+  freightType: 'CIF' | 'FOB'
+}
+
+export interface CPQCommercialQuote {
+  id: string
+  quoteNumber: string
+  sapQuoteId?: string
+  customerId: string
+  customerName: string
+  customerSap: string
+  customerArchetype: CommercialArchetype
+  sellerId: string
+  sellerName: string
+  items: CPQQuoteItem[]
+  totalTons: number
+  totalValue: number
+  averageMarginPercent?: number
+  paymentCondition: string
+  freightTerms: string
+  validUntil: string
+  version: number
+  status:
+    | 'RASCUNHO'
+    | 'EM_APROVACAO'
+    | 'APROVADA'
+    | 'REJEITADA'
+    | 'ENVIADA_AO_CLIENTE'
+    | 'CONVERTIDA_PEDIDO'
+  approvalRequired: boolean
+  approvalReason?: string
+  approvedBy?: string
+  approvedAt?: string
+  createdAt: string
+  history: {
+    version: number
+    date: string
+    author: string
+    changes: string
+    status: string
+  }[]
 }
 
 export interface LeadItem {

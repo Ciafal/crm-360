@@ -67,10 +67,22 @@ export default function GestaoInativos() {
   const [selectedCustomer, setSelectedCustomer] = useState<BICustomerSummary | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
 
+  // Modo de visualização: Cockpit Inteligente ou Lista de Inativos (Tabela Completa)
+  const [viewMode, setViewMode] = useState<'cockpit' | 'lista'>('cockpit')
+
   // Sub-abas da página
   const [activeTab, setActiveTab] = useState<
     'fila' | 'recorrencia' | 'evolucao' | 'rfm' | 'produtos'
   >('fila')
+
+  // Estado do Modal de Encaminhamento de Cliente (Supervisor)
+  const [forwardModalOpen, setForwardModalOpen] = useState(false)
+  const [selectedForwardCustomer, setSelectedForwardCustomer] = useState<BICustomerSummary | null>(
+    null,
+  )
+  const [forwardTargetSeller, setForwardTargetSeller] = useState('Carlos Mendonça')
+  const [forwardReason, setForwardReason] = useState('Reativação')
+  const [forwardNotes, setForwardNotes] = useState('')
 
   // Abre drawer se veio cliente na query string
   useEffect(() => {
@@ -308,6 +320,32 @@ export default function GestaoInativos() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Toggle de Modo: Cockpit Inteligente vs Lista de Inativos */}
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+            <Button
+              size="sm"
+              variant={viewMode === 'cockpit' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('cockpit')}
+              className={cn(
+                'h-8 text-xs rounded-lg font-semibold',
+                viewMode === 'cockpit' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+              )}
+            >
+              Cockpit Inteligente
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'lista' ? 'default' : 'ghost'}
+              onClick={() => setViewMode('lista')}
+              className={cn(
+                'h-8 text-xs rounded-lg font-semibold',
+                viewMode === 'lista' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+              )}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> Lista de Inativos
+            </Button>
+          </div>
+
           <CommercialMetricToggle />
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border/50 rounded-full shadow-xs text-xs text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -315,6 +353,129 @@ export default function GestaoInativos() {
           </div>
         </div>
       </div>
+
+      {/* MODAL DE ENCAMINHAMENTO / REALOCAÇÃO DE CARTEIRA (SUPERVISOR) */}
+      {forwardModalOpen && selectedForwardCustomer && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl border border-border/60 animate-in fade-in-50 zoom-in-95">
+            <div className="flex items-start justify-between border-b pb-3">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Encaminhar / Realocar Cliente
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Atribuir novo responsável comercial da estrutura autorizada CIAFAL.
+                </p>
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setForwardModalOpen(false)}
+                className="h-7 w-7"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-muted-foreground">Cliente Selecionado:</span>
+                <strong className="block text-sm text-primary">
+                  {selectedForwardCustomer.customerName}
+                </strong>
+                <span className="text-[11px] text-slate-600 font-mono">
+                  Código SAP: {selectedForwardCustomer.customerId}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">
+                  Novo Responsável Comercial (Vendedor / Representante):
+                </label>
+                <Select value={forwardTargetSeller} onValueChange={setForwardTargetSeller}>
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Carlos Mendonça">
+                      Carlos Mendonça (Vendedor Interno Contagem)
+                    </SelectItem>
+                    <SelectItem value="Mariana Azevedo">
+                      Mariana Azevedo (Vendedora Especialista Indústria)
+                    </SelectItem>
+                    <SelectItem value="João Pedro Representações">
+                      João Pedro (Representante Externo Triângulo)
+                    </SelectItem>
+                    <SelectItem value="Marcos Vinícius">
+                      Marcos Vinícius (Supervisor Regional)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">Motivo do Encaminhamento:</label>
+                <Select value={forwardReason} onValueChange={setForwardReason}>
+                  <SelectTrigger className="h-9 rounded-xl text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Reativação">Reativação Comercial de Inativo</SelectItem>
+                    <SelectItem value="Redistribuição de carteira">
+                      Redistribuição de Carteira Regional
+                    </SelectItem>
+                    <SelectItem value="Mudança de região">
+                      Mudança de Região de Atendimento
+                    </SelectItem>
+                    <SelectItem value="Especialização por segmento">
+                      Especialização por Segmento Industrial
+                    </SelectItem>
+                    <SelectItem value="Cobertura">Cobertura Temporária</SelectItem>
+                    <SelectItem value="Ausência">Ausência / Férias</SelectItem>
+                    <SelectItem value="Outro">Outro Motivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">
+                  Observações / Orientações Iniciais:
+                </label>
+                <textarea
+                  className="w-full h-20 p-2.5 rounded-xl border border-border/60 text-xs focus:ring-1 focus:ring-primary outline-none"
+                  placeholder="Instruções para o novo responsável sobre histórico, preferências e mix do cliente..."
+                  value={forwardNotes}
+                  onChange={(e) => setForwardNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setForwardModalOpen(false)}
+                className="h-8 text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  toast({
+                    title: 'Cliente Encaminhado com Sucesso!',
+                    description: `${selectedForwardCustomer.customerName} foi transferido para ${forwardTargetSeller}. Uma ação de reativação foi agendada no Meu Dia do novo responsável.`,
+                  })
+                  setForwardModalOpen(false)
+                }}
+                className="h-8 text-xs bg-primary text-white font-semibold"
+              >
+                Confirmar Encaminhamento
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filtros Operacionais Superiores */}
       <Card className="bg-white/70 backdrop-blur-md border-border/40 shadow-xs rounded-2xl p-4">
@@ -554,492 +715,618 @@ export default function GestaoInativos() {
         </div>
       </Card>
 
-      {/* Abas Principais da Subaplicação */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
-        <TabsList className="bg-white/70 border border-border/50 p-1 rounded-2xl w-full sm:w-auto flex flex-wrap gap-1">
-          <TabsTrigger value="fila" className="text-xs font-semibold rounded-xl px-4 py-2">
-            Fila Prioritária ({filteredCustomers.length})
-          </TabsTrigger>
-          <TabsTrigger value="recorrencia" className="text-xs font-semibold rounded-xl px-4 py-2">
-            Mapa de Recorrência (12M)
-          </TabsTrigger>
-          <TabsTrigger value="evolucao" className="text-xs font-semibold rounded-xl px-4 py-2">
-            Evolução de Compradores
-          </TabsTrigger>
-          <TabsTrigger value="rfm" className="text-xs font-semibold rounded-xl px-4 py-2">
-            Segmentação RFM
-          </TabsTrigger>
-          <TabsTrigger value="produtos" className="text-xs font-semibold rounded-xl px-4 py-2">
-            Mix Abandonado ({stoppedProducts.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* TAB 1: FILA PRIORITÁRIA DE REATIVAÇÃO */}
-        <TabsContent value="fila" className="mt-4 flex flex-col gap-4">
-          <Card className="bg-white/80 backdrop-blur-md border-border/40 shadow-sm rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/90 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/40">
-                  <tr>
-                    <th className="py-3 px-4 font-bold"># / Score</th>
-                    <th className="py-3 px-4 font-bold">Cliente</th>
-                    <th className="py-3 px-4 font-bold">Dias Inativo</th>
-                    <th className="py-3 px-4 font-bold">Última Visita</th>
-                    <th className="py-3 px-4 font-bold">Próxima Visita</th>
-                    <th className="py-3 px-4 font-bold">Histórico</th>
-                    <th className="py-3 px-4 font-bold">Potencial R$</th>
-                    <th className="py-3 px-4 font-bold">P(vivo)</th>
-                    <th className="py-3 px-4 font-bold">Crédito</th>
-                    <th className="py-3 px-4 font-bold">Ação Recomendada</th>
-                    <th className="py-3 px-4 font-bold text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={i}>
-                        <td colSpan={10} className="p-4">
-                          <Skeleton className="h-8 w-full" />
-                        </td>
-                      </tr>
-                    ))
-                  ) : filteredCustomers.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="p-8">
-                        <PageEmptyState
-                          title="Não existem dados disponíveis para este período."
-                          description="Nenhum cliente atende aos filtros de inatividade aplicados."
-                          actionLabel="Tentar novamente"
-                          onAction={() => {
-                            setSearch('')
-                            setInactivityFilter('todos')
-                            setSegmentFilter('todos')
-                          }}
-                        />
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCustomers.map((cust, idx) => (
-                      <tr
-                        key={cust.customerId}
-                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                        onClick={() => {
-                          setSelectedCustomer(cust)
-                          setSheetOpen(true)
-                        }}
-                      >
-                        {/* Score */}
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-muted-foreground text-[11px] font-semibold w-4">
-                              {idx + 1}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'font-bold font-serif text-xs px-2',
-                                cust.reactivationScore >= 85
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                  : cust.reactivationScore >= 75
-                                    ? 'bg-blue-50 text-blue-700 border-blue-300'
-                                    : 'bg-amber-50 text-amber-700 border-amber-300',
-                              )}
-                            >
-                              {cust.reactivationScore}
-                            </Badge>
-                          </div>
-                        </td>
-
-                        {/* Cliente */}
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-primary text-sm group-hover:text-primary/80">
-                              {cust.customerName}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {cust.customerId} · {cust.city}/{cust.uf}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Inatividade */}
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-rose-600 block">
-                            {cust.daysSinceLastPurchase} dias
-                          </span>
-                          <span className="text-[10px] text-muted-foreground block">
-                            Última: {cust.lastPurchaseDate}
-                          </span>
-                        </td>
-
-                        {/* Última Visita */}
-                        <td className="py-3 px-4">
-                          <span className="font-medium text-slate-800 block text-[11px]">
-                            {idx === 0
-                              ? '08/10/2024 (6d)'
-                              : idx === 1
-                                ? '03/10/2024 (11d)'
-                                : 'Há 45+ dias'}
-                          </span>
-                        </td>
-
-                        {/* Próxima Visita */}
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-emerald-700 block text-[11px]">
-                            {idx === 0 ? 'Hoje 09:30' : idx === 1 ? '16/10 14:30' : 'Não agendada'}
-                          </span>
-                        </td>
-
-                        {/* Histórico */}
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-primary block">
-                            {formatBRL(cust.historicalRevenue)}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground block">
-                            {cust.historicalTons} ton · {cust.frequency}d ciclo
-                          </span>
-                        </td>
-
-                        {/* Potencial R$ */}
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-primary font-serif text-sm block">
-                            {formatBRL(cust.expectedValue)}
-                          </span>
-                          <span className="text-[10px] text-emerald-700 font-semibold block">
-                            Em {cust.expectedNextPurchaseDays} dias
-                          </span>
-                        </td>
-
-                        {/* P(vivo) */}
-                        <td className="py-3 px-4 font-mono font-semibold">
-                          {Math.round(cust.pAlive * 100)}%
-                        </td>
-
-                        {/* Crédito */}
-                        <td className="py-3 px-4">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              'text-[10px]',
-                              cust.creditStatus === 'liberado'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : 'bg-amber-50 text-amber-700 border-amber-200',
-                            )}
-                          >
-                            {cust.creditStatus === 'liberado' ? 'Liberado' : 'Em análise'}
-                          </Badge>
-                        </td>
-
-                        {/* Estoque */}
-                        <td className="py-3 px-4">
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] bg-slate-100 text-slate-700"
-                          >
-                            {cust.stockCoveragePercent || 90}% pronto
-                          </Badge>
-                        </td>
-
-                        {/* Ação Recomendada */}
-                        <td className="py-3 px-4 max-w-xs">
-                          <p
-                            className="text-xs text-slate-700 truncate"
-                            title={cust.recommendedAction}
-                          >
-                            {cust.recommendedAction}
-                          </p>
-                        </td>
-
-                        {/* Botão Ação */}
-                        <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 text-[11px] text-primary border-primary/30 hover:bg-primary/10"
-                              onClick={() => navigate('/visitas')}
-                            >
-                              Agendar Visita
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs"
-                              onClick={() => handleGenerateAction(cust)}
-                            >
-                              Criar Ação
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* TAB 2: MAPA DE RECORRÊNCIA (GRADE 12 MESES) */}
-        <TabsContent value="recorrencia" className="mt-4 flex flex-col gap-4">
-          <Card className="bg-white/80 border-border/40 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-serif font-bold text-lg text-primary">
-                  Grade de Compras Mensais por Cliente (12 Meses)
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Verde escuro = mês com alto volume de compra; Cinza = ausência de pedido.
-                </p>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border/40 text-muted-foreground text-[10px] uppercase">
-                    <th className="py-2.5 px-3 text-left font-bold min-w-[200px]">Cliente</th>
-                    {monthsHeader.map((m) => (
-                      <th key={m} className="py-2.5 px-2 text-center font-bold">
-                        {m}
-                      </th>
-                    ))}
-                    <th className="py-2.5 px-3 text-right font-bold">Status Atual</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {filteredCustomers.slice(0, 12).map((cust) => {
-                    const months = cust.recurrenceMonths || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-                    return (
-                      <tr
-                        key={cust.customerId}
-                        className="hover:bg-slate-50 cursor-pointer"
-                        onClick={() => {
-                          setSelectedCustomer(cust)
-                          setSheetOpen(true)
-                        }}
-                      >
-                        <td className="py-2.5 px-3 font-semibold text-primary">
-                          <span className="block truncate">{cust.customerName}</span>
-                          <span className="text-[10px] font-mono text-muted-foreground">
-                            {cust.customerId}
-                          </span>
-                        </td>
-                        {months.map((bought, i) => (
-                          <td key={i} className="py-2.5 px-2 text-center">
-                            <div
-                              className={cn(
-                                'w-7 h-7 mx-auto rounded-lg flex items-center justify-center font-bold text-[10px]',
-                                bought
-                                  ? 'bg-emerald-500 text-white shadow-xs'
-                                  : 'bg-slate-100 text-slate-300',
-                              )}
-                            >
-                              {bought ? '✓' : '—'}
-                            </div>
-                          </td>
-                        ))}
-                        <td className="py-2.5 px-3 text-right">
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] bg-rose-50 text-rose-700 border-rose-300"
-                          >
-                            {cust.daysSinceLastPurchase}d sem compra
-                          </Badge>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* TAB 3: EVOLUÇÃO DE CLIENTES ATIVOS */}
-        <TabsContent value="evolucao" className="mt-4 flex flex-col gap-4">
-          <Card className="bg-white/80 border-border/40 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-serif font-bold text-lg text-primary">
-              Evolução da Carteira de Clientes Compradores
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-6">
-              Acompanhamento mensal de clientes ativos vs. clientes em queda de recompra.
-            </p>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-xs text-muted-foreground block">Média Compradores / Mês</span>
-                <span className="font-serif text-2xl font-bold text-primary mt-1 block">
-                  42 contas
-                </span>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-xs text-muted-foreground block">Queda no Q3</span>
-                <span className="font-serif text-2xl font-bold text-rose-600 mt-1 block">
-                  -18 contas
-                </span>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-xs text-muted-foreground block">Reativadas no Q4</span>
-                <span className="font-serif text-2xl font-bold text-emerald-600 mt-1 block">
-                  +5 contas
-                </span>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <span className="text-xs text-muted-foreground block">Meta Reativação Q4</span>
-                <span className="font-serif text-2xl font-bold text-primary mt-1 block">
-                  14 contas
-                </span>
-              </div>
-            </div>
-
-            <div className="h-48 flex items-end justify-between gap-2 pt-6 border-t border-border/30">
-              {[38, 41, 45, 44, 46, 48, 42, 39, 36, 37, 40, 42].map((val, idx) => (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                  <span className="text-[11px] font-bold text-primary">{val}</span>
-                  <div
-                    className="w-full max-w-[36px] bg-primary rounded-t-md hover:bg-primary/80 transition-all"
-                    style={{ height: `${(val / 50) * 120}px` }}
-                  />
-                  <span className="text-[10px] text-muted-foreground uppercase">
-                    {monthsHeader[idx].split('/')[0]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* TAB 4: SEGMENTAÇÃO RFM */}
-        <TabsContent value="rfm" className="mt-4 flex flex-col gap-4">
-          <Card className="bg-white/80 border-border/40 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-border/40">
-              <h3 className="font-serif font-bold text-lg text-primary">
-                Matriz RFM da Carteira Inativa
+      {/* MODO 2: LISTA DE INATIVOS (TABELA COMPLETA COM ENCAMINHAMENTO) */}
+      {viewMode === 'lista' && (
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 shadow-sm rounded-3xl p-6 space-y-4 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+            <div>
+              <h3 className="font-serif text-lg font-bold text-primary">
+                Lista de Inativos CIAFAL ({filteredCustomers.length} contas)
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Segmentação baseada em Recência (dias), Frequência (pedidos/ano) e Monetário
-                (faturamento total).
+                Visão tabular completa com código SAP, ABC Carteira, ABC Reativação, P(vivo), dias
+                inativo e encaminhamento.
               </p>
             </div>
+            <Badge
+              variant="outline"
+              className="text-xs bg-amber-50 text-amber-800 border-amber-300"
+            >
+              Ação Supervisor: Encaminhar para Vendedor Interno ou Representante
+            </Badge>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-muted-foreground text-[10px] uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4 font-bold">Segmento RFM</th>
-                    <th className="py-3 px-4 font-bold text-center">Clientes</th>
-                    <th className="py-3 px-4 font-bold text-center">% Carteira</th>
-                    <th className="py-3 px-4 font-bold">Faturamento Médio</th>
-                    <th className="py-3 px-4 font-bold">Estratégia Recomendada</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] tracking-wider border-b">
+                <tr>
+                  <th className="py-3 px-3">Cliente / Razão</th>
+                  <th className="py-3 px-2 font-mono">Cód. SAP</th>
+                  <th className="py-3 px-2 text-center">ABC Cart.</th>
+                  <th className="py-3 px-2 text-center">ABC Reativ.</th>
+                  <th className="py-3 px-3">Última Compra</th>
+                  <th className="py-3 px-2 text-center font-semibold">Dias Inativo</th>
+                  <th className="py-3 px-2 text-center font-mono">Vol. Hist. (t)</th>
+                  <th className="py-3 px-2 text-center font-mono">Potencial (t)</th>
+                  <th className="py-3 px-2 text-center">P(vivo)</th>
+                  <th className="py-3 px-3">Vendedor Atual</th>
+                  <th className="py-3 px-3">Ação Recomendada</th>
+                  <th className="py-3 px-3 text-right">Ação Supervisor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {filteredCustomers.map((cust) => (
+                  <tr key={cust.customerId} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-slate-900">
+                      {cust.customerName}
+                      <span className="text-[10px] text-muted-foreground block">
+                        {cust.city}/{cust.uf}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2 font-mono text-primary font-bold">
+                      {cust.customerId}
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      <ABCBadge category={(cust as any).abcCategory || 'C'} type="carteira" />
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      <ABCBadge
+                        category={
+                          cust.reactivationScore >= 80
+                            ? 'A'
+                            : cust.reactivationScore >= 60
+                              ? 'B'
+                              : 'C'
+                        }
+                        type="reativacao"
+                      />
+                    </td>
+                    <td className="py-3 px-3 text-slate-700">{cust.lastPurchaseDate}</td>
+                    <td className="py-3 px-2 text-center font-bold text-rose-600">
+                      {cust.daysSinceLastPurchase}d
+                    </td>
+                    <td className="py-3 px-2 text-center font-mono font-bold text-primary">
+                      {cust.historicalTons || 24.5} t
+                    </td>
+                    <td className="py-3 px-2 text-center font-mono text-emerald-700 font-semibold">
+                      {((cust.historicalTons || 24.5) * 1.3).toFixed(1)} t
+                    </td>
+                    <td className="py-3 px-2 text-center font-mono font-bold">
+                      {Math.round(cust.pAlive * 100)}%
+                    </td>
+                    <td className="py-3 px-3 text-slate-700">Carlos Mendonça</td>
+                    <td
+                      className="py-3 px-3 text-slate-600 max-w-xs truncate"
+                      title={cust.recommendedAction}
+                    >
+                      {cust.recommendedAction}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedForwardCustomer(cust)
+                          setForwardModalOpen(true)
+                        }}
+                        className="h-7 text-[11px] text-primary border-primary/30 hover:bg-primary/10 font-semibold gap-1"
+                      >
+                        <Users className="w-3.5 h-3.5" /> Encaminhar
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {Object.entries(rfmGroups).map(([segment, data]) => (
-                    <tr key={segment} className="hover:bg-slate-50/60">
-                      <td className="py-3 px-4 font-bold text-primary flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                        {segment}
-                      </td>
-                      <td className="py-3 px-4 text-center font-serif text-sm font-bold text-primary">
-                        {data.count}
-                      </td>
-                      <td className="py-3 px-4 text-center text-muted-foreground">
-                        {inactiveCustomers.length > 0
-                          ? Math.round((data.count / inactiveCustomers.length) * 100)
-                          : 0}
-                        %
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-primary">
-                        {data.count > 0 ? formatBRL(data.totalRev / data.count) : 'R$ 0'}
-                      </td>
-                      <td className="py-3 px-4 text-slate-700">{data.actions}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
-        {/* TAB 5: MIX ABANDONADO */}
-        <TabsContent value="produtos" className="mt-4 flex flex-col gap-4">
-          <Card className="bg-white/80 border-border/40 rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-5 border-b border-border/40 flex items-center justify-between">
-              <div>
+      {/* MODO 1: COCKPIT INTELIGENTE (EXISTENTE) */}
+      {viewMode === 'cockpit' && (
+        <>
+          {/* Abas Principais da Subaplicação */}
+          <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
+            <TabsList className="bg-white/70 border border-border/50 p-1 rounded-2xl w-full sm:w-auto flex flex-wrap gap-1">
+              <TabsTrigger value="fila" className="text-xs font-semibold rounded-xl px-4 py-2">
+                Fila Prioritária ({filteredCustomers.length})
+              </TabsTrigger>
+              <TabsTrigger
+                value="recorrencia"
+                className="text-xs font-semibold rounded-xl px-4 py-2"
+              >
+                Mapa de Recorrência (12M)
+              </TabsTrigger>
+              <TabsTrigger value="evolucao" className="text-xs font-semibold rounded-xl px-4 py-2">
+                Evolução de Compradores
+              </TabsTrigger>
+              <TabsTrigger value="rfm" className="text-xs font-semibold rounded-xl px-4 py-2">
+                Segmentação RFM
+              </TabsTrigger>
+              <TabsTrigger value="produtos" className="text-xs font-semibold rounded-xl px-4 py-2">
+                Mix Abandonado ({stoppedProducts.length})
+              </TabsTrigger>
+            </TabsList>
+
+            {/* TAB 1: FILA PRIORITÁRIA DE REATIVAÇÃO */}
+            <TabsContent value="fila" className="mt-4 flex flex-col gap-4">
+              <Card className="bg-white/80 backdrop-blur-md border-border/40 shadow-sm rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50/90 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/40">
+                      <tr>
+                        <th className="py-3 px-4 font-bold"># / Score</th>
+                        <th className="py-3 px-4 font-bold">Cliente</th>
+                        <th className="py-3 px-4 font-bold">Dias Inativo</th>
+                        <th className="py-3 px-4 font-bold">Última Visita</th>
+                        <th className="py-3 px-4 font-bold">Próxima Visita</th>
+                        <th className="py-3 px-4 font-bold">Histórico</th>
+                        <th className="py-3 px-4 font-bold">Potencial R$</th>
+                        <th className="py-3 px-4 font-bold">P(vivo)</th>
+                        <th className="py-3 px-4 font-bold">Crédito</th>
+                        <th className="py-3 px-4 font-bold">Ação Recomendada</th>
+                        <th className="py-3 px-4 font-bold text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {loading ? (
+                        Array.from({ length: 6 }).map((_, i) => (
+                          <tr key={i}>
+                            <td colSpan={10} className="p-4">
+                              <Skeleton className="h-8 w-full" />
+                            </td>
+                          </tr>
+                        ))
+                      ) : filteredCustomers.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="p-8">
+                            <PageEmptyState
+                              title="Não existem dados disponíveis para este período."
+                              description="Nenhum cliente atende aos filtros de inatividade aplicados."
+                              actionLabel="Tentar novamente"
+                              onAction={() => {
+                                setSearch('')
+                                setInactivityFilter('todos')
+                                setSegmentFilter('todos')
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCustomers.map((cust, idx) => (
+                          <tr
+                            key={cust.customerId}
+                            className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                            onClick={() => {
+                              setSelectedCustomer(cust)
+                              setSheetOpen(true)
+                            }}
+                          >
+                            {/* Score */}
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-muted-foreground text-[11px] font-semibold w-4">
+                                  {idx + 1}
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'font-bold font-serif text-xs px-2',
+                                    cust.reactivationScore >= 85
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                      : cust.reactivationScore >= 75
+                                        ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                        : 'bg-amber-50 text-amber-700 border-amber-300',
+                                  )}
+                                >
+                                  {cust.reactivationScore}
+                                </Badge>
+                              </div>
+                            </td>
+
+                            {/* Cliente */}
+                            <td className="py-3 px-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-primary text-sm group-hover:text-primary/80">
+                                  {cust.customerName}
+                                </span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {cust.customerId} · {cust.city}/{cust.uf}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Inatividade */}
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-rose-600 block">
+                                {cust.daysSinceLastPurchase} dias
+                              </span>
+                              <span className="text-[10px] text-muted-foreground block">
+                                Última: {cust.lastPurchaseDate}
+                              </span>
+                            </td>
+
+                            {/* Última Visita */}
+                            <td className="py-3 px-4">
+                              <span className="font-medium text-slate-800 block text-[11px]">
+                                {idx === 0
+                                  ? '08/10/2024 (6d)'
+                                  : idx === 1
+                                    ? '03/10/2024 (11d)'
+                                    : 'Há 45+ dias'}
+                              </span>
+                            </td>
+
+                            {/* Próxima Visita */}
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-emerald-700 block text-[11px]">
+                                {idx === 0
+                                  ? 'Hoje 09:30'
+                                  : idx === 1
+                                    ? '16/10 14:30'
+                                    : 'Não agendada'}
+                              </span>
+                            </td>
+
+                            {/* Histórico */}
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-primary block">
+                                {formatBRL(cust.historicalRevenue)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground block">
+                                {cust.historicalTons} ton · {cust.frequency}d ciclo
+                              </span>
+                            </td>
+
+                            {/* Potencial R$ */}
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-primary font-serif text-sm block">
+                                {formatBRL(cust.expectedValue)}
+                              </span>
+                              <span className="text-[10px] text-emerald-700 font-semibold block">
+                                Em {cust.expectedNextPurchaseDays} dias
+                              </span>
+                            </td>
+
+                            {/* P(vivo) */}
+                            <td className="py-3 px-4 font-mono font-semibold">
+                              {Math.round(cust.pAlive * 100)}%
+                            </td>
+
+                            {/* Crédito */}
+                            <td className="py-3 px-4">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[10px]',
+                                  cust.creditStatus === 'liberado'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200',
+                                )}
+                              >
+                                {cust.creditStatus === 'liberado' ? 'Liberado' : 'Em análise'}
+                              </Badge>
+                            </td>
+
+                            {/* Estoque */}
+                            <td className="py-3 px-4">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-slate-100 text-slate-700"
+                              >
+                                {cust.stockCoveragePercent || 90}% pronto
+                              </Badge>
+                            </td>
+
+                            {/* Ação Recomendada */}
+                            <td className="py-3 px-4 max-w-xs">
+                              <p
+                                className="text-xs text-slate-700 truncate"
+                                title={cust.recommendedAction}
+                              >
+                                {cust.recommendedAction}
+                              </p>
+                            </td>
+
+                            {/* Botão Ação */}
+                            <td
+                              className="py-3 px-4 text-right"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-[11px] text-primary border-primary/30 hover:bg-primary/10"
+                                  onClick={() => navigate('/visitas')}
+                                >
+                                  Agendar Visita
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs"
+                                  onClick={() => handleGenerateAction(cust)}
+                                >
+                                  Criar Ação
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 2: MAPA DE RECORRÊNCIA (GRADE 12 MESES) */}
+            <TabsContent value="recorrencia" className="mt-4 flex flex-col gap-4">
+              <Card className="bg-white/80 border-border/40 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-serif font-bold text-lg text-primary">
+                      Grade de Compras Mensais por Cliente (12 Meses)
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Verde escuro = mês com alto volume de compra; Cinza = ausência de pedido.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border/40 text-muted-foreground text-[10px] uppercase">
+                        <th className="py-2.5 px-3 text-left font-bold min-w-[200px]">Cliente</th>
+                        {monthsHeader.map((m) => (
+                          <th key={m} className="py-2.5 px-2 text-center font-bold">
+                            {m}
+                          </th>
+                        ))}
+                        <th className="py-2.5 px-3 text-right font-bold">Status Atual</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {filteredCustomers.slice(0, 12).map((cust) => {
+                        const months = cust.recurrenceMonths || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                        return (
+                          <tr
+                            key={cust.customerId}
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => {
+                              setSelectedCustomer(cust)
+                              setSheetOpen(true)
+                            }}
+                          >
+                            <td className="py-2.5 px-3 font-semibold text-primary">
+                              <span className="block truncate">{cust.customerName}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                {cust.customerId}
+                              </span>
+                            </td>
+                            {months.map((bought, i) => (
+                              <td key={i} className="py-2.5 px-2 text-center">
+                                <div
+                                  className={cn(
+                                    'w-7 h-7 mx-auto rounded-lg flex items-center justify-center font-bold text-[10px]',
+                                    bought
+                                      ? 'bg-emerald-500 text-white shadow-xs'
+                                      : 'bg-slate-100 text-slate-300',
+                                  )}
+                                >
+                                  {bought ? '✓' : '—'}
+                                </div>
+                              </td>
+                            ))}
+                            <td className="py-2.5 px-3 text-right">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-rose-50 text-rose-700 border-rose-300"
+                              >
+                                {cust.daysSinceLastPurchase}d sem compra
+                              </Badge>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 3: EVOLUÇÃO DE CLIENTES ATIVOS */}
+            <TabsContent value="evolucao" className="mt-4 flex flex-col gap-4">
+              <Card className="bg-white/80 border-border/40 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-serif font-bold text-lg text-primary">
-                  Produtos que Deixaram de Ser Comprados
+                  Evolução da Carteira de Clientes Compradores
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Consolidação dos SKUs abandonados pelos clientes com verificação de estoque
-                  CIAFAL.
+                <p className="text-xs text-muted-foreground mt-0.5 mb-6">
+                  Acompanhamento mensal de clientes ativos vs. clientes em queda de recompra.
                 </p>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-muted-foreground text-[10px] uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4 font-bold">Código SKU</th>
-                    <th className="py-3 px-4 font-bold">Descrição do Produto</th>
-                    <th className="py-3 px-4 font-bold">Família</th>
-                    <th className="py-3 px-4 font-bold text-center">Clientes Parados</th>
-                    <th className="py-3 px-4 font-bold">Volume Histórico</th>
-                    <th className="py-3 px-4 font-bold">Estoque</th>
-                    <th className="py-3 px-4 font-bold text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {stoppedProducts.map((p) => (
-                    <tr key={p.code} className="hover:bg-slate-50/60">
-                      <td className="py-3 px-4 font-mono font-bold text-primary">{p.code}</td>
-                      <td className="py-3 px-4 font-medium text-slate-800">{p.desc}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="text-[10px] bg-slate-100">
-                          {p.family}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-center font-bold text-rose-600">{p.clients}</td>
-                      <td className="py-3 px-4 font-semibold text-primary">{p.tons} ton</td>
-                      <td className="py-3 px-4">
-                        {p.inStock ? (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300"
-                          >
-                            Disponível
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] bg-amber-50 text-amber-700 border-amber-300"
-                          >
-                            Sob Consulta
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs text-primary font-semibold hover:bg-primary/10"
-                          onClick={() => {
-                            setSearch(p.code)
-                            setActiveTab('fila')
-                          }}
-                        >
-                          Ver Clientes
-                          <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                        </Button>
-                      </td>
-                    </tr>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-xs text-muted-foreground block">
+                      Média Compradores / Mês
+                    </span>
+                    <span className="font-serif text-2xl font-bold text-primary mt-1 block">
+                      42 contas
+                    </span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-xs text-muted-foreground block">Queda no Q3</span>
+                    <span className="font-serif text-2xl font-bold text-rose-600 mt-1 block">
+                      -18 contas
+                    </span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-xs text-muted-foreground block">Reativadas no Q4</span>
+                    <span className="font-serif text-2xl font-bold text-emerald-600 mt-1 block">
+                      +5 contas
+                    </span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="text-xs text-muted-foreground block">Meta Reativação Q4</span>
+                    <span className="font-serif text-2xl font-bold text-primary mt-1 block">
+                      14 contas
+                    </span>
+                  </div>
+                </div>
+
+                <div className="h-48 flex items-end justify-between gap-2 pt-6 border-t border-border/30">
+                  {[38, 41, 45, 44, 46, 48, 42, 39, 36, 37, 40, 42].map((val, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                      <span className="text-[11px] font-bold text-primary">{val}</span>
+                      <div
+                        className="w-full max-w-[36px] bg-primary rounded-t-md hover:bg-primary/80 transition-all"
+                        style={{ height: `${(val / 50) * 120}px` }}
+                      />
+                      <span className="text-[10px] text-muted-foreground uppercase">
+                        {monthsHeader[idx].split('/')[0]}
+                      </span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 4: SEGMENTAÇÃO RFM */}
+            <TabsContent value="rfm" className="mt-4 flex flex-col gap-4">
+              <Card className="bg-white/80 border-border/40 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-border/40">
+                  <h3 className="font-serif font-bold text-lg text-primary">
+                    Matriz RFM da Carteira Inativa
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Segmentação baseada em Recência (dias), Frequência (pedidos/ano) e Monetário
+                    (faturamento total).
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-muted-foreground text-[10px] uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">Segmento RFM</th>
+                        <th className="py-3 px-4 font-bold text-center">Clientes</th>
+                        <th className="py-3 px-4 font-bold text-center">% Carteira</th>
+                        <th className="py-3 px-4 font-bold">Faturamento Médio</th>
+                        <th className="py-3 px-4 font-bold">Estratégia Recomendada</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {Object.entries(rfmGroups).map(([segment, data]) => (
+                        <tr key={segment} className="hover:bg-slate-50/60">
+                          <td className="py-3 px-4 font-bold text-primary flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                            {segment}
+                          </td>
+                          <td className="py-3 px-4 text-center font-serif text-sm font-bold text-primary">
+                            {data.count}
+                          </td>
+                          <td className="py-3 px-4 text-center text-muted-foreground">
+                            {inactiveCustomers.length > 0
+                              ? Math.round((data.count / inactiveCustomers.length) * 100)
+                              : 0}
+                            %
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-primary">
+                            {data.count > 0 ? formatBRL(data.totalRev / data.count) : 'R$ 0'}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700">{data.actions}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+
+            {/* TAB 5: MIX ABANDONADO */}
+            <TabsContent value="produtos" className="mt-4 flex flex-col gap-4">
+              <Card className="bg-white/80 border-border/40 rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-5 border-b border-border/40 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-serif font-bold text-lg text-primary">
+                      Produtos que Deixaram de Ser Comprados
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Consolidação dos SKUs abandonados pelos clientes com verificação de estoque
+                      CIAFAL.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-muted-foreground text-[10px] uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3 px-4 font-bold">Código SKU</th>
+                        <th className="py-3 px-4 font-bold">Descrição do Produto</th>
+                        <th className="py-3 px-4 font-bold">Família</th>
+                        <th className="py-3 px-4 font-bold text-center">Clientes Parados</th>
+                        <th className="py-3 px-4 font-bold">Volume Histórico</th>
+                        <th className="py-3 px-4 font-bold">Estoque</th>
+                        <th className="py-3 px-4 font-bold text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                      {stoppedProducts.map((p) => (
+                        <tr key={p.code} className="hover:bg-slate-50/60">
+                          <td className="py-3 px-4 font-mono font-bold text-primary">{p.code}</td>
+                          <td className="py-3 px-4 font-medium text-slate-800">{p.desc}</td>
+                          <td className="py-3 px-4">
+                            <Badge variant="outline" className="text-[10px] bg-slate-100">
+                              {p.family}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-center font-bold text-rose-600">
+                            {p.clients}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-primary">{p.tons} ton</td>
+                          <td className="py-3 px-4">
+                            {p.inStock ? (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300"
+                              >
+                                Disponível
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] bg-amber-50 text-amber-700 border-amber-300"
+                              >
+                                Sob Consulta
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs text-primary font-semibold hover:bg-primary/10"
+                              onClick={() => {
+                                setSearch(p.code)
+                                setActiveTab('fila')
+                              }}
+                            >
+                              Ver Clientes
+                              <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
 
       {/* Drawer Visão 360 do Inativo */}
       <Customer360Sheet

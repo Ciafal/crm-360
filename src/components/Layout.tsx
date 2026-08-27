@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { Building2, Search, Menu, X, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { GlobalAssistant } from '@/components/shared/GlobalAssistant'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -205,6 +206,7 @@ export default function Layout() {
       <div className="flex-1 pt-24 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full z-10">
         <Outlet />
       </div>
+      <GlobalAssistant />
     </main>
   )
 }

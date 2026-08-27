@@ -17,7 +17,27 @@ import {
   Smartphone,
   Radio,
   ExternalLink,
+  BookOpen,
+  Workflow,
+  Sparkles,
+  Layers,
+  Plus,
+  Edit2,
+  Trash2,
+  FileCheck,
 } from 'lucide-react'
+import {
+  initialCommercialPlaybooks,
+  initialRelationshipEvents,
+  initialAutomationRules,
+  initialDynamicFormFields,
+} from '@/data/mockPlaybooksAndWorkflows'
+import type {
+  CommercialPlaybook,
+  RelationshipEvent,
+  CommercialAutomationRule,
+  DynamicFormField,
+} from '@/types/models'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +46,7 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { cn } from '@/lib/utils'
 
 interface MockEmailItem {
   id: string
@@ -41,10 +62,22 @@ export default function Administracao() {
   const { user } = useAuth()
   const { toast } = useToast()
 
+  const [adminTab, setAdminTab] = useState<
+    'geral' | 'playbooks' | 'relacionamento' | 'workflows' | 'formularios'
+  >('geral')
   const [emails, setEmails] = useState<MockEmailItem[]>([])
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  // Estados dos Módulos Administrativos
+  const [playbooks, setPlaybooks] = useState<CommercialPlaybook[]>(initialCommercialPlaybooks)
+  const [selectedPlaybook, setSelectedPlaybook] = useState<CommercialPlaybook | null>(null)
+  const [playbookModalOpen, setPlaybookModalOpen] = useState(false)
+
+  const [relEvents, setRelEvents] = useState<RelationshipEvent[]>(initialRelationshipEvents)
+  const [rules, setRules] = useState<CommercialAutomationRule[]>(initialAutomationRules)
+  const [formFields, setFormFields] = useState<DynamicFormField[]>(initialDynamicFormFields)
 
   const isAdmin =
     user?.role === 'administrador' ||
@@ -158,297 +191,627 @@ export default function Administracao() {
         </Button>
       </div>
 
-      {/* Grid de Métricas de Ambiente de Teste */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl">
-              <Server className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Ambiente Atual
-              </span>
-              <span className="font-bold text-primary text-base">DEV / Pré-Homologação</span>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Usuários de Teste
-              </span>
-              <span className="font-bold text-emerald-700 text-base">5 Contas Ativas (v0.0.6)</span>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
-              <Shield className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                ENABLE_TEST_USERS
-              </span>
-              <span className="font-bold text-amber-700 text-base">Habilitado (true)</span>
-            </div>
-          </div>
-        </Card>
+      {/* BARRA DE NAVEGAÇÃO DE SUB-MÓDULOS DE ADMINISTRAÇÃO */}
+      <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-wrap gap-1.5 border border-border/60">
+        <Button
+          size="sm"
+          variant={adminTab === 'geral' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('geral')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'geral' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <Server className="w-4 h-4 mr-1.5" /> 1. Geral & Mocks OTP
+        </Button>
+        <Button
+          size="sm"
+          variant={adminTab === 'playbooks' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('playbooks')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'playbooks' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <BookOpen className="w-4 h-4 mr-1.5" /> 2. Playbooks Comerciais ({playbooks.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={adminTab === 'relacionamento' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('relacionamento')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'relacionamento' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <Sparkles className="w-4 h-4 mr-1.5" /> 3. Réguas de Relacionamento ({relEvents.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={adminTab === 'workflows' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('workflows')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'workflows' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <Workflow className="w-4 h-4 mr-1.5" /> 4. Workflow Engine & Automação ({rules.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={adminTab === 'formularios' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('formularios')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'formularios' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <Layers className="w-4 h-4 mr-1.5" /> 5. Formulários Dinâmicos ({formFields.length})
+        </Button>
       </div>
 
-      {/* INTEGRAÇÃO WHATSAPP COEX */}
-      <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
-        <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-600 text-white rounded-xl">
-              <MessageSquare className="w-5 h-5" />
-            </div>
+      {/* ABA 2: PLAYBOOKS COMERCIAIS */}
+      {adminTab === 'playbooks' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
             <div>
-              <CardTitle className="font-serif text-xl font-bold text-primary">
-                Integrações & WhatsApp COEX / Cloud API
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                Monitoramento de modo operacional, instâncias ativas e sincronização de mensageria
-                omnicanal.
-              </CardDescription>
-            </div>
-          </div>
-          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-300 border text-xs px-2.5 py-1">
-            <Radio className="w-3 h-3 mr-1 animate-pulse text-emerald-600" /> WhatsApp COEX Ativo
-          </Badge>
-        </CardHeader>
-
-        <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Modo WhatsApp
-              </span>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className="bg-primary text-white font-bold text-xs">
-                  COEX (Oficial + Web)
-                </Badge>
-                <span className="text-xs text-muted-foreground">ou Cloud API / MOCK</span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Número Conectado
-              </span>
-              <div className="flex items-center gap-2 mt-1 font-mono font-bold text-slate-800 text-sm">
-                <Smartphone className="w-4 h-4 text-emerald-600" />
-                +55 (31) 98888-0000
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Status Operacional
-              </span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="font-bold text-emerald-700 text-xs">
-                  Conectado & Sincronizando
-                </span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                Última Sincronização
-              </span>
-              <span className="font-bold text-slate-800 text-xs mt-1 block">
-                {new Date().toLocaleTimeString('pt-BR')} (tempo real via webhook)
-              </span>
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <p className="font-bold">Mapeamento de Contexto Comercial no WhatsApp:</p>
-              <p className="text-[11px] text-blue-800">
-                Campos registrados: <code className="font-mono font-bold">phone_number_id</code>,{' '}
-                <code className="font-mono font-bold">wa_id</code>,{' '}
-                <code className="font-mono font-bold">contact_id</code>,{' '}
-                <code className="font-mono font-bold">customer_id</code>,{' '}
-                <code className="font-mono font-bold">seller_id</code>,{' '}
-                <code className="font-mono font-bold">conversation_id</code>,{' '}
-                <code className="font-mono font-bold">channel_mode: COEX</code>.
+              <h3 className="font-serif text-xl font-bold text-primary">
+                Playbooks Comerciais por Arquétipo
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Definição de diretrizes, perguntas-chave, canais, cadência e anti-patterns com
+                versionamento completo.
               </p>
             </div>
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 text-xs bg-white text-primary border-blue-300 shrink-0"
               onClick={() => {
-                toast({
-                  title: 'WhatsApp COEX Sincronizado',
-                  description:
-                    'Status verificado com sucesso. Webhooks e instâncias operando normalmente.',
-                })
+                toast({ title: 'Novo playbook de arquétipo comercial iniciado.' })
               }}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
             >
-              Testar Conexão COEX
+              <Plus className="w-3.5 h-3.5" /> Adicionar Playbook
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* CAIXA DE E-MAIL MOCK (MFA) */}
-      <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
-        <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary text-primary-foreground rounded-xl">
-              <Mail className="w-5 h-5" />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {playbooks.map((pb) => (
+              <div
+                key={pb.id}
+                className="p-5 rounded-2xl border border-border/60 bg-slate-50/70 hover:bg-slate-50 transition-colors space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <Badge className="bg-primary text-white font-bold text-[10px]">
+                      {pb.customer_archetype}
+                    </Badge>
+                    <h4 className="font-bold text-sm text-slate-900 mt-1">{pb.name}</h4>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] bg-white font-mono">
+                    v{pb.version}
+                  </Badge>
+                </div>
+
+                <p className="text-xs text-slate-700 line-clamp-2">{pb.recommended_approach}</p>
+
+                <div className="text-[11px] text-muted-foreground border-t pt-2 flex items-center justify-between">
+                  <span>
+                    Autor: <strong>{pb.created_by}</strong>
+                  </span>
+                  <span>Atualizado: {pb.updated_at}</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      toast({ title: `Editando playbook para ${pb.customer_archetype}` })
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    <Edit2 className="w-3 h-3 mr-1" /> Editar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ABA 3: RÉGUAS DE RELACIONAMENTO */}
+      {adminTab === 'relacionamento' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
             <div>
-              <CardTitle className="font-serif text-xl font-bold text-primary">
-                Caixa de E-mail Mock (MFA / OTP)
-              </CardTitle>
-              <CardDescription className="text-xs mt-0.5">
-                Códigos de verificação OTP gerados para usuários externos durante o login em teste.
-              </CardDescription>
-            </div>
-          </div>
-
-          <div className="w-full sm:w-64">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por e-mail ou código..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9 text-xs pl-9 rounded-xl"
-              />
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0 overflow-x-auto">
-          {loading ? (
-            <div className="py-12 text-center text-muted-foreground text-sm flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin" /> Carregando mensagens...
-            </div>
-          ) : filteredEmails.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-sm">
-              <Mail className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              Nenhum código OTP foi solicitado ainda.
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                Faça login com{' '}
-                <code className="bg-slate-100 px-1 py-0.5 rounded">
-                  representante.teste@crm360.local
-                </code>{' '}
-                para gerar um OTP.
+              <h3 className="font-serif text-xl font-bold text-primary">
+                Réguas de Relacionamento & Marketing
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Gatilhos automáticos de relacionamento (Aniversário, Pós-Venda, Recompra e Datas
+                Setoriais) com governança e consentimento LGPD.
               </p>
             </div>
-          ) : (
-            <div className="p-4 bg-muted/20 border-b border-border/40 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between gap-2">
-              <span>
-                <strong>Como utilizar o OTP:</strong> Quando o Representante Externo (
-                <code>representante.teste@crm360.local</code>) tentar logar com{' '}
-                <code>teste123</code>, o OTP de 6 dígitos aparece aqui. Copie e informe ao testador
-                para concluir o acesso.
-              </span>
-            </div>
-          )}
-          {filteredEmails.length > 0 && (
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-border/60 text-[11px] uppercase font-bold text-muted-foreground tracking-wider">
-                  <th className="p-4">Destinatário</th>
-                  <th className="p-4">Assunto</th>
-                  <th className="p-4 text-center">Código OTP</th>
-                  <th className="p-4 text-center">Status</th>
-                  <th className="p-4">Gerado em</th>
-                  <th className="p-4">Expira em</th>
-                  <th className="p-4 text-center">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {filteredEmails.map((item) => {
-                  const isExpired =
-                    item.status === 'EXPIRED' ||
-                    (item.expires_at && new Date(item.expires_at).getTime() < Date.now())
+            <Button
+              size="sm"
+              onClick={() => toast({ title: 'Nova régua de relacionamento criada.' })}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Nova Régua
+            </Button>
+          </div>
 
-                  return (
-                    <tr key={item.id} className="hover:bg-primary/5 transition-colors">
-                      <td className="p-4 font-semibold text-foreground">{item.recipient}</td>
-                      <td className="p-4 text-muted-foreground">{item.subject}</td>
-                      <td className="p-4 text-center">
-                        <span className="font-mono font-bold text-sm bg-slate-100 text-primary px-2.5 py-1 rounded-md border border-slate-200 tracking-widest">
-                          {item.otp_code}
-                        </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        {item.status === 'USED' ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-slate-100 text-slate-600 border-slate-300 text-[10px]"
-                          >
-                            Utilizado
-                          </Badge>
-                        ) : isExpired ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-rose-50 text-rose-700 border-rose-300 text-[10px]"
-                          >
-                            Expirado
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] font-bold"
-                          >
-                            Válido
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-4 text-muted-foreground">
-                        {new Date(item.created).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        })}
-                      </td>
-                      <td className="p-4 text-muted-foreground">
-                        {item.expires_at
-                          ? new Date(item.expires_at).toLocaleTimeString('pt-BR', {
+          <div className="space-y-3">
+            {relEvents.map((ev) => (
+              <div
+                key={ev.id}
+                className="p-4 rounded-2xl border border-border/60 bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-3"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-slate-900">{ev.name}</span>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-white font-semibold text-primary"
+                    >
+                      {ev.type}
+                    </Badge>
+                    <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-none font-bold">
+                      {ev.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    <strong>Gatilho:</strong> {ev.date_rule} · <strong>Público:</strong>{' '}
+                    {ev.audience}
+                  </p>
+                  <p className="text-[11px] text-slate-500 italic">Template: "{ev.template}"</p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant="outline" className="text-[10px] bg-white text-slate-700">
+                    Canal: {ev.channel}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => toast({ title: `Régua ${ev.name} atualizada.` })}
+                    className="h-7 text-xs"
+                  >
+                    Configurar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ABA 4: WORKFLOW ENGINE & AUTOMAÇÃO */}
+      {adminTab === 'workflows' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-primary">
+                Workflow & Automation Engine
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Regras de negócio de automação comercial desacopladas: TRIGGER + CONDITIONS +
+                ACTIONS.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => toast({ title: 'Nova regra de automação criada.' })}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Criar Regra de Automação
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {rules.map((r) => (
+              <div
+                key={r.id}
+                className="p-4 rounded-2xl border border-border/60 bg-slate-50 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs text-slate-900">{r.name}</span>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] bg-blue-50 text-blue-700 border-blue-300 font-mono"
+                    >
+                      TRIGGER: {r.trigger}
+                    </Badge>
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-none font-bold">
+                    {r.enabled ? 'ATIVA' : 'PAUSADA'}
+                  </Badge>
+                </div>
+
+                <div className="text-xs text-slate-700 grid grid-cols-1 md:grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-border/40">
+                  <div>
+                    <strong className="text-primary text-[11px] block">CONDIÇÕES:</strong>
+                    {r.conditions.map((c, i) => (
+                      <span key={i} className="text-slate-600 block text-[11px]">
+                        • {c.field} {c.operator} {JSON.stringify(c.value)}
+                      </span>
+                    ))}
+                  </div>
+                  <div>
+                    <strong className="text-emerald-700 text-[11px] block">
+                      AÇÕES DISPARADAS:
+                    </strong>
+                    {r.actions.map((a, i) => (
+                      <span key={i} className="text-slate-600 block text-[11px]">
+                        • Executar {a.type}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ABA 5: FORMULÁRIOS DINÂMICOS */}
+      {adminTab === 'formularios' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+            <div>
+              <h3 className="font-serif text-xl font-bold text-primary">
+                Formulários Comerciais Dinâmicos
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Configuração de campos dinâmicos e condicionais por arquétipo comercial com detecção
+                de duplicidade.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => toast({ title: 'Novo campo de formulário dinâmico adicionado.' })}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Adicionar Campo
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {formFields.map((field) => (
+              <div
+                key={field.id}
+                className="p-4 rounded-2xl border border-border/60 bg-slate-50 flex items-center justify-between gap-3 text-xs"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <strong className="text-slate-900">{field.label}</strong>
+                    <code className="font-mono text-[10px] text-muted-foreground bg-white px-1.5 py-0.5 rounded border">
+                      {field.name}
+                    </code>
+                    {field.required && (
+                      <Badge className="bg-rose-100 text-rose-800 text-[9px] border-none font-bold">
+                        Obrigatório
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-slate-600 mt-1">{field.helpText}</p>
+                  {field.conditionalArchetypes && (
+                    <span className="text-[10px] text-primary font-semibold block mt-0.5">
+                      Condicional para: {field.conditionalArchetypes.join(', ')}
+                    </span>
+                  )}
+                </div>
+
+                <Badge variant="outline" className="text-[10px] bg-white font-mono uppercase">
+                  Tipo: {field.type}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ABA 1: GERAL & MOCKS OTP */}
+      {adminTab === 'geral' && (
+        <>
+          {/* Grid de Métricas de Ambiente de Teste */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl">
+                  <Server className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Ambiente Atual
+                  </span>
+                  <span className="font-bold text-primary text-base">DEV / Pré-Homologação</span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Usuários de Teste
+                  </span>
+                  <span className="font-bold text-emerald-700 text-base">
+                    5 Contas Ativas (v0.0.6)
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="rounded-2xl border-border/60 bg-white shadow-sm p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    ENABLE_TEST_USERS
+                  </span>
+                  <span className="font-bold text-amber-700 text-base">Habilitado (true)</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* INTEGRAÇÃO WHATSAPP COEX */}
+          <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
+            <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600 text-white rounded-xl">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <div>
+                  <CardTitle className="font-serif text-xl font-bold text-primary">
+                    Integrações & WhatsApp COEX / Cloud API
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Monitoramento de modo operacional, instâncias ativas e sincronização de
+                    mensageria omnicanal.
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-300 border text-xs px-2.5 py-1">
+                <Radio className="w-3 h-3 mr-1 animate-pulse text-emerald-600" /> WhatsApp COEX
+                Ativo
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Modo WhatsApp
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className="bg-primary text-white font-bold text-xs">
+                      COEX (Oficial + Web)
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">ou Cloud API / MOCK</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Número Conectado
+                  </span>
+                  <div className="flex items-center gap-2 mt-1 font-mono font-bold text-slate-800 text-sm">
+                    <Smartphone className="w-4 h-4 text-emerald-600" />
+                    +55 (31) 98888-0000
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Status Operacional
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="font-bold text-emerald-700 text-xs">
+                      Conectado & Sincronizando
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Última Sincronização
+                  </span>
+                  <span className="font-bold text-slate-800 text-xs mt-1 block">
+                    {new Date().toLocaleTimeString('pt-BR')} (tempo real via webhook)
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="font-bold">Mapeamento de Contexto Comercial no WhatsApp:</p>
+                  <p className="text-[11px] text-blue-800">
+                    Campos registrados: <code className="font-mono font-bold">phone_number_id</code>
+                    , <code className="font-mono font-bold">wa_id</code>,{' '}
+                    <code className="font-mono font-bold">contact_id</code>,{' '}
+                    <code className="font-mono font-bold">customer_id</code>,{' '}
+                    <code className="font-mono font-bold">seller_id</code>,{' '}
+                    <code className="font-mono font-bold">conversation_id</code>,{' '}
+                    <code className="font-mono font-bold">channel_mode: COEX</code>.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs bg-white text-primary border-blue-300 shrink-0"
+                  onClick={() => {
+                    toast({
+                      title: 'WhatsApp COEX Sincronizado',
+                      description:
+                        'Status verificado com sucesso. Webhooks e instâncias operando normalmente.',
+                    })
+                  }}
+                >
+                  Testar Conexão COEX
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CAIXA DE E-MAIL MOCK (MFA) */}
+          <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
+            <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary text-primary-foreground rounded-xl">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <CardTitle className="font-serif text-xl font-bold text-primary">
+                    Caixa de E-mail Mock (MFA / OTP)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Códigos de verificação OTP gerados para usuários externos durante o login em
+                    teste.
+                  </CardDescription>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-64">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por e-mail ou código..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-9 text-xs pl-9 rounded-xl"
+                  />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0 overflow-x-auto">
+              {loading ? (
+                <div className="py-12 text-center text-muted-foreground text-sm flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Carregando mensagens...
+                </div>
+              ) : filteredEmails.length === 0 ? (
+                <div className="py-12 text-center text-muted-foreground text-sm">
+                  <Mail className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  Nenhum código OTP foi solicitado ainda.
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    Faça login com{' '}
+                    <code className="bg-slate-100 px-1 py-0.5 rounded">
+                      representante.teste@crm360.local
+                    </code>{' '}
+                    para gerar um OTP.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-muted/20 border-b border-border/40 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between gap-2">
+                  <span>
+                    <strong>Como utilizar o OTP:</strong> Quando o Representante Externo (
+                    <code>representante.teste@crm360.local</code>) tentar logar com{' '}
+                    <code>teste123</code>, o OTP de 6 dígitos aparece aqui. Copie e informe ao
+                    testador para concluir o acesso.
+                  </span>
+                </div>
+              )}
+              {filteredEmails.length > 0 && (
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-border/60 text-[11px] uppercase font-bold text-muted-foreground tracking-wider">
+                      <th className="p-4">Destinatário</th>
+                      <th className="p-4">Assunto</th>
+                      <th className="p-4 text-center">Código OTP</th>
+                      <th className="p-4 text-center">Status</th>
+                      <th className="p-4">Gerado em</th>
+                      <th className="p-4">Expira em</th>
+                      <th className="p-4 text-center">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/30">
+                    {filteredEmails.map((item) => {
+                      const isExpired =
+                        item.status === 'EXPIRED' ||
+                        (item.expires_at && new Date(item.expires_at).getTime() < Date.now())
+
+                      return (
+                        <tr key={item.id} className="hover:bg-primary/5 transition-colors">
+                          <td className="p-4 font-semibold text-foreground">{item.recipient}</td>
+                          <td className="p-4 text-muted-foreground">{item.subject}</td>
+                          <td className="p-4 text-center">
+                            <span className="font-mono font-bold text-sm bg-slate-100 text-primary px-2.5 py-1 rounded-md border border-slate-200 tracking-widest">
+                              {item.otp_code}
+                            </span>
+                          </td>
+                          <td className="p-4 text-center">
+                            {item.status === 'USED' ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-slate-100 text-slate-600 border-slate-300 text-[10px]"
+                              >
+                                Utilizado
+                              </Badge>
+                            ) : isExpired ? (
+                              <Badge
+                                variant="outline"
+                                className="bg-rose-50 text-rose-700 border-rose-300 text-[10px]"
+                              >
+                                Expirado
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px] font-bold"
+                              >
+                                Válido
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="p-4 text-muted-foreground">
+                            {new Date(item.created).toLocaleTimeString('pt-BR', {
                               hour: '2-digit',
                               minute: '2-digit',
-                            })
-                          : '10 min'}
-                      </td>
-                      <td className="p-4 text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => copyToClipboard(item.otp_code, item.id)}
-                          title="Copiar código OTP para informar ao testador"
-                        >
-                          {copiedId === item.id ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+                              second: '2-digit',
+                            })}
+                          </td>
+                          <td className="p-4 text-muted-foreground">
+                            {item.expires_at
+                              ? new Date(item.expires_at).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : '10 min'}
+                          </td>
+                          <td className="p-4 text-center">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => copyToClipboard(item.otp_code, item.id)}
+                              title="Copiar código OTP para informar ao testador"
+                            >
+                              {copiedId === item.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }
