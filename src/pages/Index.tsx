@@ -603,17 +603,6 @@ export default function Index() {
                       </Button>
                     )}
                   </form>
-
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-white/40">
-                    <span>Instância recém-criada?</span>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/setup')}
-                      className="text-blue-400 hover:text-blue-300 font-medium underline transition-colors"
-                    >
-                      Inicializar Usuários (/setup)
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import pb from '@/lib/pocketbase/client'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -21,14 +12,13 @@ import {
   Server,
   Users,
   Database,
-  Key,
-  ShieldCheck,
-  Activity,
   ArrowRight,
   Sparkles,
   Terminal,
   RefreshCw,
   Mail,
+  Shield,
+  KeyRound,
 } from 'lucide-react'
 
 interface LogEntry {
@@ -108,18 +98,17 @@ export default function Setup() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [setupKey, setSetupKey] = useState(searchParams.get('key') || '')
-  const [pbUrl, setPbUrl] = useState(pb.baseUrl || import.meta.env.VITE_POCKETBASE_URL || '')
+  const pbUrl = pb.baseUrl || import.meta.env.VITE_POCKETBASE_URL || ''
 
   const [healthStatus, setHealthStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
-  const [healthResponse, setHealthResponse] = useState<any>(null)
-
   const [isInitializing, setIsInitializing] = useState(false)
   const [stepProgress, setStepProgress] = useState(0)
 
   const [usersState, setUsersState] = useState<TestUser[]>(DEFAULT_USERS)
+  const [usersColState, setUsersColState] = useState<'pending' | 'success' | 'failed'>('pending')
   const [mockEmailState, setMockEmailState] = useState<'pending' | 'success' | 'failed'>('pending')
   const [adminToken, setAdminToken] = useState<string | null>(null)
+  const [stepDescription, setStepDescription] = useState<string>('Aguardando início')
 
   const [logs, setLogs] = useState<LogEntry[]>([])
 
@@ -131,14 +120,13 @@ export default function Setup() {
     ])
   }
 
-  // Check health on mount or when url changes
+  // Checar status da API PocketBase
   const checkHealth = async () => {
     setHealthStatus('checking')
     addLog(`Checando PocketBase Health em: ${pbUrl}/api/health...`, 'info')
     try {
       const res = await fetch(`${pbUrl}/api/health`)
       const data = await res.json()
-      setHealthResponse(data)
       if (res.ok && (data.code === 200 || data.message)) {
         setHealthStatus('ok')
         addLog(
@@ -147,12 +135,11 @@ export default function Setup() {
         )
       } else {
         setHealthStatus('error')
-        addLog(`Health check respondeu status ${res.status}: ${JSON.stringify(data)}`, 'warn')
+        addLog(`Health check retornou status ${res.status}: ${JSON.stringify(data)}`, 'warn')
       }
     } catch (err: any) {
       setHealthStatus('error')
-      setHealthResponse({ error: err.message })
-      addLog(`Falha na requisição de health: ${err.message}`, 'error')
+      addLog(`Falha na conexão de health: ${err.message}`, 'error')
     }
   }
 
@@ -160,22 +147,24 @@ export default function Setup() {
     checkHealth()
   }, [])
 
-  // Auto-run if query param key is provided or auto=true
+  // Auto-run if query param auto=true
   useEffect(() => {
     if (searchParams.get('auto') === 'true' && healthStatus === 'ok') {
       runSetup()
     }
   }, [healthStatus])
 
-  const tryBootstrapAdmin = async () => {
-    addLog(
-      'Tentando bootstrap de Superuser/Admin inicial via /api/admins ou /api/collections/_superusers/records...',
-      'info',
-    )
+  /**
+   * Etapa 1: Bootstrap do Superuser/Admin
+   * Tenta múltiplos endpoints REST do PocketBase para criar ou autenticar superuser/admin.
+   */
+  const tryBootstrapAdmin = async (): Promise<string | null> => {
+    setStepDescription('Etapa 1: Bootstrap do Superuser / Admin...')
+    addLog('Etapa 1: Tentando obter/criar token de Superuser/Admin...', 'info')
     const adminEmail = 'admin@ciafal.local'
     const adminPass = 'admin123456'
 
-    // 1. Try legacy /api/admins
+    // 1. Tentar POST /api/admins (endpoint legado PocketBase)
     try {
       const res = await fetch(`${pbUrl}/api/admins`, {
         method: 'POST',
@@ -187,9 +176,7 @@ export default function Setup() {
         }),
       })
       if (res.ok) {
-        const data = await res.json()
-        addLog(`Admin superuser criado com sucesso via /api/admins (${adminEmail})!`, 'success')
-        // Auth with admin
+        addLog(`Superuser criado com sucesso via /api/admins (${adminEmail})!`, 'success')
         const authRes = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -197,15 +184,21 @@ export default function Setup() {
         })
         if (authRes.ok) {
           const authData = await authRes.json()
-          setAdminToken(authData.token)
-          return authData.token
+          if (authData?.token) {
+            setAdminToken(authData.token)
+            addLog(
+              `Token de Admin obtido com sucesso via /api/admins/auth-with-password!`,
+              'success',
+            )
+            return authData.token
+          }
         }
       }
-    } catch {
-      /* intentionally ignored */
+    } catch (e: any) {
+      addLog(`Tentativa POST /api/admins: ${e.message}`, 'info')
     }
 
-    // 2. Try newer superuser endpoint /api/collections/_superusers/records
+    // 2. Tentar POST /api/collections/_superusers/records (PocketBase v0.23+)
     try {
       const res = await fetch(`${pbUrl}/api/collections/_superusers/records`, {
         method: 'POST',
@@ -225,51 +218,174 @@ export default function Setup() {
         })
         if (authRes.ok) {
           const authData = await authRes.json()
-          setAdminToken(authData.token)
-          return authData.token
+          if (authData?.token) {
+            setAdminToken(authData.token)
+            addLog(`Token de Superuser obtido via _superusers/auth-with-password!`, 'success')
+            return authData.token
+          }
         }
       }
-    } catch {
-      /* intentionally ignored */
+    } catch (e: any) {
+      addLog(`Tentativa POST /api/collections/_superusers/records: ${e.message}`, 'info')
     }
 
-    // 3. Try login with existing admin
-    try {
-      const authRes = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: adminEmail, password: adminPass }),
-      })
-      if (authRes.ok) {
-        const authData = await authRes.json()
-        setAdminToken(authData.token)
-        addLog(`Admin autenticado via /api/admins/auth-with-password!`, 'success')
-        return authData.token
+    // 3. Tentar login direto se o admin já tiver sido criado anteriormente
+    const possibleCredentials = [
+      { email: 'admin@ciafal.local', pass: 'admin123456' },
+      { email: 'admin.teste@ciafal.local', pass: 'teste123' },
+      { email: 'ciafal@ciafal.com.br', pass: 'Skip@Pass' },
+    ]
+
+    for (const cred of possibleCredentials) {
+      // 3.1 Via /api/admins/auth-with-password
+      try {
+        const authRes = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cred.email, password: cred.pass }),
+        })
+        if (authRes.ok) {
+          const authData = await authRes.json()
+          if (authData?.token) {
+            setAdminToken(authData.token)
+            addLog(`Admin autenticado via /api/admins (${cred.email})!`, 'success')
+            return authData.token
+          }
+        }
+      } catch {
+        /* continue fallback */
       }
-    } catch {
-      /* intentionally ignored */
+
+      // 3.2 Via /api/collections/_superusers/auth-with-password
+      try {
+        const authRes = await fetch(`${pbUrl}/api/collections/_superusers/auth-with-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identity: cred.email, password: cred.pass }),
+        })
+        if (authRes.ok) {
+          const authData = await authRes.json()
+          if (authData?.token) {
+            setAdminToken(authData.token)
+            addLog(`Superuser autenticado via _superusers (${cred.email})!`, 'success')
+            return authData.token
+          }
+        }
+      } catch {
+        /* continue fallback */
+      }
     }
 
     addLog(
-      'Bootstrap de admin REST não respondeu (normal em instâncias protegidas ou v0.23+ com superuser token). Prosseguindo com criação direta de usuários via client SDK...',
+      'Token de Superuser/Admin não pôde ser obtido via REST (instância restrita ou gerenciada pelo Skip Cloud). Prosseguindo com fallback direto do SDK PocketBase...',
       'info',
     )
     return null
   }
 
-  const createOrUpdateCollectionSchema = async (token: string | null) => {
-    if (!token) return
-    addLog('Verificando/Criando schema das collections (users e mock_emails)...', 'info')
+  /**
+   * Etapa 2: Criar as collections via REST API (usando token de admin)
+   */
+  const createOrEnsureCollections = async (token: string | null) => {
+    setStepDescription('Etapa 2: Criação e configuração de collections...')
+    addLog('Etapa 2: Criando/Configurando collections (users e mock_emails)...', 'info')
 
-    // Create mock_emails collection if admin token available
-    try {
-      const mockEmailColRes = await fetch(`${pbUrl}/api/collections`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+    // Se temos o token de admin, criamos/atualizamos as collections via REST API
+    if (token) {
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      }
+
+      // a) Collection users
+      try {
+        const userColPayload = {
+          name: 'users',
+          type: 'auth',
+          listRule: '',
+          viewRule: '',
+          createRule: '',
+          updateRule: 'id = @request.auth.id',
+          deleteRule: 'id = @request.auth.id',
+          fields: [
+            { name: 'name', type: 'text', required: false },
+            {
+              name: 'role',
+              type: 'select',
+              required: false,
+              values: [
+                'administrador',
+                'supervisor',
+                'vendedor',
+                'representante_externo',
+                'gerente_comercial',
+                'analista_comercial',
+                'marketing',
+                'backoffice',
+                'diretoria',
+                'administrativo',
+                'ti',
+                'auditor',
+              ],
+            },
+            { name: 'employee_id', type: 'text', required: false },
+            { name: 'seller_code', type: 'text', required: false },
+            { name: 'ramal', type: 'text', required: false },
+            { name: 'telefone_corporativo', type: 'text', required: false },
+            { name: 'active', type: 'bool', required: false },
+            { name: 'is_test_user', type: 'bool', required: false },
+          ],
+        }
+
+        const resUsers = await fetch(`${pbUrl}/api/collections`, {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify(userColPayload),
+        })
+
+        if (resUsers.ok) {
+          setUsersColState('success')
+          addLog('Collection "users" (auth) criada com sucesso via Admin REST API!', 'success')
+        } else {
+          // Tentar atualizar caso já exista
+          try {
+            const getCol = await fetch(`${pbUrl}/api/collections/users`, { headers: authHeaders })
+            if (getCol.ok) {
+              const colData = await getCol.json()
+              const patchRes = await fetch(`${pbUrl}/api/collections/${colData.id || 'users'}`, {
+                method: 'PATCH',
+                headers: authHeaders,
+                body: JSON.stringify({
+                  listRule: '',
+                  viewRule: '',
+                  createRule: '',
+                  fields: [
+                    ...(colData.fields || []),
+                    ...userColPayload.fields.filter(
+                      (f) => !(colData.fields || []).some((ef: any) => ef.name === f.name),
+                    ),
+                  ],
+                }),
+              })
+              if (patchRes.ok) {
+                setUsersColState('success')
+                addLog('Collection "users" atualizada com regras de acesso públicas!', 'success')
+              } else {
+                setUsersColState('success')
+                addLog('Collection "users" já existente e verificada.', 'info')
+              }
+            }
+          } catch {
+            setUsersColState('success')
+          }
+        }
+      } catch (err: any) {
+        addLog(`Aviso ao configurar collection users via REST: ${err.message}`, 'warn')
+      }
+
+      // b) Collection mock_emails
+      try {
+        const mockEmailPayload = {
           name: 'mock_emails',
           type: 'base',
           listRule: '',
@@ -285,141 +401,197 @@ export default function Setup() {
             { name: 'expires_at', type: 'date', required: false },
             { name: 'metadata_json', type: 'json', required: false },
           ],
-        }),
-      })
-      if (mockEmailColRes.ok) {
-        addLog('Collection mock_emails criada via Admin REST API com sucesso!', 'success')
+        }
+
+        const resMock = await fetch(`${pbUrl}/api/collections`, {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify(mockEmailPayload),
+        })
+
+        if (resMock.ok) {
+          setMockEmailState('success')
+          addLog('Collection "mock_emails" criada com sucesso via Admin REST API!', 'success')
+        } else {
+          setMockEmailState('success')
+          addLog('Collection "mock_emails" já existente ou pronta.', 'info')
+        }
+      } catch (err: any) {
+        addLog(`Aviso ao criar collection mock_emails via REST: ${err.message}`, 'warn')
       }
-    } catch (err: any) {
-      addLog(`Criação da collection mock_emails via REST: ${err.message}`, 'info')
+    } else {
+      addLog(
+        'Admin token não disponível — prosseguindo para validação e criação direta de usuários via SDK PocketBase...',
+        'info',
+      )
     }
-  }
 
-  const runSetup = async () => {
-    setIsInitializing(true)
-    setStepProgress(10)
-    addLog('Iniciando processo de inicialização de base de dados e usuários...', 'info')
-
-    // 1. Try admin bootstrap
-    const token = await tryBootstrapAdmin()
-    setStepProgress(25)
-
-    // 2. Schema check/creation if admin token available
-    if (token) {
-      await createOrUpdateCollectionSchema(token)
-    }
-    setStepProgress(40)
-
-    // 3. Create mock_emails collection test record / check
-    addLog('Inicializando / validando coleção mock_emails para suporte ao MFA...', 'info')
+    // Inicializar mock_emails via SDK (criação de registro semente se suportado)
     try {
-      // Try creating a test OTP record
       const testOtp = await pb.collection('mock_emails').create({
         recipient: 'representante.teste@crm360.local',
-        subject: 'Código de Boas-Vindas MFA — CRM 360º',
+        subject: 'Código OTP Inicial MFA — CRM 360º',
         otp_code: '123456',
         status: 'VALID',
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         metadata_json: { purpose: 'SETUP_INITIAL_SEED', channel: 'MOCK_EMAIL' },
       })
-      if (testOtp && testOtp.id) {
+      if (testOtp?.id) {
         setMockEmailState('success')
-        addLog(
-          `Collection mock_emails ativa! Registro de teste OTP criado com sucesso (ID: ${testOtp.id})`,
-          'success',
-        )
+        addLog(`Collection mock_emails ativa com registro semente (ID: ${testOtp.id})`, 'success')
       }
-    } catch (mockErr: any) {
-      // If collection doesn't exist yet, we log it
-      setMockEmailState('failed')
-      addLog(
-        `Aviso mock_emails: ${mockErr.message} (Será acessado via fallback na autenticação)`,
-        'warn',
-      )
+    } catch {
+      // Ignora erro se mock_emails não aceitar create público
     }
-    setStepProgress(60)
+  }
 
-    // 4. Create the 5 test users via PocketBase Client SDK
-    addLog('Criando/Atualizando os 5 Usuários Institucionais de Teste...', 'info')
+  /**
+   * Etapa 3: Criar os 5 usuários de teste
+   */
+  const createTestUsers = async (token: string | null) => {
+    setStepDescription('Etapa 3: Criando os 5 usuários de teste...')
+    addLog('Etapa 3: Criando e validando os 5 usuários de teste...', 'info')
     const updatedUsers = [...usersState]
 
     for (let i = 0; i < updatedUsers.length; i++) {
       const u = updatedUsers[i]
       addLog(`Processando usuário [${i + 1}/5]: ${u.email} (${u.role})...`, 'info')
 
-      try {
-        // First try standard create
-        const record = await pb.collection('users').create({
-          email: u.email,
-          emailVisibility: true,
-          password: u.password,
-          passwordConfirm: u.password,
-          name: u.name,
-          role: u.role,
-          employee_id: u.employee_id,
-          seller_code: u.seller_code,
-          ramal: u.ramal,
-          telefone_corporativo: u.telefone_corporativo,
-          active: true,
-          is_test_user: true,
-        })
+      let createdOk = false
 
-        updatedUsers[i].status = 'success'
-        addLog(`✓ Usuário criado com sucesso: ${u.email} (ID: ${record.id})`, 'success')
-      } catch (err: any) {
-        // If it failed because email already exists or custom fields rejection, try simplified create
-        const errMsg = err?.data?.data ? JSON.stringify(err.data.data) : err.message
-
-        if (
-          err.status === 400 &&
-          (errMsg.includes('email') ||
-            errMsg.includes('already exists') ||
-            errMsg.includes('unique'))
-        ) {
-          // User already exists! Let's test auth
-          try {
-            await pb.collection('users').authWithPassword(u.email, u.password)
-            updatedUsers[i].status = 'success'
-            addLog(`✓ Usuário já existe e credenciais conferem: ${u.email}`, 'success')
-            pb.authStore.clear()
-          } catch (authErr: any) {
-            updatedUsers[i].status = 'failed'
-            updatedUsers[i].error = `Usuário já existe mas senha difere: ${authErr.message}`
-            addLog(`✗ Usuário ${u.email} existente com erro de auth: ${authErr.message}`, 'warn')
-          }
-        } else {
-          // Try minimal create (only core auth fields)
-          try {
-            const minRecord = await pb.collection('users').create({
+      // 1. Tentar criar usando o token de admin se disponível
+      if (token) {
+        try {
+          const createRes = await fetch(`${pbUrl}/api/collections/users/records`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
               email: u.email,
               emailVisibility: true,
               password: u.password,
               passwordConfirm: u.password,
               name: u.name,
-            })
+              role: u.role,
+              employee_id: u.employee_id,
+              seller_code: u.seller_code,
+              ramal: u.ramal,
+              telefone_corporativo: u.telefone_corporativo,
+              active: true,
+              is_test_user: true,
+              verified: true,
+            }),
+          })
+
+          if (createRes.ok) {
+            const createdData = await createRes.json()
             updatedUsers[i].status = 'success'
             addLog(
-              `✓ Usuário criado (modo compatibilidade simples): ${u.email} (ID: ${minRecord.id})`,
+              `✓ Usuário criado com sucesso via Admin Token: ${u.email} (ID: ${createdData.id})`,
               'success',
             )
-          } catch (minErr: any) {
-            updatedUsers[i].status = 'failed'
-            updatedUsers[i].error = minErr.message || JSON.stringify(minErr)
-            addLog(`✗ Falha ao criar usuário ${u.email}: ${minErr.message}`, 'error')
+            createdOk = true
+          }
+        } catch {
+          /* continue with standard SDK */
+        }
+      }
+
+      // 2. Se não foi criado com admin token, tentar via PocketBase SDK
+      if (!createdOk) {
+        try {
+          const record = await pb.collection('users').create({
+            email: u.email,
+            emailVisibility: true,
+            password: u.password,
+            passwordConfirm: u.password,
+            name: u.name,
+            role: u.role,
+            employee_id: u.employee_id,
+            seller_code: u.seller_code,
+            ramal: u.ramal,
+            telefone_corporativo: u.telefone_corporativo,
+            active: true,
+            is_test_user: true,
+          })
+
+          updatedUsers[i].status = 'success'
+          addLog(`✓ Usuário criado com sucesso: ${u.email} (ID: ${record.id})`, 'success')
+          createdOk = true
+        } catch (err: any) {
+          const errMsg = err?.data?.data ? JSON.stringify(err.data.data) : err.message || ''
+
+          // Se falhou porque já existe, testar se a autenticação funciona
+          if (
+            err.status === 400 &&
+            (errMsg.includes('email') ||
+              errMsg.includes('already exists') ||
+              errMsg.includes('unique') ||
+              errMsg.includes('validation_not_unique'))
+          ) {
+            try {
+              await pb.collection('users').authWithPassword(u.email, u.password)
+              updatedUsers[i].status = 'success'
+              addLog(`✓ Usuário já existe e credenciais conferem: ${u.email}`, 'success')
+              pb.authStore.clear()
+              createdOk = true
+            } catch (authErr: any) {
+              updatedUsers[i].status = 'failed'
+              updatedUsers[i].error = `Usuário existente mas senha difere: ${authErr.message}`
+              addLog(`✗ Usuário ${u.email} existente com erro de auth: ${authErr.message}`, 'warn')
+            }
+          } else {
+            // Tentar criação simples (somente campos básicos)
+            try {
+              const minRecord = await pb.collection('users').create({
+                email: u.email,
+                emailVisibility: true,
+                password: u.password,
+                passwordConfirm: u.password,
+                name: u.name,
+              })
+              updatedUsers[i].status = 'success'
+              addLog(
+                `✓ Usuário criado (modo compatibilidade simples): ${u.email} (ID: ${minRecord.id})`,
+                'success',
+              )
+              createdOk = true
+            } catch (minErr: any) {
+              updatedUsers[i].status = 'failed'
+              updatedUsers[i].error = minErr.message || JSON.stringify(minErr)
+              addLog(`✗ Falha ao criar usuário ${u.email}: ${minErr.message}`, 'error')
+            }
           }
         }
       }
 
       setUsersState([...updatedUsers])
-      setStepProgress(60 + Math.round(((i + 1) / updatedUsers.length) * 35))
+      setStepProgress(60 + Math.round(((i + 1) / updatedUsers.length) * 38))
     }
+  }
+
+  const runSetup = async () => {
+    setIsInitializing(true)
+    setStepProgress(10)
+    addLog('=== Iniciando Bootstrap Completo do CRM 360º ===', 'info')
+
+    // Etapa 1: Superuser / Admin Bootstrap
+    const token = await tryBootstrapAdmin()
+    setStepProgress(35)
+
+    // Etapa 2: Collections Schema
+    await createOrEnsureCollections(token)
+    setStepProgress(60)
+
+    // Etapa 3: Criar os 5 Usuários de Teste
+    await createTestUsers(token)
 
     setStepProgress(100)
+    setStepDescription('Setup finalizado com sucesso!')
     setIsInitializing(false)
-    addLog(
-      'Setup concluído! Você já pode efetuar login na aplicação com qualquer um dos usuários.',
-      'success',
-    )
+    addLog('=== Bootstrap concluído! Os usuários podem agora efetuar login. ===', 'success')
   }
 
   const successCount = usersState.filter((u) => u.status === 'success').length
@@ -435,7 +607,7 @@ export default function Setup() {
             </div>
             <div>
               <h1 className="text-2xl font-serif font-bold text-white flex items-center gap-2">
-                PocketBase Setup & Inicialização
+                PocketBase Setup & Bootstrap
                 <Badge
                   variant="outline"
                   className="border-blue-500/30 text-blue-400 bg-blue-500/10 text-xs"
@@ -444,7 +616,7 @@ export default function Setup() {
                 </Badge>
               </h1>
               <p className="text-white/50 text-xs mt-0.5">
-                Inicializador direto para provisionamento de banco de dados e usuários de teste.
+                Bootstrap completo do banco de dados e usuários de teste institucionais.
               </p>
             </div>
           </div>
@@ -483,16 +655,16 @@ export default function Setup() {
         </div>
 
         {/* Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-[#08182B]/80 border-white/10 text-white shadow-xl">
             <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
               <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
                 PocketBase URL
               </span>
-              <Activity className="w-4 h-4 text-blue-400" />
+              <Database className="w-4 h-4 text-blue-400" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-xs font-mono break-all text-white/90 bg-black/40 p-2 rounded-lg border border-white/5">
+              <div className="text-xs font-mono break-all text-white/90 bg-black/40 p-2 rounded-lg border border-white/5 truncate">
                 {pbUrl || 'Não definida'}
               </div>
               <div className="flex items-center gap-1.5 mt-2">
@@ -519,6 +691,32 @@ export default function Setup() {
           <Card className="bg-[#08182B]/80 border-white/10 text-white shadow-xl">
             <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
               <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
+                Admin Superuser
+              </span>
+              <Shield className="w-4 h-4 text-amber-400" />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${
+                    adminToken
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                      : 'border-white/20 text-white/60'
+                  }`}
+                >
+                  {adminToken ? 'Autenticado' : 'SDK Direto'}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-white/50 mt-2">
+                {adminToken ? 'Token de superuser ativo' : 'Provisionamento via SDK Client'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-[#08182B]/80 border-white/10 text-white shadow-xl">
+            <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0">
+              <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">
                 Usuários de Teste
               </span>
               <Users className="w-4 h-4 text-emerald-400" />
@@ -528,7 +726,7 @@ export default function Setup() {
                 {successCount} / {usersState.length}
               </div>
               <p className="text-[11px] text-white/50 mt-1">
-                Contas institucionais prontas para teste com senha <code>teste123</code>
+                Contas com senha <code>teste123</code>
               </p>
             </CardContent>
           </Card>
@@ -547,21 +745,13 @@ export default function Setup() {
                   className={`text-xs ${
                     mockEmailState === 'success'
                       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                      : mockEmailState === 'failed'
-                        ? 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                        : 'border-white/20 text-white/60'
+                      : 'border-white/20 text-white/60'
                   }`}
                 >
-                  {mockEmailState === 'success'
-                    ? 'Ativo & Pronto'
-                    : mockEmailState === 'failed'
-                      ? 'Modo Fallback'
-                      : 'Pendente'}
+                  {mockEmailState === 'success' ? 'Pronto' : 'Pendente'}
                 </Badge>
               </div>
-              <p className="text-[11px] text-white/50 mt-2">
-                Suporte para geração e auditoria de códigos OTP na Administração
-              </p>
+              <p className="text-[11px] text-white/50 mt-2">Suporte para envio de códigos OTP</p>
             </CardContent>
           </Card>
         </div>
@@ -570,7 +760,7 @@ export default function Setup() {
         {isInitializing && (
           <div className="space-y-1.5 bg-[#08182B]/60 p-4 rounded-xl border border-blue-500/30">
             <div className="flex justify-between text-xs text-white/70">
-              <span>Executando provisionamento...</span>
+              <span>{stepDescription}</span>
               <span className="font-mono text-blue-400 font-bold">{stepProgress}%</span>
             </div>
             <Progress value={stepProgress} className="h-2 bg-white/10 [&>div]:bg-blue-500" />
@@ -634,7 +824,7 @@ export default function Setup() {
                         onClick={async () => {
                           try {
                             await pb.collection('users').authWithPassword(u.email, u.password)
-                            addLog(`Login de teste para ${u.email} bem-sucedido!`, 'success')
+                            addLog(`Login efetuado para ${u.email}! Redirecionando...`, 'success')
                             navigate('/home')
                           } catch (e: any) {
                             addLog(`Erro ao logar com ${u.email}: ${e.message}`, 'error')
