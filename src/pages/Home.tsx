@@ -1,875 +1,588 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useMemo } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 import {
-  MessageSquare,
-  UserPlus,
-  ChevronRight,
-  Camera,
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
-  Video,
-  FileText,
-  AudioLines,
-  ListTodo,
-  CheckCircle2,
-  RefreshCw,
+  mockClientes,
+  mockEquipe,
+  mockFunilOportunidades,
+  mockAcoesDoDia,
+  ClienteCarteira,
+  OportunidadeFunil,
+  AcaoDoDia,
+} from '@/data/mockCommercialData'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import {
   TrendingUp,
   Target,
-  Users2,
-  Zap,
+  Sparkles,
+  DollarSign,
+  Calendar,
+  Clock,
+  Phone,
+  MessageSquare,
+  Mail,
+  MapPin,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  Flame,
+  Building2,
+  Users,
+  ChevronRight,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
-import { useTeamMembers } from '@/hooks/use-team-members'
-import { useInstanciaAtiva, useConversas } from '@/hooks/use-whatsapp'
-import { useRealtime } from '@/hooks/use-realtime'
-import { useToast } from '@/hooks/use-toast'
-import { useTasks } from '@/hooks/use-tasks'
-import { useDailyActions } from '@/hooks/use-daily-actions'
-import { useBI } from '@/hooks/use-bi'
-import { getPriorityMeta } from '@/lib/task-meta'
-import pb from '@/lib/pocketbase/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
+import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { TaskViewDialog } from '@/components/TaskViewDialog'
-import { DailyActionsSection } from '@/components/home/DailyActionsSection'
-import { StrategicSummarySection } from '@/components/home/StrategicSummarySection'
 
 export default function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const { instance } = useInstanciaAtiva()
-  const { conversations } = useConversas(instance?.instance_name)
-  const { tasks } = useTasks()
-  const { actions, loading: loadingActions, updateActionStatus } = useDailyActions()
-  const { dailySummary, isDemoData } = useBI(user?.id)
 
-  const [chartData, setChartData] = useState<any[]>([])
-  const [loadingChart, setLoadingChart] = useState(true)
+  const [completedActions, setCompletedActions] = useState<Record<string, boolean>>({})
 
-  const [crmCount, setCrmCount] = useState(0)
-  const [crmTrendCount, setCrmTrendCount] = useState(0)
-
-  const { members: rawTeamMembers } = useTeamMembers()
-  const teamMembers = useMemo(
-    () => rawTeamMembers.map((m) => m.expand?.user_id).filter(Boolean),
-    [rawTeamMembers],
-  )
-
-  const [selectedTask, setSelectedTask] = useState<any | null>(null)
-  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
-
-  useEffect(() => {
-    if (!instance?.instance_name) return
-    const fetchCrmStats = async () => {
-      try {
-        const total = await pb.collection('crm_contacts').getList(1, 1, {
-          filter: `instance_name = '${instance.instance_name}'`,
-          requestKey: null,
-        })
-
-        const sevenDaysAgo = new Date()
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        const dateIso = sevenDaysAgo.toISOString().replace('T', ' ')
-
-        const recent = await pb.collection('crm_contacts').getList(1, 1, {
-          filter: `instance_name = '${instance.instance_name}' && created >= '${dateIso}'`,
-          requestKey: null,
-        })
-
-        setCrmCount(total.totalItems)
-        setCrmTrendCount(recent.totalItems)
-      } catch (err) {
-        console.error('Error fetching CRM stats')
-      }
-    }
-    fetchCrmStats()
-  }, [instance?.instance_name])
-
-  const fetchChartData = useCallback(
-    async (silent = false) => {
-      if (!instance?.instance_name) {
-        if (!silent) setLoadingChart(false)
-        return
-      }
-
-      if (!silent) setLoadingChart(true)
-      try {
-        const days = Array.from({ length: 7 })
-          .map((_, i) => {
-            const d = new Date()
-            d.setDate(d.getDate() - i)
-            d.setHours(0, 0, 0, 0)
-            const startMs = d.getTime()
-            const endMs = startMs + 86400000
-
-            const startSec = Math.floor(startMs / 1000)
-            const endSec = Math.floor(endMs / 1000)
-
-            return { date: d, startSec, endSec }
-          })
-          .reverse()
-
-        const promises = days.flatMap((d) => [
-          pb.collection('whatsapp_messages').getList(1, 1, {
-            filter: `instance_name = '${instance.instance_name}' && timestamp >= ${d.startSec} && timestamp < ${d.endSec} && from_me = true`,
-            requestKey: null,
-          }),
-          pb.collection('whatsapp_messages').getList(1, 1, {
-            filter: `instance_name = '${instance.instance_name}' && timestamp >= ${d.startSec} && timestamp < ${d.endSec} && from_me = false`,
-            requestKey: null,
-          }),
-        ])
-
-        const results = await Promise.all(promises)
-
-        const newChartData = days.map((d, i) => {
-          const sent = results[i * 2].totalItems
-          const received = results[i * 2 + 1].totalItems
-          return {
-            label: d.date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
-            sent,
-            received,
-            total: sent + received,
-          }
-        })
-
-        setChartData(newChartData)
-      } catch (err) {
-        console.error(err)
-        if (!silent) {
-          toast({
-            title: 'Erro ao carregar dados',
-            description: 'Não foi possível carregar as métricas do gráfico.',
-            variant: 'destructive',
-          })
-        }
-      } finally {
-        if (!silent) setLoadingChart(false)
-      }
-    },
-    [instance?.instance_name, toast],
-  )
-
-  useEffect(() => {
-    fetchChartData()
-  }, [fetchChartData])
-
-  useRealtime('whatsapp_messages', () => {
-    fetchChartData(true)
-  })
-
-  const { activeConversationsCount, activeTrendCount, unreadCount } = useMemo(() => {
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-    let unread = 0
-    let activeWeek = 0
-
-    conversations.forEach((c) => {
-      unread += c.unread_count || 0
-      if (new Date(c.created) > sevenDaysAgo) {
-        activeWeek++
-      }
+  const formatBRL = (val: number) => {
+    return val.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0,
     })
+  }
 
-    return {
-      activeConversationsCount: conversations.length,
-      activeTrendCount: activeWeek,
-      unreadCount: unread,
+  // Identificação do Usuário e RLS
+  const userRole = (user?.role || '').toLowerCase()
+  const userEmail = (user?.email || '').toLowerCase()
+  const isVendedorOnly = userRole === 'vendedor' || userRole === 'representante_externo'
+
+  // Dados do Vendedor Logado
+  const currentMember = useMemo(() => {
+    return (
+      mockEquipe.find((m) => m.email.toLowerCase() === userEmail) ||
+      (userEmail.includes('vendedor2')
+        ? mockEquipe.find((m) => m.id === 'eq-vend2')
+        : userEmail.includes('representante')
+          ? mockEquipe.find((m) => m.id === 'eq-rep')
+          : isVendedorOnly
+            ? mockEquipe.find((m) => m.id === 'eq-vend1')
+            : mockEquipe[0]) ||
+      mockEquipe[0]
+    )
+  }, [userEmail, isVendedorOnly])
+
+  // Cálculos de Meta e Ritmo
+  // Meta R$ / Realizado R$ / Gap R$ / % Atingimento / Dias restantes
+  // Ritmo atual R$/dia vs Ritmo necessário R$/dia
+  const meta = currentMember.metaMensal
+  const realizado = currentMember.realizadoMensal
+  const gap = currentMember.gap
+  const atingimento = currentMember.atingimentoPercent
+  const diasTotaisMes = 22 // dias úteis
+  const diasPassados = 14
+  const diasRestantes = 8
+
+  const ritmoAtualPorDia = diasPassados > 0 ? Math.round(realizado / diasPassados) : 0
+  const ritmoNecessarioPorDia = diasRestantes > 0 ? Math.round(gap / diasRestantes) : 0
+
+  // Clientes Prioritários (Top 5 por score)
+  const topClientes = useMemo(() => {
+    const list = [...mockClientes]
+    if (isVendedorOnly) {
+      return list
+        .filter(
+          (c) =>
+            c.vendedorId === currentMember.userId ||
+            c.vendedor.toLowerCase().includes(currentMember.name.split(' ')[0].toLowerCase()),
+        )
+        .sort((a, b) => b.scoreComercial - a.scoreComercial)
+        .slice(0, 5)
     }
-  }, [conversations])
+    return list.sort((a, b) => b.scoreComercial - a.scoreComercial).slice(0, 5)
+  }, [isVendedorOnly, currentMember])
 
-  const pendingTasks = useMemo(() => {
-    return tasks.filter((t) => t.status !== 'concluida' && t.status !== 'cancelada')
-  }, [tasks])
-
-  const myPendingTasks = useMemo(() => {
-    return pendingTasks.filter((t) => t.assigned_to === user?.id)
-  }, [pendingTasks, user?.id])
-
-  const myUrgentTasks = useMemo(() => {
-    const PRIORITY_WEIGHT: Record<string, number> = {
-      urgente: 4,
-      alta: 3,
-      media: 2,
-      baixa: 1,
+  // Oportunidades do Vendedor
+  const vendedorOps = useMemo(() => {
+    if (isVendedorOnly) {
+      return mockFunilOportunidades
+        .filter(
+          (op) =>
+            op.vendedorId === currentMember.userId ||
+            op.vendedorNome.toLowerCase().includes(currentMember.name.split(' ')[0].toLowerCase()),
+        )
+        .slice(0, 4)
     }
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    return mockFunilOportunidades.slice(0, 4)
+  }, [isVendedorOnly, currentMember])
 
-    return [...myPendingTasks].sort((a, b) => {
-      const aDue = a.due_date ? new Date(a.due_date) : null
-      const bDue = b.due_date ? new Date(b.due_date) : null
+  // Agenda do Dia (Mock de visitas/reuniões)
+  const agendaDoDia = [
+    {
+      id: 'ag-1',
+      horario: '09:30 - 10:15',
+      tipo: 'WhatsApp Call',
+      cliente: 'Metalúrgica Santa Rita Ltda',
+      contato: 'Eduardo (Comprador)',
+      pauta: 'Follow-up da cotação de 16.5t Perfis W',
+      status: 'confirmado',
+    },
+    {
+      id: 'ag-2',
+      horario: '11:00 - 12:00',
+      tipo: 'Reunião Teams M365',
+      cliente: 'Aços & Caldeiraria Betim S.A.',
+      contato: 'Roberto (Diretor Industrial)',
+      pauta: 'Alinhamento do desconto de 2.5% em Chapas Grossas',
+      status: 'confirmado',
+    },
+    {
+      id: 'ag-3',
+      horario: '14:30 - 16:00',
+      tipo: 'Visita Presencial',
+      cliente: 'Construtora Horizonte Belo Ltda',
+      contato: 'Eng. Marcelo',
+      pauta: 'Apresentação técnica de Vergalhões CA-50 no canteiro',
+      status: 'pendente',
+    },
+  ]
 
-      const aOverdue = aDue && aDue < today
-      const bOverdue = bDue && bDue < today
-
-      if (aOverdue && !bOverdue) return -1
-      if (!aOverdue && bOverdue) return 1
-
-      if (aDue && bDue) {
-        if (aDue.getTime() !== bDue.getTime()) return aDue.getTime() - bDue.getTime()
-      } else if (aDue && !bDue) {
-        return -1
-      } else if (!aDue && bDue) {
-        return 1
-      }
-
-      const aPri = PRIORITY_WEIGHT[a.priority] || 0
-      const bPri = PRIORITY_WEIGHT[b.priority] || 0
-      return bPri - aPri
+  const toggleAction = (id: string) => {
+    setCompletedActions((prev) => {
+      const next = !prev[id]
+      if (next) toast.success('Ação concluída com sucesso!')
+      return { ...prev, [id]: next }
     })
-  }, [myPendingTasks])
-
-  const todayData = chartData[chartData.length - 1] || { total: 0, sent: 0, received: 0 }
-  const yesterdayData = chartData[chartData.length - 2] || { total: 0, sent: 0, received: 0 }
-  const messagesToday = todayData.total
-  const yesterdayMessages = yesterdayData.total
-
-  let todayTrend = ''
-  let todayTrendUp = true
-  if (loadingChart) {
-    todayTrend = 'carregando...'
-  } else if (yesterdayMessages === 0 && messagesToday > 0) {
-    todayTrend = 'novo recorde'
-    todayTrendUp = true
-  } else if (messagesToday > yesterdayMessages) {
-    todayTrend = `+${messagesToday - yesterdayMessages} em relação a ontem`
-    todayTrendUp = true
-  } else if (messagesToday < yesterdayMessages) {
-    todayTrend = `${yesterdayMessages - messagesToday} a menos que ontem`
-    todayTrendUp = false
-  } else {
-    todayTrend = 'mesmo volume de ontem'
-    todayTrendUp = true
   }
 
-  const statCards = [
-    {
-      title: 'Conversas ativas',
-      value: activeConversationsCount.toString(),
-      trend: activeTrendCount > 0 ? `+${activeTrendCount} esta semana` : 'Nenhuma esta semana',
-      trendUp: activeTrendCount > 0,
-      link: '/conversas',
-    },
-    {
-      title: 'Não lidas',
-      value: unreadCount.toString(),
-      trend: unreadCount > 0 ? 'responder em breve' : 'tudo em dia',
-      trendUp: unreadCount === 0,
-      link: '/conversas',
-    },
-    {
-      title: 'Mensagens hoje',
-      value: messagesToday.toString(),
-      trend: todayTrend,
-      trendUp: todayTrendUp,
-      link: '/conversas',
-    },
-    {
-      title: 'Contatos no CRM',
-      value: crmCount.toString(),
-      trend: crmTrendCount > 0 ? `+${crmTrendCount} esta semana` : 'Nenhum esta semana',
-      trendUp: crmTrendCount >= 0,
-      link: '/crm',
-    },
-  ]
-
-  const myTaskCount = myPendingTasks.length
-  const otherTeamTasksCount = pendingTasks.length - myPendingTasks.length
-
-  let headerTaskText = ''
-  if (myTaskCount > 0 || otherTeamTasksCount > 0) {
-    if (myTaskCount === 1) {
-      headerTaskText = '1 tarefa sua'
-    } else if (myTaskCount > 1) {
-      headerTaskText = `${myTaskCount} tarefas suas`
-    } else {
-      headerTaskText = 'Nenhuma tarefa sua'
+  const getCanalIcon = (canal: string) => {
+    switch (canal) {
+      case 'WhatsApp':
+        return <MessageSquare className="w-3.5 h-3.5 text-emerald-600 inline mr-1" />
+      case 'Telefone':
+        return <Phone className="w-3.5 h-3.5 text-blue-600 inline mr-1" />
+      case 'E-mail':
+        return <Mail className="w-3.5 h-3.5 text-indigo-600 inline mr-1" />
+      case 'Visita':
+        return <MapPin className="w-3.5 h-3.5 text-amber-600 inline mr-1" />
+      default:
+        return null
     }
-
-    if (otherTeamTasksCount > 0) {
-      headerTaskText += ` · ${otherTeamTasksCount} da equipe`
-    }
-
-    headerTaskText += ' pendentes'
   }
-
-  const shortcuts = [
-    {
-      title: 'Gestão de Inativos',
-      description: 'Recupere contas e faturamento',
-      icon: RefreshCw,
-      color: 'text-emerald-700',
-      bg: 'bg-emerald-100',
-      link: '/gestao-inativos',
-    },
-    {
-      title: 'Abrir Conversas',
-      description: 'Acesse seu inbox comercial',
-      icon: MessageSquare,
-      color: 'text-primary',
-      bg: 'bg-primary/10',
-      link: '/conversas',
-    },
-    {
-      title: 'Pipeline CRM',
-      description: 'Acompanhe negociações',
-      icon: Target,
-      color: 'text-blue-600',
-      bg: 'bg-blue-100',
-      link: '/crm',
-    },
-  ]
-
-  const myCommercialCalendar = [
-    {
-      id: 'cal-1',
-      title: 'Reunião Comercial Safra — Metalúrgica Santa Rita',
-      time: '14:30 - 15:30',
-      type: 'Microsoft Teams',
-      customer: 'Metalúrgica Santa Rita Ltda',
-    },
-  ]
-
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return 'BOM DIA'
-    if (hour < 18) return 'BOA TARDE'
-    return 'BOA NOITE'
-  }
-
-  const currentDateStr = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-  const formattedDate = currentDateStr.charAt(0).toUpperCase() + currentDateStr.slice(1)
-
-  const instanceStatus = instance?.status || 'disconnected'
-  const isConnected = instanceStatus === 'connected'
-  const isConnecting = instanceStatus === 'qrcode' || instanceStatus === 'creating'
-  const statusColor = isConnected ? 'bg-emerald-500' : isConnecting ? 'bg-amber-500' : 'bg-gray-500'
-  const statusText = isConnected ? 'Conectado' : isConnecting ? 'Conectando' : 'Desconectado'
-  const instanceLabel = instance?.instance_name || 'WhatsApp principal'
-
-  const maxTotal = Math.max(...chartData.map((d) => d.total), 1)
-
-  // KPIs de Execução Diária
-  const actionsDoneCount = actions.filter((a) => a.status === 'concluida').length
-  const actionsPendingCount = actions.filter(
-    (a) => a.status === 'pendente' || a.status === 'em_andamento',
-  ).length
-  const executionRate =
-    actions.length > 0 ? Math.round((actionsDoneCount / actions.length) * 100) : 0
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 animate-fade-in pb-16">
-      {/* Section 1: Hero & Instance Status */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-          <div className="flex items-center gap-4 md:gap-5">
-            <Avatar className="h-14 w-14 md:h-16 md:w-16 border-2 border-background shadow-sm">
-              <AvatarImage src={user?.avatar ? pb.files.getUrl(user, user.avatar) : ''} />
-              <AvatarFallback className="bg-primary/5 text-primary font-serif font-bold text-xl md:text-2xl">
-                {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col gap-0.5 md:gap-1">
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
+      {/* BOAS-VINDAS / COCKPIT HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 bg-primary/10 rounded-2xl">
+              <Sparkles className="w-6 h-6 text-primary" />
+            </div>
+            <div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground font-sans font-semibold text-[10px] md:text-xs uppercase tracking-widest">
-                  {getGreeting()} · CRM 360º — MEU DIA
-                </span>
-                {isDemoData && (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] py-0 px-2 bg-amber-50 text-amber-700 border-amber-300"
-                  >
-                    Dados demonstrativos
-                  </Badge>
-                )}
-              </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary tracking-tight font-sans leading-none">
-                Olá, {user?.name?.split(' ')[0] || 'Vendedor'}
-              </h1>
-              <p className="text-muted-foreground font-sans text-sm md:text-base mt-0.5">
-                {formattedDate} · Cargo:{' '}
-                <span className="font-semibold text-primary capitalize">
-                  {user?.role ? user.role.replace('_', ' ') : 'Gerente Comercial'}
-                </span>
-              </p>
-              {headerTaskText && (
-                <div
-                  onClick={() => navigate('/tarefas')}
-                  className="group flex items-center gap-1.5 mt-1.5 text-xs font-medium text-amber-600 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 rounded-full px-2.5 py-1 w-fit cursor-pointer transition-colors"
+                <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
+                  Meu Dia · Cockpit Comercial
+                </h1>
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300"
                 >
-                  <ListTodo className="w-3.5 h-3.5" />
-                  <span>{headerTaskText}</span>
-                  <ChevronRight className="w-3 h-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all duration-200" />
-                </div>
-              )}
+                  {currentMember.cargo}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground font-sans mt-0.5">
+                Olá, <strong>{currentMember.name}</strong>. Aqui está seu plano de ação diário
+                baseado em inteligência preditiva.
+              </p>
             </div>
           </div>
-
-          {teamMembers.length > 0 && (
-            <div
-              onClick={() => navigate('/equipe')}
-              className="flex items-center gap-3 bg-white/50 border border-border/40 rounded-full py-1.5 px-2 md:px-4 cursor-pointer hover:bg-white hover:shadow-sm transition-all self-start md:self-auto"
-            >
-              <div className="flex -space-x-2">
-                {teamMembers.slice(0, 4).map((member) => (
-                  <Avatar key={member.id} className="w-8 h-8 border-2 border-white shadow-sm">
-                    <AvatarImage
-                      src={member.avatar ? pb.files.getUrl(member, member.avatar) : ''}
-                    />
-                    <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
-                      {member.name?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-                {teamMembers.length > 4 && (
-                  <div className="w-8 h-8 rounded-full border-2 border-white bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground z-10 shadow-sm">
-                    +{teamMembers.length - 4}
-                  </div>
-                )}
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-xs font-bold text-primary leading-none">Equipe</span>
-                <span className="text-[10px] text-muted-foreground font-medium">
-                  {teamMembers.length} {teamMembers.length === 1 ? 'membro' : 'membros'}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/conversas')}
-          className="group flex items-center gap-2.5 px-4 py-2.5 bg-white/80 hover:bg-white border border-border/40 rounded-full transition-all shadow-sm hover:shadow-md text-xs md:text-sm shrink-0 self-start md:self-auto"
-        >
-          <div className="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
-            {isConnected && (
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            )}
-            <span className={cn('relative inline-flex rounded-full h-full w-full', statusColor)} />
-          </div>
-          <span className="font-semibold text-foreground/80">{statusText}</span>
-          <span className="text-muted-foreground/40">•</span>
-          <span className="text-muted-foreground hidden sm:inline truncate max-w-[140px] font-medium">
-            {instanceLabel}
-          </span>
-          <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
-        </button>
-      </div>
-
-      {/* KPIs de Execução Diária Comercial */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Ações Geradas
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-serif text-3xl font-bold text-primary">{actions.length}</span>
-            <span className="text-xs text-muted-foreground">hoje</span>
-          </div>
-        </Card>
-
-        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
-            Ações Concluídas
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-serif text-3xl font-bold text-emerald-600">
-              {actionsDoneCount}
-            </span>
-            <Badge
-              variant="outline"
-              className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300"
-            >
-              {executionRate}%
-            </Badge>
-          </div>
-        </Card>
-
-        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
-            Ações Pendentes
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-serif text-3xl font-bold text-amber-600">
-              {actionsPendingCount}
-            </span>
-            <span className="text-xs text-muted-foreground">restantes</span>
-          </div>
-        </Card>
-
-        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Reativações Mês
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-serif text-3xl font-bold text-primary">
-              {dailySummary?.reactivatedThisMonth || 5}
-            </span>
-            <span className="text-xs text-emerald-600 font-semibold">+2 vs anterior</span>
-          </div>
-        </Card>
-
-        <Card className="bg-white/60 border-border/40 rounded-2xl p-4 flex flex-col justify-between shadow-sm col-span-2 md:col-span-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-primary">
-            Receita Recuperada
-          </span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="font-serif text-2xl font-bold text-primary">
-              R$ {((dailySummary?.revenueRecovered || 312500) / 1000).toFixed(0)}k
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {dailySummary?.tonsRecovered || 41.8} ton
-            </span>
-          </div>
-        </Card>
-      </div>
-
-      {/* C.1.1 Seção AÇÕES DO DIA */}
-      <DailyActionsSection
-        actions={actions}
-        loading={loadingActions}
-        onUpdateStatus={updateActionStatus}
-        onOpenCustomer360={(custId) => navigate(`/cliente/${custId}`)}
-        onNavigateConversas={(query) =>
-          navigate(query ? `/conversas?search=${encodeURIComponent(query)}` : '/conversas')
-        }
-      />
-
-      {/* C.1.2 Seção RESUMO ESTRATÉGICO */}
-      <StrategicSummarySection
-        onFilterCategory={(cat) => {
-          // Permite rolar e selecionar tab nas Ações do Dia
-          window.scrollTo({ top: 380, behavior: 'smooth' })
-        }}
-      />
-
-      {/* Section 2: Metric Cards Originais */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {statCards.map((stat, i) => (
-          <Card
-            key={i}
-            onClick={() => navigate(stat.link)}
-            className="border-border/40 bg-white/50 backdrop-blur-md shadow-none hover:shadow-md hover:bg-white/80 transition-all duration-200 cursor-pointer rounded-2xl overflow-hidden group"
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              toast.info('Recalculando recomendações BG/NBD do dia...')
+            }}
+            className="h-9 gap-1.5 text-xs text-muted-foreground"
           >
-            <CardContent className="p-6 md:p-8 flex flex-col items-center text-center gap-3 min-h-[180px] md:min-h-[210px] justify-center">
-              <p className="text-[10px] md:text-[11px] font-semibold text-muted-foreground/80 font-sans uppercase tracking-[0.15em]">
-                {stat.title}
-              </p>
-
-              {loadingChart ? (
-                <Skeleton className="h-14 md:h-20 w-24 md:w-32 rounded-lg" />
-              ) : (
-                <p className="text-6xl md:text-7xl font-bold font-serif text-primary tracking-tight leading-none transition-transform group-hover:-translate-y-0.5">
-                  {stat.value}
-                </p>
-              )}
-
-              <div className="flex items-center gap-1 text-[11px] md:text-xs min-h-[16px]">
-                {loadingChart ? (
-                  <Skeleton className="h-3 w-24" />
-                ) : (
-                  <>
-                    {stat.trendUp ? (
-                      <ArrowUpRight className="w-3.5 h-3.5 text-primary shrink-0" />
-                    ) : (
-                      <ArrowDownRight className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    )}
-                    <span
-                      className={cn(
-                        'font-medium font-sans',
-                        stat.trendUp ? 'text-primary' : 'text-amber-700',
-                      )}
-                    >
-                      {stat.trend}
-                    </span>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            <RefreshCw className="w-3.5 h-3.5" />
+            Recalcular Ações
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => navigate('/crm')}
+            className="h-9 gap-1.5 text-xs bg-primary text-white"
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            Ver Carteira Completa
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Section 3: 7-Day Activity Chart */}
-        <Card className="lg:col-span-2 border-border/40 bg-white/50 backdrop-blur-md shadow-sm rounded-2xl overflow-hidden flex flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="font-serif text-xl font-bold text-primary">
-              Volume de Mensagens (7 dias)
-            </CardTitle>
-            <p className="text-sm text-muted-foreground font-sans">
-              Enviadas vs. Recebidas ao longo da semana.
-            </p>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-end pt-4">
-            {loadingChart ? (
-              <div className="flex items-end justify-around h-48 gap-2 mt-4">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <Skeleton
-                    key={i}
-                    className="w-full max-w-[48px] h-full rounded-t-md opacity-20"
-                  />
-                ))}
-              </div>
-            ) : (
-              <>
-                <div className="relative flex items-end justify-around h-48 gap-2 mt-4">
-                  {maxTotal === 1 && chartData.every((d) => d.total === 0) && (
-                    <div className="absolute inset-0 pb-6 flex flex-col items-center justify-center text-muted-foreground text-center pointer-events-none z-0">
-                      <BarChart3 className="w-10 h-10 mb-3 opacity-20" />
-                      <span className="text-sm font-medium">
-                        Assim que chegar uma nova mensagem, o gráfico começa a contar!
-                      </span>
-                    </div>
-                  )}
-                  {chartData.map((d, i) => {
-                    const totalHeight = `${(d.total / maxTotal) * 100}%`
-                    const receivedPct = d.total > 0 ? (d.received / d.total) * 100 : 0
-                    const sentPct = d.total > 0 ? (d.sent / d.total) * 100 : 0
-
-                    return (
-                      <Tooltip key={i} delayDuration={100}>
-                        <TooltipTrigger asChild>
-                          <div className="flex flex-col items-center flex-1 gap-2 group z-10 h-full cursor-default">
-                            <div className="w-full flex-1 flex flex-col justify-end items-center px-1 relative">
-                              <div
-                                className="w-full max-w-[48px] rounded-t-md overflow-hidden flex flex-col justify-end transition-all duration-1000 ease-out bg-black/5 hover:ring-2 hover:ring-primary/20"
-                                style={{ height: d.total === 0 ? '4px' : totalHeight }}
-                              >
-                                {d.total > 0 && (
-                                  <>
-                                    <div
-                                      className="w-full bg-primary hover:brightness-110 transition-all"
-                                      style={{ height: `${receivedPct}%` }}
-                                    />
-                                    <div
-                                      className="w-full bg-primary/40 hover:brightness-110 transition-all"
-                                      style={{ height: `${sentPct}%` }}
-                                    />
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                              {d.label}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="bg-popover text-popover-foreground border-border shadow-lg font-sans z-50"
-                        >
-                          <div className="flex flex-col gap-1.5 text-xs min-w-[120px] p-1">
-                            <div className="font-bold text-sm mb-1 text-primary">{d.label}</div>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-                                <div className="w-2.5 h-2.5 rounded-sm bg-primary"></div> Recebidas
-                              </span>
-                              <span className="font-semibold text-primary">{d.received}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-                                <div className="w-2.5 h-2.5 rounded-sm bg-primary/40"></div>{' '}
-                                Enviadas
-                              </span>
-                              <span className="font-semibold text-primary">{d.sent}</span>
-                            </div>
-                            <div className="border-t border-border mt-1 pt-1.5 flex items-center justify-between gap-4 font-bold text-primary">
-                              <span>Total</span>
-                              <span>{d.total}</span>
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
-                <div className="flex items-center justify-center gap-6 mt-6 pt-4 border-t border-border/30">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span className="text-xs font-medium text-muted-foreground font-sans">
-                      Recebidas
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary/40"></div>
-                    <span className="text-xs font-medium text-muted-foreground font-sans">
-                      Enviadas
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Section 4: Urgent Tasks & Shortcuts */}
-        <div className="flex flex-col gap-8">
-          <Card className="border-border/40 bg-white/50 backdrop-blur-md shadow-sm rounded-2xl flex flex-col">
-            <CardHeader className="pb-3 px-5 pt-5">
+      {/* COCKPIT DO VENDEDOR — 2 CARDS GRANDES: META E RITMO */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* CARD META */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <ListTodo className="w-5 h-5 text-primary" />
-                </div>
-                <CardTitle className="font-serif text-lg font-bold text-primary">
-                  Minhas tarefas urgentes
-                </CardTitle>
+                <Target className="w-5 h-5 text-primary" />
+                <h3 className="font-serif font-bold text-lg text-primary">
+                  Desempenho da Meta Mensal
+                </h3>
               </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 flex flex-col gap-3">
-              {myUrgentTasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
-                  <CheckCircle2 className="w-8 h-8 mb-2 opacity-20" />
-                  <span className="text-sm font-medium">Sem tarefas pendentes</span>
-                </div>
-              ) : (
-                myUrgentTasks.slice(0, 5).map((task) => {
-                  const meta = getPriorityMeta(task.priority)
-                  const due = task.due_date ? new Date(task.due_date) : null
-                  let isOverdue = false
-                  if (due) {
-                    const d = new Date()
-                    d.setHours(0, 0, 0, 0)
-                    isOverdue = due < d
-                  }
-
-                  return (
-                    <div
-                      key={task.id}
-                      className="p-3 bg-white border border-border/40 rounded-xl cursor-pointer hover:shadow-sm transition-all group"
-                      onClick={() => {
-                        setSelectedTask(task)
-                        setTaskDialogOpen(true)
-                      }}
-                    >
-                      <h4 className="font-semibold text-sm text-primary truncate group-hover:text-primary/80 mb-2">
-                        {task.title}
-                      </h4>
-                      <div className="flex items-center justify-between">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            'text-[10px] px-1.5 py-0 h-4 border uppercase tracking-wider',
-                            meta.color,
-                          )}
-                        >
-                          {meta.label}
-                        </Badge>
-                        {due && (
-                          <span
-                            className={cn(
-                              'text-[11px] font-semibold',
-                              isOverdue ? 'text-rose-600' : 'text-muted-foreground',
-                            )}
-                          >
-                            {isOverdue
-                              ? '⚠ Vencida'
-                              : `Vence ${due.toLocaleDateString('pt-BR', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                })}`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-              {myUrgentTasks.length > 5 && (
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm text-primary mt-1"
-                  onClick={() => navigate('/tarefas')}
-                >
-                  Ver todas ({myUrgentTasks.length})
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Compromisso Comercial do Dia (Microsoft 365) */}
-          <Card className="border-sky-200 bg-sky-50/40 backdrop-blur-md shadow-sm rounded-2xl flex flex-col p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-sky-600 text-white rounded-lg">
-                  <Zap className="w-4 h-4" />
-                </div>
-                <span className="font-serif font-bold text-sm text-sky-950">
-                  Agenda Comercial do Dia
-                </span>
-              </div>
-              <Badge variant="outline" className="text-[9px] bg-white text-sky-700 border-sky-300">
-                Microsoft 365
+              <Badge className="bg-emerald-100 text-emerald-800 text-xs font-bold border-none">
+                {atingimento.toFixed(1)}% Atingido
               </Badge>
             </div>
-            {myCommercialCalendar.map((evt) => (
-              <div
-                key={evt.id}
-                className="bg-white p-3 rounded-xl border border-sky-100 shadow-xs flex flex-col gap-1 text-xs mt-1"
-              >
-                <div className="flex justify-between items-start">
-                  <span className="font-bold text-sky-900">{evt.title}</span>
-                  <Badge className="bg-sky-100 text-sky-800 text-[9px] border-none">
-                    {evt.type}
-                  </Badge>
-                </div>
-                <span className="text-[11px] text-muted-foreground">
-                  Horário: <strong>{evt.time}</strong> · Conta: {evt.customer}
+
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-border/40">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Meta Mensal
+                </span>
+                <span className="font-serif text-lg font-bold text-slate-900 block mt-0.5">
+                  {formatBRL(meta)}
                 </span>
               </div>
-            ))}
-          </Card>
 
-          <div className="flex flex-col gap-4">
-            <h3 className="font-serif text-xl font-bold text-primary mb-1">Acesso Rápido</h3>
-            {shortcuts.map((s, i) => (
-              <Card
-                key={i}
-                onClick={() => navigate(s.link)}
-                className="cursor-pointer group hover:bg-black/5 hover:scale-[1.01] transition-all duration-200 border-border/40 shadow-sm rounded-xl"
-              >
-                <CardContent className="p-4 flex items-center justify-between min-h-[44px]">
-                  <div className="flex items-center gap-4">
-                    <div className={cn('p-2.5 rounded-xl', s.bg)}>
-                      <s.icon className={cn('w-5 h-5', s.color)} />
-                    </div>
-                    <div>
-                      <h4 className="font-serif font-semibold text-primary">{s.title}</h4>
-                      <p className="text-xs text-muted-foreground font-sans mt-0.5">
-                        {s.description}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </CardContent>
-              </Card>
-            ))}
+              <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                  Realizado
+                </span>
+                <span className="font-serif text-lg font-bold text-emerald-700 block mt-0.5">
+                  {formatBRL(realizado)}
+                </span>
+              </div>
+
+              <div className="p-3 bg-amber-50/60 rounded-2xl border border-amber-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
+                  Gap Faltante
+                </span>
+                <span className="font-serif text-lg font-bold text-amber-600 block mt-0.5">
+                  {formatBRL(gap)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Progress value={atingimento} className="h-3 bg-slate-100" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Passados: {diasPassados} dias úteis</span>
+                <span className="font-semibold text-primary">
+                  Restam: {diasRestantes} dias úteis
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <div className="pt-3 border-t border-border/30 mt-4 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Volume: <strong>{currentMember.toneladasRealizado}t</strong> de{' '}
+              {currentMember.toneladasMeta}t
+            </span>
+            <span>
+              Conversão: <strong>{currentMember.conversaoPercent}%</strong>
+            </span>
+          </div>
+        </Card>
+
+        {/* CARD RITMO */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-serif font-bold text-lg text-primary">
+                  Ritmo Comercial Diário
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
+                Controle de Cadência
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground">Ritmo Atual</span>
+                <span className="font-serif text-2xl font-bold text-slate-800 block">
+                  {formatBRL(ritmoAtualPorDia)}
+                  <span className="text-xs font-normal text-muted-foreground">/dia</span>
+                </span>
+                <span className="text-[11px] text-muted-foreground block">
+                  Média realizada nos 14 dias anteriores
+                </span>
+              </div>
+
+              <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-1">
+                <span className="text-xs font-semibold text-emerald-800">Ritmo Necessário</span>
+                <span className="font-serif text-2xl font-bold text-emerald-700 block">
+                  {formatBRL(ritmoNecessarioPorDia)}
+                  <span className="text-xs font-normal text-emerald-600">/dia</span>
+                </span>
+                <span className="text-[11px] text-emerald-700 font-medium block">
+                  Necessário nos próximos 8 dias úteis
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted/20 rounded-xl text-xs text-muted-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>
+                Seu ritmo atual cobre{' '}
+                <strong>{Math.round((ritmoAtualPorDia / ritmoNecessarioPorDia) * 100)}%</strong> do
+                ritmo necessário. Fechar as 2 cotações prioritárias de hoje garantirá 100% da meta.
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-border/30 mt-4 flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">
+              Pipeline Pessoal: <strong>{formatBRL(currentMember.pipeline)}</strong>
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate('/crm?tab=funil')}
+              className="h-7 text-xs text-primary gap-1"
+            >
+              Ver Funil <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </Card>
       </div>
 
-      <TaskViewDialog
-        task={selectedTask}
-        open={taskDialogOpen}
-        onOpenChange={(open) => {
-          setTaskDialogOpen(open)
-          if (!open) setSelectedTask(null)
-        }}
-      />
+      {/* SEÇÃO PRINCIPAL: AÇÕES DO DIA (5-8 AÇÕES RECOMENDADAS) */}
+      <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Flame className="w-5 h-5 text-amber-500" />
+              <h3 className="font-serif text-xl font-bold text-primary">
+                Ações Recomendadas do Dia
+              </h3>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Oportunidades e contatos priorizados com maior probabilidade de impacto imediato na
+              meta.
+            </p>
+          </div>
+          <Badge className="bg-primary text-white text-xs">
+            {mockAcoesDoDia.length} Ações Prioritárias
+          </Badge>
+        </div>
+
+        <div className="space-y-3">
+          {mockAcoesDoDia.map((acao) => {
+            const isDone = completedActions[acao.id]
+
+            return (
+              <div
+                key={acao.id}
+                className={cn(
+                  'p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4',
+                  isDone
+                    ? 'bg-slate-50 border-slate-200 opacity-60'
+                    : acao.urgencia === 'urgente'
+                      ? 'bg-amber-50/40 border-amber-200 hover:border-amber-400'
+                      : 'bg-white border-border/50 hover:border-primary/40',
+                )}
+              >
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      className={cn(
+                        'text-[10px] font-bold border-none',
+                        acao.urgencia === 'urgente'
+                          ? 'bg-rose-100 text-rose-800'
+                          : acao.urgencia === 'alta'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800',
+                      )}
+                    >
+                      {acao.tipoAcao}
+                    </Badge>
+                    <span
+                      onClick={() => navigate(`/crm/${acao.clienteId}`)}
+                      className="font-bold text-sm text-primary hover:underline cursor-pointer"
+                    >
+                      {acao.clienteNome}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      SAP {acao.clienteSap} · {acao.cidadeUf}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-800 font-medium">{acao.recomendacao}</p>
+                  <p className="text-[11px] text-muted-foreground">{acao.justificativa}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 shrink-0 border-t md:border-t-0 pt-2 md:pt-0">
+                  <div className="text-right">
+                    <span className="font-serif font-bold text-sm text-emerald-600 block">
+                      {formatBRL(acao.potencialValor)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {acao.potencialTon} ton · {getCanalIcon(acao.canalSugerido)}{' '}
+                      {acao.horarioSugerido}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/crm/${acao.clienteId}`)}
+                      className="h-8 text-xs text-primary border-primary/30 hover:bg-primary/10"
+                    >
+                      Abrir 360º
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => toggleAction(acao.id)}
+                      className={cn(
+                        'h-8 text-xs text-white gap-1',
+                        isDone ? 'bg-slate-500' : 'bg-emerald-600 hover:bg-emerald-700',
+                      )}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {isDone ? 'Concluída' : 'Concluir'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Card>
+
+      {/* GRADE INFERIOR: CLIENTES PRIORITÁRIOS, OPORTUNIDADES E AGENDA DO DIA */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* TOP 5 CLIENTES PRIORITÁRIOS */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-primary" />
+              <h4 className="font-serif font-bold text-sm text-primary">Clientes Prioritários</h4>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate('/crm')}
+              className="h-7 text-xs text-primary p-0"
+            >
+              Ver todos
+            </Button>
+          </div>
+
+          <div className="space-y-2.5">
+            {topClientes.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/crm/${c.id}`)}
+                className="p-3 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-border/30 cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <span className="font-bold text-xs text-slate-900 block hover:text-primary">
+                    {c.nomeFantasia || c.razaoSocial}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {c.cidade}/{c.uf} · Fat: {formatBRL(c.faturamento12m)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="font-serif font-bold text-xs text-primary block">
+                    Score {c.scoreComercial}
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">
+                    {c.pVivo}% P(vivo)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* OPORTUNIDADES ATIVAS / FOLLOW-UPS */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h4 className="font-serif font-bold text-sm text-primary">Oportunidades Ativas</h4>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => navigate('/crm?tab=funil')}
+              className="h-7 text-xs text-primary p-0"
+            >
+              Abrir Funil
+            </Button>
+          </div>
+
+          <div className="space-y-2.5">
+            {vendedorOps.map((op) => (
+              <div
+                key={op.id}
+                onClick={() => navigate(`/crm/${op.clienteId}`)}
+                className="p-3 bg-slate-50 hover:bg-slate-100 transition-colors rounded-2xl border border-border/30 cursor-pointer space-y-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-primary">{op.clienteNome}</span>
+                  <Badge className="text-[9px] bg-primary/10 text-primary border-none">
+                    {op.probabilidade}%
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-slate-700 font-medium line-clamp-1">{op.titulo}</p>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-serif font-bold text-emerald-600">
+                    {formatBRL(op.valor)}
+                  </span>
+                  <span className="text-slate-500">Prev: {op.previsaoFechamento}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* AGENDA DO DIA (VISITAS / REUNIÕES) */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              <h4 className="font-serif font-bold text-sm text-primary">Agenda Comercial</h4>
+            </div>
+            <Badge variant="outline" className="text-[10px] bg-white">
+              Microsoft 365
+            </Badge>
+          </div>
+
+          <div className="space-y-2.5">
+            {agendaDoDia.map((ag) => (
+              <div
+                key={ag.id}
+                className="p-3 bg-slate-50 rounded-2xl border border-border/30 space-y-1"
+              >
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-slate-900">{ag.horario}</span>
+                  <Badge className="text-[9px] bg-blue-100 text-blue-800 border-none font-bold">
+                    {ag.tipo}
+                  </Badge>
+                </div>
+                <span className="font-bold text-xs text-primary block">{ag.cliente}</span>
+                <p className="text-[10px] text-slate-600">
+                  {ag.contato} · {ag.pauta}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }

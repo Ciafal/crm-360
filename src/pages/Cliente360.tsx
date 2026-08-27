@@ -1,110 +1,84 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import React, { useState, useMemo } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Building2,
-  Phone,
-  MessageSquare,
-  Mail,
-  Sparkles,
-  Calendar,
-  DollarSign,
-  TrendingUp,
-  Package,
-  FileText,
-  Truck,
-  ShieldCheck,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
-  ExternalLink,
-  ChevronLeft,
-  ArrowRight,
-  Send,
-  PlusCircle,
-  RotateCcw,
-  Briefcase,
-  Users,
-  Layers,
-  History,
-  FileSpreadsheet,
-  BadgeAlert,
-  Loader2,
-  Filter,
-} from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
-import { useToast } from '@/hooks/use-toast'
+  mockClientes,
+  mockTimelineData,
+  mockProdutosCliente,
+  mockNFsCliente,
+  mockFunilOportunidades,
+  ClienteCarteira,
+  TimelineEntry,
+  ProdutoCliente,
+  NFCliente,
+} from '@/data/mockCommercialData'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  defaultERPProvider,
-  type CustomerERPData,
-  type QuoteERPData,
-  type OrderERPData,
-  type BillingERPData,
-  type DeliveryERPData,
-} from '@/providers/ERPProvider'
-import { defaultBIProvider } from '@/providers/QlikProvider'
-import { defaultAIProvider } from '@/providers/LocalAIAdapter'
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CreditCard,
+  FileText,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Package,
+  Phone,
+  Plus,
+  RefreshCw,
+  ShoppingBag,
+  Sparkles,
+  TrendingUp,
+  Truck,
+  Users,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Send,
+  Warehouse,
+  Flame,
+  ShieldCheck,
+  ShieldAlert,
+} from 'lucide-react'
+import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
+import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 export default function Cliente360() {
-  const { id = 'CLI-8041' } = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const { user } = useAuth()
 
-  const [activeTab, setActiveTab] = useState('visao_geral')
-  const [loading, setLoading] = useState(true)
-  const [customer, setCustomer] = useState<CustomerERPData | null>(null)
-  const [orders, setOrders] = useState<OrderERPData[]>([])
-  const [quotes, setQuotes] = useState<QuoteERPData[]>([])
-  const [billings, setBillings] = useState<BillingERPData[]>([])
-  const [deliveries, setDeliveries] = useState<DeliveryERPData[]>([])
-  const [biSummary, setBiSummary] = useState<any>(null)
-  const [aiRecommendation, setAiRecommendation] = useState<any>(null)
-  const [timelineFilter, setTimelineFilter] = useState<
-    'all' | 'whatsapp' | 'phone' | 'email' | 'sap' | 'tasks' | 'visits'
-  >('all')
+  const [activeTab, setActiveTab] = useState('timeline')
+  const [wmsConfirmed, setWmsConfirmed] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true)
-      try {
-        const [erpData, ord, qts, bll, del, biCust, aiRec] = await Promise.all([
-          defaultERPProvider.getCustomer(id),
-          defaultERPProvider.getCustomerOrders(id),
-          defaultERPProvider.getCustomerQuotes(id),
-          defaultERPProvider.getCustomerBillings(id),
-          defaultERPProvider.getCustomerDeliveries(id),
-          defaultBIProvider.getCustomerHistory(id),
-          defaultAIProvider.generateRecommendation(id),
-        ])
-        setCustomer(erpData)
-        setOrders(ord)
-        setQuotes(qts)
-        setBillings(bll)
-        setDeliveries(del)
-        setBiSummary(biCust)
-        setAiRecommendation(aiRec)
-      } catch (err) {
-        console.error(err)
-        toast({
-          title: 'Aviso de Conexão',
-          description: 'Dados SAP temporariamente indisponíveis. Carregando última versão local.',
-          variant: 'destructive',
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [id, toast])
+  // Localizar cliente nos mocks
+  const cliente = useMemo(() => {
+    return (
+      mockClientes.find((c) => c.id === id || c.sapCode === id) || mockClientes[0] // fallback seguro
+    )
+  }, [id])
 
-  const formatBRL = (val?: number) => {
-    if (val === undefined || val === null) return 'R$ 0,00'
+  // Dados das abas com fallback seguro
+  const timeline = useMemo(() => {
+    return mockTimelineData[cliente.id] || mockTimelineData['cli-100001'] || []
+  }, [cliente.id])
+
+  const produtos = useMemo(() => {
+    return mockProdutosCliente[cliente.id] || mockProdutosCliente['cli-100001'] || []
+  }, [cliente.id])
+
+  const nfs = useMemo(() => {
+    return mockNFsCliente[cliente.id] || mockNFsCliente['cli-100001'] || []
+  }, [cliente.id])
+
+  const oportunidades = useMemo(() => {
+    return mockFunilOportunidades.filter((op) => op.clienteId === cliente.id)
+  }, [cliente.id])
+
+  const formatBRL = (val: number) => {
     return val.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -112,843 +86,815 @@ export default function Cliente360() {
     })
   }
 
-  // Timeline Omnichannel Unificada com suporte ao canal E-mail (Microsoft Graph)
-  const allTimelineEvents = useMemo(() => {
-    return [
-      {
-        id: 't-email-1',
-        type: 'email',
-        category: 'email',
-        title: 'E-mail Comercial: Solicitação de Cotação Tubos Inox',
-        summary:
-          'compras@santarita.ind.br solicitou cotação para 3 toneladas de Tubo Inox AISI 304 Redondo SCH 10 com frete CIF para Campinas.',
-        date: 'Hoje às 08:30',
-        channel: 'E-mail (Outlook 365)',
-        origin: 'Microsoft Graph 365',
-        badgeColor: 'bg-sky-50 text-sky-700 border-sky-300',
-        conversationId: 'AAQkAGI2TGFiYWNhLWNvbnYtMDAx',
-      },
-      {
-        id: 't-1',
-        type: 'whatsapp',
-        category: 'whatsapp',
-        title: 'Mensagem de Negociação WhatsApp',
-        summary:
-          'Comprador solicitou confirmação de frete CIF para entrega de 3t Tubos Inox 304 em Campinas.',
-        date: 'Hoje às 10:45',
-        channel: 'WhatsApp Web',
-        origin: 'WhatsApp Baileys',
-        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-      },
-      {
-        id: 't-email-2',
-        type: 'email',
-        category: 'email',
-        title: 'E-mail Enviado: Proposta Comercial COT-SAP-98104',
-        summary:
-          'Envio da cotação formal COT-SAP-98104 (R$ 54.000,00) via Microsoft 365 com tabela de preços anexa.',
-        date: 'Hoje às 11:15',
-        channel: 'E-mail (Outlook 365)',
-        origin: 'Microsoft Graph 365',
-        badgeColor: 'bg-blue-50 text-blue-700 border-blue-300',
-        conversationId: 'AAQkAGI2TGFiYWNhLWNvbnYtMDAx',
-      },
-      {
-        id: 't-2',
-        type: 'cotacao',
-        category: 'sap',
-        title: 'Cotação SAP COT-SAP-98104 Emitida',
-        summary:
-          'Proposta comercial de R$ 54.000,00 (6.8t Tubos SCH 10) enviada com validade de 15 dias.',
-        date: 'Ontem às 16:20',
-        channel: 'SAP ECC',
-        origin: 'ERP SAP S/4HANA',
-        badgeColor: 'bg-blue-50 text-blue-700 border-blue-300',
-      },
-      {
-        id: 't-3',
-        type: 'ligacao',
-        category: 'phone',
-        title: 'Ligação Telefônica Comercial (VoIP)',
-        summary: 'Alinhamento com Gerente de Compras sobre expansão da linha de tanques.',
-        date: '14/10/2024 às 11:30',
-        channel: 'VoIP Corporativo',
-        origin: 'Telefonia Asterisk',
-        badgeColor: 'bg-purple-50 text-purple-700 border-purple-300',
-      },
-      {
-        id: 't-4',
-        type: 'faturamento',
-        category: 'sap',
-        title: 'Faturamento NF-0091823 Emitido',
-        summary: 'Emissão de nota fiscal de R$ 48.500,00 referente ao pedido PED-SAP-77410.',
-        date: '14/08/2024 às 14:30',
-        channel: 'SAP Billing',
-        origin: 'SEFAZ / SAP',
-        badgeColor: 'bg-amber-50 text-amber-700 border-amber-300',
-      },
-      {
-        id: 't-5',
-        type: 'visita',
-        category: 'visits',
-        title: 'Visita Técnica Realizada',
-        summary:
-          'Apresentação da nova linha de Tubos Sanitários e certificação de qualidade CIAFAL.',
-        date: '20/07/2024 às 15:00',
-        channel: 'Presencial',
-        origin: 'App Vendas Móvel',
-        badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-300',
-      },
-    ]
-  }, [])
+  const handleRequestWMS = (prodCode: string) => {
+    setWmsConfirmed((prev) => ({ ...prev, [prodCode]: true }))
+    toast.success(`Solicitação de confirmação de saldo WMS enviada para o item ${prodCode}!`, {
+      description: 'A equipe de logística do CD Contagem foi notificada.',
+    })
+  }
 
-  const filteredTimelineEvents = useMemo(() => {
-    if (timelineFilter === 'all') return allTimelineEvents
-    return allTimelineEvents.filter((ev) => ev.category === timelineFilter)
-  }, [allTimelineEvents, timelineFilter])
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto flex flex-col gap-6 py-6 animate-pulse">
-        <Skeleton className="h-32 w-full rounded-2xl" />
-        <Skeleton className="h-12 w-full rounded-xl" />
-        <Skeleton className="h-96 w-full rounded-2xl" />
-      </div>
-    )
+  const getTimelineIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'whatsapp':
+        return <MessageSquare className="w-4 h-4 text-emerald-600" />
+      case 'email':
+        return <Mail className="w-4 h-4 text-indigo-600" />
+      case 'telefone':
+        return <Phone className="w-4 h-4 text-blue-600" />
+      case 'visita':
+        return <MapPin className="w-4 h-4 text-amber-600" />
+      case 'cotacao':
+        return <FileText className="w-4 h-4 text-purple-600" />
+      case 'pedido':
+        return <ShoppingBag className="w-4 h-4 text-primary" />
+      case 'nf':
+        return <Truck className="w-4 h-4 text-emerald-700" />
+      default:
+        return <Clock className="w-4 h-4 text-slate-500" />
+    }
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6 pb-20 animate-fade-in">
-      {/* Botão Voltar */}
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
+      {/* NAVEGAÇÃO DE VOLTA */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate(-1)}
-          className="text-muted-foreground hover:text-primary gap-1"
+          onClick={() => navigate('/crm')}
+          className="gap-1.5 text-xs text-muted-foreground hover:text-primary pl-0"
         >
-          <ChevronLeft className="w-4 h-4" /> Voltar
+          <ArrowLeft className="w-4 h-4" /> Voltar para Gestão de Carteira
         </Button>
+
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-            Dados demonstrativos · SAP ECC Mock
-          </Badge>
-          <span className="text-xs text-muted-foreground">
-            Sincronizado: {new Date(defaultERPProvider.getLastSync()).toLocaleDateString('pt-BR')}
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => toast.info('Atualizando ficha cadastral via SAP RFC...')}
+            className="h-8 gap-1.5 text-xs text-muted-foreground"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Sincronizar SAP
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => toast.info('Nova cotação gerada no SAP para ' + cliente.razaoSocial)}
+            className="h-8 gap-1.5 text-xs bg-primary text-white"
+          >
+            <Plus className="w-3.5 h-3.5" /> Criar Cotação
+          </Button>
         </div>
       </div>
 
       {/* CABEÇALHO DO CLIENTE 360º */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 relative z-10">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary/90 text-white font-mono text-xs px-2.5 py-0.5">
-                Código SAP: {customer?.sapCode || id}
-              </Badge>
-              <Badge variant="outline" className="bg-white/10 text-white border-white/20 text-xs">
-                {customer?.segmento || 'Estruturas Metálicas'}
-              </Badge>
-              {customer?.subsegmento && (
+      <Card className="bg-white/95 backdrop-blur-md border-border/40 shadow-sm rounded-3xl p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          {/* Informações Principais */}
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20">
+              <Building2 className="w-7 h-7 text-primary" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+                  SAP #{cliente.sapCode}
+                </span>
+                <h1 className="font-serif text-2xl font-bold text-primary tracking-tight">
+                  {cliente.razaoSocial}
+                </h1>
+                <Badge
+                  className={cn(
+                    'text-[10px] font-bold border-none',
+                    cliente.statusComercial === 'Ativo'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : cliente.statusComercial === 'Em Risco'
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-rose-100 text-rose-800',
+                  )}
+                >
+                  Status: {cliente.statusComercial}
+                </Badge>
                 <Badge
                   variant="outline"
-                  className="bg-white/5 text-slate-300 border-white/10 text-xs"
+                  className={cn(
+                    'text-[10px] font-bold',
+                    cliente.statusCredito === 'Regular'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      : cliente.statusCredito === 'Restrito'
+                        ? 'bg-amber-50 text-amber-700 border-amber-300'
+                        : 'bg-rose-50 text-rose-700 border-rose-300',
+                  )}
                 >
-                  {customer.subsegmento}
+                  Crédito: {cliente.statusCredito}
                 </Badge>
-              )}
-              <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs">
-                {customer?.status || 'Ativo'}
-              </Badge>
-            </div>
+              </div>
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold font-serif text-white tracking-tight mt-1">
-              {customer?.razaoSocial || customer?.nomeFantasia}
-            </h1>
+              <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-muted-foreground mt-2">
+                <span className="font-medium text-slate-800">
+                  Fantasia: <strong>{cliente.nomeFantasia}</strong>
+                </span>
+                <span>CNPJ: {cliente.cnpj}</span>
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                  {cliente.cidade} - {cliente.uf}
+                </span>
+                <span>
+                  Segmento: <strong>{cliente.segmento}</strong> ({cliente.subsegmento})
+                </span>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-300 mt-1">
-              <span>
-                <strong>Nome Fantasia:</strong> {customer?.nomeFantasia || '—'}
-              </span>
-              <span>•</span>
-              <span>
-                <strong>CNPJ:</strong> {customer?.cnpj || '—'}
-              </span>
-              <span>•</span>
-              <span>
-                <strong>Local:</strong> {customer?.cidade}/{customer?.uf}
-              </span>
-              {customer?.grupoEconomico && (
-                <>
-                  <span>•</span>
-                  <span>
-                    <strong>Grupo:</strong> {customer.grupoEconomico}
-                  </span>
-                </>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-2 pt-2 border-t border-white/10">
-              <span>
-                Vendedor:{' '}
-                <strong className="text-white">{customer?.vendedor || 'Carlos Mendonça'}</strong>
-              </span>
-              <span>
-                Supervisor:{' '}
-                <strong className="text-white">{customer?.supervisor || 'Marcos Vinícius'}</strong>
-              </span>
+              <div className="flex flex-wrap items-center gap-x-4 text-xs text-slate-600 mt-1">
+                <span>
+                  Vendedor Responsável: <strong>{cliente.vendedor}</strong>
+                </span>
+                <span>
+                  Supervisor Regional: <strong>{cliente.supervisor}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Ações Rápidas no Cabeçalho */}
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0">
-            <Button
-              onClick={() =>
-                navigate(`/conversas?search=${encodeURIComponent(customer?.razaoSocial || '')}`)
-              }
-              className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg text-sm gap-2"
-            >
-              <MessageSquare className="w-4 h-4" /> Abrir WhatsApp
-            </Button>
-            <Button
-              variant="outline"
-              className="bg-white/10 hover:bg-white/20 text-white border-white/20 text-sm gap-2"
-              onClick={() => {
-                toast({
-                  title: 'Chamada VoIP',
-                  description: `Iniciando ligação para ${customer?.contatos?.[0]?.telefone || 'comprador'}...`,
-                })
-              }}
-            >
-              <Phone className="w-4 h-4" /> Ligar para Comprador
-            </Button>
+          {/* Tag de Segmento RFM & Score */}
+          <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-border/40 shrink-0">
+            <div className="text-right">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Classificação RFM
+              </span>
+              <div className="mt-1">
+                <RFMSegmentBadge segment={cliente.rfmSegmento} />
+              </div>
+            </div>
+            <div className="h-9 w-px bg-border/60 mx-1" />
+            <div className="text-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Score
+              </span>
+              <span className="font-serif text-2xl font-bold text-primary block mt-0.5">
+                {cliente.scoreComercial}
+              </span>
+            </div>
           </div>
         </div>
+      </Card>
 
-        {/* Métricas Rápidas SAP */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/10">
-          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-              Faturamento Histórico
-            </span>
-            <span className="text-xl font-serif font-bold text-white mt-0.5 block">
-              {formatBRL(customer?.faturamento)}
-            </span>
-            <span className="text-[11px] text-slate-300">
-              {customer?.toneladas || 62.5} ton faturadas
-            </span>
-          </div>
-          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-              Ticket Médio & Ciclo
-            </span>
-            <span className="text-xl font-serif font-bold text-white mt-0.5 block">
-              {formatBRL(customer?.ticketMedio)}
-            </span>
-            <span className="text-[11px] text-slate-300">
-              Ciclo médio: {customer?.frequenciaDias || 45} dias
+      {/* 8 CARDS DE RESUMO OBRIGATÓRIOS (LINHA SUPERIOR) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {/* 1. Faturamento 12m */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Fat. 12m
+          </span>
+          <div className="mt-1.5">
+            <span className="font-serif text-sm font-bold text-slate-900 block">
+              {formatBRL(cliente.faturamento12m)}
             </span>
           </div>
-          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-              Última Compra SAP
-            </span>
-            <span className="text-xl font-serif font-bold text-amber-300 mt-0.5 block">
-              {customer?.ultimaCompra || '14/08/2024'}
-            </span>
-            <span className="text-[11px] text-slate-300">
-              {biSummary?.daysSinceLastPurchase || 74} dias sem comprar
-            </span>
-          </div>
-          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-              Limite de Crédito
-            </span>
-            <span className="text-xl font-serif font-bold text-emerald-400 mt-0.5 block">
-              {customer?.credit?.isAvailable
-                ? formatBRL(customer.credit.limiteCredito)
-                : 'Crédito não disponível'}
-            </span>
-            <span className="text-[11px] text-slate-300">
-              Saldo livre: {customer?.credit ? formatBRL(customer.credit.saldoDisponivel) : '—'}
+        </Card>
+
+        {/* 2. Toneladas 12m */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Volume 12m
+          </span>
+          <div className="mt-1.5">
+            <span className="font-serif text-sm font-bold text-primary block">
+              {cliente.toneladas12m} ton
             </span>
           </div>
-        </div>
+        </Card>
+
+        {/* 3. Ticket Médio */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Ticket Médio
+          </span>
+          <div className="mt-1.5">
+            <span className="font-serif text-sm font-bold text-slate-900 block">
+              {formatBRL(cliente.ticketMedio)}
+            </span>
+          </div>
+        </Card>
+
+        {/* 4. Frequência */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Frequência
+          </span>
+          <div className="mt-1.5">
+            <span className="text-xs font-semibold text-slate-800 block">
+              {cliente.recorrencia}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              ~{cliente.frequenciaDias} dias
+            </span>
+          </div>
+        </Card>
+
+        {/* 5. Última Compra */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Última Compra
+          </span>
+          <div className="mt-1.5">
+            <span className="text-xs font-semibold text-slate-900 block">
+              {cliente.ultimaCompraData}
+            </span>
+            <span className="text-[10px] text-emerald-600 font-bold block">
+              {formatBRL(cliente.ultimaCompraValor)}
+            </span>
+          </div>
+        </Card>
+
+        {/* 6. Próxima Recompra Estimada */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Próx. Recompra
+          </span>
+          <div className="mt-1.5">
+            <span className="text-xs font-semibold text-slate-900 block">
+              {cliente.proximaCompraEstimada}
+            </span>
+            <span className="text-[10px] text-primary font-semibold block">
+              em {cliente.diasProximaCompra} dias
+            </span>
+          </div>
+        </Card>
+
+        {/* 7. P(vivo) & Potencial */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            P(vivo) / Potencial
+          </span>
+          <div className="mt-1.5">
+            <span className="font-mono text-xs font-bold text-emerald-600 block">
+              {cliente.pVivo}% ativo
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              {formatBRL(cliente.potencial12m)}
+            </span>
+          </div>
+        </Card>
+
+        {/* 8. Pipeline & Último Contato */}
+        <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-3 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Pipeline Ativo
+          </span>
+          <div className="mt-1.5">
+            <span className="font-serif text-sm font-bold text-emerald-600 block">
+              {formatBRL(cliente.pipelineValor)}
+            </span>
+            <span className="text-[10px] text-slate-500 block">
+              Contato: {cliente.ultimoContatoData}
+            </span>
+          </div>
+        </Card>
       </div>
 
-      {/* NAVEGAÇÃO DE 12 ABAS */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="overflow-x-auto pb-2">
-          <TabsList className="bg-white/80 border border-border/60 p-1 rounded-2xl h-auto flex flex-nowrap min-w-max gap-1">
+      {/* 6 ABAS DETALHADAS DO CLIENTE 360º */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <div className="border-b border-border/40 pb-px">
+          <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap">
             <TabsTrigger
-              value="visao_geral"
-              className="rounded-xl text-xs font-semibold px-3.5 py-2"
+              value="timeline"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              1. Visão Geral
+              <Clock className="w-3.5 h-3.5" /> 1. Timeline ({timeline.length})
             </TabsTrigger>
-            <TabsTrigger value="timeline" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              2. Timeline Omnichannel
+            <TabsTrigger
+              value="produtos"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <Package className="w-3.5 h-3.5" /> 2. Produtos & Abandonados ({produtos.length})
             </TabsTrigger>
-            <TabsTrigger value="contatos" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              3. Contatos ({customer?.contatos?.length || 0})
+            <TabsTrigger
+              value="financeiro"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> 3. Financeiro & Crédito
             </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              4. WhatsApp
+            <TabsTrigger
+              value="nfs"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <FileText className="w-3.5 h-3.5" /> 4. Últimas NFs ({nfs.length})
             </TabsTrigger>
-            <TabsTrigger value="ligacoes" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              5. Ligações
+            <TabsTrigger
+              value="estoque"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <Warehouse className="w-3.5 h-3.5" /> 5. Estoque & WMS
             </TabsTrigger>
             <TabsTrigger
               value="oportunidades"
-              className="rounded-xl text-xs font-semibold px-3.5 py-2"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              6. Oportunidades
-            </TabsTrigger>
-            <TabsTrigger value="cotacoes" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              7. Cotações SAP ({quotes.length})
-            </TabsTrigger>
-            <TabsTrigger value="pedidos" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              8. Pedidos SAP ({orders.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="faturamento"
-              className="rounded-xl text-xs font-semibold px-3.5 py-2"
-            >
-              9. Faturamento
-            </TabsTrigger>
-            <TabsTrigger value="produtos" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              10. Produtos
-            </TabsTrigger>
-            <TabsTrigger value="tarefas" className="rounded-xl text-xs font-semibold px-3.5 py-2">
-              11. Tarefas
-            </TabsTrigger>
-            <TabsTrigger
-              value="inteligencia"
-              className="rounded-xl text-xs font-semibold px-3.5 py-2"
-            >
-              12. Inteligência IA
+              <TrendingUp className="w-3.5 h-3.5" /> 6. Oportunidades ({oportunidades.length})
             </TabsTrigger>
           </TabsList>
         </div>
 
-        {/* 1. VISÃO GERAL */}
-        <TabsContent value="visao_geral" className="flex flex-col gap-6 mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm md:col-span-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="font-serif text-lg font-bold text-primary">
-                  Diagnóstico Comercial & RFM
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block">
-                      Segmento RFM
-                    </span>
-                    <span className="font-bold text-sm text-primary mt-1 block">
-                      {biSummary?.rfmSegment || 'Em risco'}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block">
-                      P(Vivo) BG/NBD
-                    </span>
-                    <span className="font-bold text-sm text-emerald-600 mt-1 block">
-                      {Math.round((biSummary?.pAlive || 0.82) * 100)}%
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block">
-                      Score Reativação
-                    </span>
-                    <span className="font-bold text-sm text-primary mt-1 block">
-                      {biSummary?.reactivationScore || 94}/100
-                    </span>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold block">
-                      Próxima Compra
-                    </span>
-                    <span className="font-bold text-sm text-primary mt-1 block">
-                      Em {biSummary?.expectedNextPurchaseDays || 6} dias
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-4 bg-blue-50/60 rounded-xl border border-blue-200/60 flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-xs text-primary uppercase tracking-wider block">
-                      Recomendação Estratégica IA
-                    </span>
-                    <p className="text-xs text-foreground/80 mt-1 leading-relaxed">
-                      {aiRecommendation?.action ||
-                        biSummary?.recommendedAction ||
-                        'Ofertar Tubos Inox 304 SCH 10 com preço FOB promocional para pronta-entrega.'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="font-serif text-lg font-bold text-primary">
-                  Crédito & Vendas SAP
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Condição de Pagamento:</span>
-                  <span className="font-semibold text-primary">
-                    {customer?.credit?.condicaoPagamento || '28 DDL'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Status do Crédito:</span>
-                  <span className="font-semibold text-emerald-600">
-                    {customer?.credit?.statusBloqueio || 'Liberado'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-border/40">
-                  <span className="text-muted-foreground">Org. de Vendas:</span>
-                  <span className="font-semibold text-primary">
-                    {customer?.salesArea?.organizacaoVendas || '1000'}
-                  </span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-muted-foreground">Canal de Distribuição:</span>
-                  <span className="font-semibold text-primary">
-                    {customer?.salesArea?.canalDistribuicao || '10 (Direta)'}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* 2. TIMELINE OMNICHANNEL */}
-        <TabsContent value="timeline" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        {/* ABA 1: TIMELINE */}
+        <TabsContent value="timeline" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  Linha do Tempo Unificada
+                  Linha do Tempo de Interações & Movimentações
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  WhatsApp, ligações, e-mails Microsoft 365, visitas, cotações SAP e faturamentos.
+                  Feed unificado com WhatsApp, E-mails Microsoft 365, Visitas, Cotações e Pedidos
+                  SAP.
                 </p>
               </div>
-
-              {/* Filtros da Timeline */}
-              <div className="flex items-center gap-1.5 flex-wrap bg-slate-100/80 p-1 rounded-full border border-border/40">
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'all' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3"
-                  onClick={() => setTimelineFilter('all')}
-                >
-                  Todos
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'whatsapp' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3"
-                  onClick={() => setTimelineFilter('whatsapp')}
-                >
-                  WhatsApp
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'phone' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3"
-                  onClick={() => setTimelineFilter('phone')}
-                >
-                  Telefone
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'email' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3 bg-sky-600 text-white hover:bg-sky-500"
-                  onClick={() => setTimelineFilter('email')}
-                >
-                  <Mail className="w-3 h-3 mr-1" /> E-mail
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'sap' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3"
-                  onClick={() => setTimelineFilter('sap')}
-                >
-                  SAP
-                </Button>
-                <Button
-                  size="sm"
-                  variant={timelineFilter === 'visits' ? 'default' : 'ghost'}
-                  className="rounded-full text-xs h-7 px-3"
-                  onClick={() => setTimelineFilter('visits')}
-                >
-                  Visitas
-                </Button>
-              </div>
-            </div>
-
-            <div className="relative pl-6 border-l-2 border-primary/20 space-y-6">
-              {filteredTimelineEvents.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground">
-                  Nenhuma interação encontrada para o filtro selecionado.
-                </div>
-              ) : (
-                filteredTimelineEvents.map((ev) => (
-                  <div key={ev.id} className="relative group">
-                    <div className="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white" />
-                    <div className="bg-white p-4 rounded-2xl border border-border/60 shadow-sm flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-primary">{ev.title}</span>
-                          <Badge variant="outline" className={cn('text-[10px]', ev.badgeColor)}>
-                            {ev.channel}
-                          </Badge>
-                          {ev.conversationId && (
-                            <Badge
-                              variant="outline"
-                              className="text-[9px] bg-slate-50 text-slate-500 font-mono"
-                            >
-                              Thread Microsoft
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">{ev.date}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{ev.summary}</p>
-                      <span className="text-[10px] text-slate-400 mt-1">Origem: {ev.origin}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* 3. CONTATOS */}
-        <TabsContent value="contatos" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {customer?.contatos?.map((c, i) => (
-              <Card
-                key={i}
-                className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-base text-primary">{c.nome}</h4>
-                    {c.isPrincipal && (
-                      <Badge className="bg-primary text-white text-[10px]">Principal</Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground block mt-0.5">{c.cargo}</span>
-                  <div className="mt-4 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="w-3.5 h-3.5 text-primary" /> {c.telefone}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600" /> {c.whatsapp}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span className="font-semibold text-primary">@</span> {c.email}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4 pt-3 border-t border-border/40">
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-8"
-                    onClick={() => navigate(`/conversas?search=${encodeURIComponent(c.nome)}`)}
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 mr-1" /> WhatsApp
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-primary text-xs h-8"
-                    onClick={() =>
-                      toast({ title: 'Discando', description: `Ligando para ${c.telefone}` })
-                    }
-                  >
-                    <Phone className="w-3.5 h-3.5 mr-1" /> Ligar
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* 4. WHATSAPP */}
-        <TabsContent value="whatsapp" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6 flex flex-col items-center justify-center text-center gap-4 py-12">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <MessageSquare className="w-7 h-7" />
-            </div>
-            <div>
-              <h3 className="font-serif text-lg font-bold text-primary">Conversas WhatsApp</h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                Acesse todas as mensagens trocadas com {customer?.razaoSocial} no Inbox integrado.
-              </p>
-            </div>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs"
-              onClick={() =>
-                navigate(`/conversas?search=${encodeURIComponent(customer?.razaoSocial || '')}`)
-              }
-            >
-              Abrir Conversa no WhatsApp →
-            </Button>
-          </Card>
-        </TabsContent>
-
-        {/* 5. LIGAÇÕES */}
-        <TabsContent value="ligacoes" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6">
-            <h3 className="font-serif text-lg font-bold text-primary mb-4">
-              Histórico de Ligações Telefônicas
-            </h3>
-            <div className="divide-y divide-border/40">
-              <div className="py-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-semibold text-primary block">Ligação VoIP Outbound</span>
-                  <span className="text-muted-foreground">
-                    Duração: 4m 32s · Vendedor: Carlos Mendonça
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-emerald-600 block">Atendida</span>
-                  <span className="text-muted-foreground">14/10/2024 às 11:30</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* 6. OPORTUNIDADES */}
-        <TabsContent value="oportunidades" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-lg font-bold text-primary">Oportunidades em Aberto</h3>
               <Button
                 size="sm"
-                className="bg-primary text-white text-xs"
-                onClick={() => navigate('/crm')}
+                variant="outline"
+                onClick={() => toast.info('Registro rápido de interação aberto.')}
+                className="h-8 gap-1.5 text-xs text-primary"
               >
-                <PlusCircle className="w-3.5 h-3.5 mr-1" /> Criar Oportunidade
+                <Plus className="w-3.5 h-3.5" /> Registrar Contato
               </Button>
             </div>
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
-              <div>
-                <span className="font-bold text-primary block">
-                  Fornecimento de Tubos Inox SCH 10 para Safra
-                </span>
-                <span className="text-muted-foreground">
-                  Fase: Proposta Comercial · Potencial: R$ 54.000,00
-                </span>
-              </div>
-              <Badge className="bg-blue-100 text-blue-800 border-none">Em Negociação</Badge>
+
+            <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+              {timeline.map((item) => (
+                <div key={item.id} className="relative group">
+                  <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-white border-2 border-primary flex items-center justify-center shadow-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  </div>
+
+                  <div className="bg-slate-50 hover:bg-slate-100/80 transition-colors p-4 rounded-2xl border border-border/40 space-y-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-white rounded-lg border border-border/40 shadow-2xs">
+                          {getTimelineIcon(item.tipo)}
+                        </div>
+                        <span className="font-bold text-xs text-slate-900">{item.titulo}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.valor && (
+                          <span className="font-serif font-bold text-xs text-emerald-600">
+                            {formatBRL(item.valor)}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-[10px] bg-white text-slate-600">
+                          {item.canal}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">{item.data}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-700 font-medium pl-8">{item.descricao}</p>
+                    <div className="pl-8 text-[10px] text-muted-foreground">
+                      Registrado por: <strong>{item.autor}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
         </TabsContent>
 
-        {/* 7. COTAÇÕES SAP */}
-        <TabsContent value="cotacoes" className="mt-4">
-          <div className="flex flex-col gap-3">
-            {quotes.map((q) => (
-              <Card
-                key={q.documentNumber}
-                className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5"
-              >
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-sm text-primary">
-                      {q.documentNumber}
-                    </span>
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                      {q.status === 'em_aberto' ? 'Em Aberto' : 'Vencida'}
-                    </Badge>
-                  </div>
-                  <span className="font-serif font-bold text-lg text-primary">
-                    {formatBRL(q.valorTotal)}
-                  </span>
-                </div>
-                <div className="mt-3 divide-y divide-border/30 text-xs">
-                  {q.items.map((it, idx) => (
-                    <div key={idx} className="py-2 flex justify-between text-muted-foreground">
-                      <span>{it.descricao}</span>
-                      <span className="font-semibold text-primary">
-                        {it.quantidade} {it.unidade} a R$ {it.precoUnitario.toFixed(2)}
-                      </span>
+        {/* ABA 2: PRODUTOS & PRODUTOS ABANDONADOS */}
+        <TabsContent value="produtos" className="space-y-6 m-0">
+          {/* Seção Destacada: Produtos Abandonados */}
+          {produtos.some((p) => p.status === 'Parou') && (
+            <Card className="bg-rose-50/70 border-rose-200 rounded-3xl p-5 space-y-3">
+              <div className="flex items-center gap-2.5 text-rose-800">
+                <Flame className="w-5 h-5 text-rose-600 animate-pulse" />
+                <h4 className="font-serif font-bold text-sm">
+                  Alerta de Produtos Abandonados (Oportunidade de Recuperação)
+                </h4>
+              </div>
+              <p className="text-xs text-rose-700">
+                O cliente costumava comprar estes materiais com frequência regular e parou nos
+                últimos ciclos. Ação de reativação comercial recomendada.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                {produtos
+                  .filter((p) => p.status === 'Parou')
+                  .map((p) => (
+                    <div
+                      key={p.id}
+                      className="bg-white p-3.5 rounded-2xl border border-rose-200 flex items-center justify-between shadow-2xs"
+                    >
+                      <div>
+                        <span className="font-mono text-[10px] text-muted-foreground block">
+                          {p.codigo} · {p.familia}
+                        </span>
+                        <span className="font-bold text-xs text-slate-900 block">
+                          {p.descricao}
+                        </span>
+                        <span className="text-[11px] text-rose-600 font-semibold block mt-0.5">
+                          Última compra: {p.ultimaCompraData} (Volume anterior: {p.volume12mTon}t)
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          toast.success(`Oferta de reativação para ${p.codigo} criada com sucesso!`)
+                        }
+                        className="h-8 text-xs bg-rose-600 hover:bg-rose-700 text-white shrink-0 ml-2"
+                      >
+                        Ofertar Lote
+                      </Button>
                     </div>
                   ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* 8. PEDIDOS SAP */}
-        <TabsContent value="pedidos" className="mt-4">
-          <div className="flex flex-col gap-3">
-            {orders.map((o) => (
-              <Card
-                key={o.documentNumber}
-                className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5"
-              >
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-sm text-primary">
-                      {o.documentNumber}
-                    </span>
-                    <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700">
-                      {o.status.toUpperCase()}
-                    </Badge>
-                  </div>
-                  <span className="font-serif font-bold text-lg text-primary">
-                    {formatBRL(o.valorTotal)}
-                  </span>
-                </div>
-                <div className="mt-3 text-xs text-muted-foreground">
-                  Data do Pedido: {o.createdAt} · Previsão de Entrega: {o.deliveryDate}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* 9. FATURAMENTO */}
-        <TabsContent value="faturamento" className="mt-4">
-          <div className="flex flex-col gap-3">
-            {billings.map((b) => (
-              <Card
-                key={b.invoiceNumber}
-                className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="font-bold text-sm text-primary block">{b.invoiceNumber}</span>
-                    <span className="text-xs text-muted-foreground">
-                      Ref. Pedido: {b.documentNumber}
-                    </span>
-                  </div>
-                  <span className="font-serif font-bold text-lg text-emerald-600">
-                    {formatBRL(b.valorTotal)}
-                  </span>
-                </div>
-                <span className="text-[11px] text-muted-foreground mt-2 block">
-                  Chave NFe: {b.chaveAcessoNFe}
-                </span>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* 10. PRODUTOS */}
-        <TabsContent value="produtos" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5">
-            <h4 className="font-serif font-bold text-base text-primary mb-3">
-              Histórico por Família e Materiais
-            </h4>
-            <div className="divide-y divide-border/40 text-xs">
-              <div className="py-3 flex justify-between items-center">
-                <div>
-                  <span className="font-bold text-primary block">
-                    Tubo Inox AISI 304 Redondo SCH 10 2"
-                  </span>
-                  <span className="text-muted-foreground">
-                    Família: Tubos Inox · Histórico: 28.4 ton
-                  </span>
-                </div>
-                <Badge className="bg-emerald-100 text-emerald-800 border-none">
-                  Estoque CIAFAL OK
-                </Badge>
               </div>
-              <div className="py-3 flex justify-between items-center">
-                <div>
-                  <span className="font-bold text-primary block">
-                    Chapa Inox AISI 304 3.00mm Escovada
-                  </span>
-                  <span className="text-muted-foreground">
-                    Família: Chapas Inox · Histórico: 34.1 ton
-                  </span>
-                </div>
-                <Badge className="bg-emerald-100 text-emerald-800 border-none">
-                  Estoque CIAFAL OK
-                </Badge>
-              </div>
+            </Card>
+          )}
+
+          {/* Grid de Todos os Produtos */}
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <h3 className="font-serif text-lg font-bold text-primary mb-1">
+              Catálogo de Materiais & Histórico de Compras
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Comportamento de compra por família de produtos, preço médio praticado e status de
+              recompra.
+            </p>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
+                  <tr>
+                    <th className="py-3 px-3">Código</th>
+                    <th className="py-3 px-3">Descrição do Material</th>
+                    <th className="py-3 px-3">Família</th>
+                    <th className="py-3 px-3">Última Compra</th>
+                    <th className="py-3 px-3 text-center">Volume 12m</th>
+                    <th className="py-3 px-3 text-right">Preço Médio / kg</th>
+                    <th className="py-3 px-3 text-center">Status</th>
+                    <th className="py-3 px-3 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {produtos.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-primary">{p.codigo}</td>
+                      <td className="py-3 px-3 font-medium text-slate-900">{p.descricao}</td>
+                      <td className="py-3 px-3 text-slate-600">{p.familia}</td>
+                      <td className="py-3 px-3 text-slate-700">{p.ultimaCompraData}</td>
+                      <td className="py-3 px-3 text-center font-mono font-semibold text-primary">
+                        {p.volume12mTon} t
+                      </td>
+                      <td className="py-3 px-3 text-right font-serif font-semibold text-slate-800">
+                        {p.precoMedioKg.toLocaleString('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL',
+                        })}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-bold border-none',
+                            p.status === 'Ativo'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : p.status === 'Reduziu'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800',
+                          )}
+                        >
+                          {p.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toast.info(`Cotação para o item ${p.codigo} adicionada.`)}
+                          className="h-7 text-xs text-primary hover:bg-primary/10"
+                        >
+                          Cotar
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Card>
         </TabsContent>
 
-        {/* 11. TAREFAS */}
-        <TabsContent value="tarefas" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-serif font-bold text-base text-primary">Tarefas Vinculadas</h4>
-              <Button
-                size="sm"
-                className="bg-primary text-white text-xs"
-                onClick={() => navigate('/tarefas')}
-              >
-                <PlusCircle className="w-3.5 h-3.5 mr-1" /> Nova Tarefa
-              </Button>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
+        {/* ABA 3: FINANCEIRO & CRÉDITO */}
+        <TabsContent value="financeiro" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div>
-                <span className="font-semibold text-primary block">
-                  Follow-up de cotação de tubos
-                </span>
-                <span className="text-muted-foreground">Vencimento: Amanhã às 17h00</span>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Posição Financeira & Linha de Crédito SAP
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Informações sincronizadas com o módulo financeiro do SAP S/4HANA (Contas a
+                  Receber).
+                </p>
               </div>
-              <Badge variant="outline" className="text-amber-700 bg-amber-50">
-                Alta Prioridade
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs font-semibold"
+              >
+                Consulta Serasa & SAP OK
               </Badge>
             </div>
+
+            {/* CARDS FINANCEIROS OBRIGATÓRIOS */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Limite de Crédito
+                </span>
+                <span className="font-serif text-lg font-bold text-slate-900 block">
+                  {formatBRL(cliente.limiteCredito)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+                  Crédito Disponível
+                </span>
+                <span className="font-serif text-lg font-bold text-emerald-700 block">
+                  {formatBRL(cliente.creditoDisponivel)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  % Utilizado
+                </span>
+                <span className="font-serif text-lg font-bold text-primary block">
+                  {(
+                    ((cliente.limiteCredito - cliente.creditoDisponivel) / cliente.limiteCredito) *
+                    100
+                  ).toFixed(0)}
+                  %
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 block">
+                  A Receber (A Vencer)
+                </span>
+                <span className="font-serif text-lg font-bold text-blue-700 block">
+                  {formatBRL(cliente.limiteCredito - cliente.creditoDisponivel)}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-rose-50/60 rounded-2xl border border-rose-200 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-800 block">
+                  Títulos Vencidos
+                </span>
+                <span className="font-serif text-lg font-bold text-rose-600 block">R$ 0,00</span>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Maior Atraso
+                </span>
+                <span className="font-serif text-lg font-bold text-slate-800 block">0 dias</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border/60 text-xs text-muted-foreground flex items-center justify-between">
+              <span>
+                Condição padrão de pagamento negociada:{' '}
+                <strong>28 / 35 DDL via Boleto Bancário</strong>
+              </span>
+              <span className="text-[11px] text-emerald-600 font-semibold">Cliente adimplente</span>
+            </div>
           </Card>
         </TabsContent>
 
-        {/* 12. INTELIGÊNCIA IA */}
-        <TabsContent value="inteligencia" className="mt-4">
-          <Card className="rounded-2xl border-border/60 bg-white/60 shadow-sm p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary text-white">
-                <Sparkles className="w-5 h-5" />
-              </div>
+        {/* ABA 4: ÚLTIMAS NOTAS FISCAIS */}
+        <TabsContent value="nfs" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  CIAFAL AI Copilot Intelligence
+                  Histórico de Faturamento & Notas Fiscais Eletrônicas
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Modelo preditivo BG/NBD + Gamma-Gamma com leitura em tempo real.
+                  Documentos fiscais emitidos pela CIAFAL integrados com a SEFAZ MG.
                 </p>
               </div>
+              <Badge className="bg-primary text-white text-xs">
+                {nfs.length} NFs no histórico recente
+              </Badge>
             </div>
 
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
-              <span className="font-bold text-primary block uppercase tracking-wider">
-                Justificativa da Ação
-              </span>
-              <p className="text-foreground/80 leading-relaxed">
-                {aiRecommendation?.justification ||
-                  'Cliente inativo há 74 dias com ciclo médio de 45 dias. Estoque com alta cobertura e margem atrativa.'}
-              </p>
-              <div className="pt-2 border-t border-slate-200 mt-2">
-                <span className="font-bold text-slate-600 block mb-1">Evidências Analíticas:</span>
-                <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                  {aiRecommendation?.evidence?.map((ev: string, idx: number) => (
-                    <li key={idx}>{ev}</li>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
+                  <tr>
+                    <th className="py-3 px-3">Número NF</th>
+                    <th className="py-3 px-3">Data de Emissão</th>
+                    <th className="py-3 px-3 text-right">Valor Total R$</th>
+                    <th className="py-3 px-3 text-center">Toneladas</th>
+                    <th className="py-3 px-3">Transportadora</th>
+                    <th className="py-3 px-3 text-center">Status Entrega</th>
+                    <th className="py-3 px-3 text-center">DANFE / XML</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {nfs.map((nf) => (
+                    <tr key={nf.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-primary">{nf.numeroNF}</td>
+                      <td className="py-3 px-3 text-slate-800">{nf.dataEmissao}</td>
+                      <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
+                        {formatBRL(nf.valorTotal)}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-semibold">
+                        {nf.toneladas} t
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">{nf.transportadora}</td>
+                      <td className="py-3 px-3 text-center">
+                        <Badge
+                          className={cn(
+                            'text-[10px] font-bold border-none',
+                            nf.statusEntrega === 'Entregue'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-blue-100 text-blue-800',
+                          )}
+                        >
+                          {nf.statusEntrega}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toast.info(`Download do DANFE da NF ${nf.numeroNF}...`)}
+                          className="h-7 text-xs text-primary hover:bg-primary/10"
+                        >
+                          Visualizar
+                        </Button>
+                      </td>
+                    </tr>
                   ))}
-                </ul>
-              </div>
+                </tbody>
+              </table>
             </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 5: ESTOQUE & WMS */}
+        <TabsContent value="estoque" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Estoque Disponível em Pátio (CD Contagem / Betim)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Saldos físicos atualizados com conferência de lotes e alertas de estoque crítico.
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-300 text-xs">
+                WMS Conectado
+              </Badge>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
+                  <tr>
+                    <th className="py-3 px-3">Código</th>
+                    <th className="py-3 px-3">Descrição do Material</th>
+                    <th className="py-3 px-3 text-center">Saldo Estoque (ton)</th>
+                    <th className="py-3 px-3 text-center">Lotes</th>
+                    <th className="py-3 px-3 text-right">Peso Médio (kg)</th>
+                    <th className="py-3 px-3">Alerta WMS</th>
+                    <th className="py-3 px-3 text-center">Ação WMS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {produtos.map((p) => {
+                    const isLowStock = p.saldoEstoqueTon < 5.0
+                    const isConfirmed = wmsConfirmed[p.codigo]
+
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-3 font-mono font-bold text-primary">{p.codigo}</td>
+                        <td className="py-3 px-3 font-medium text-slate-900">{p.descricao}</td>
+                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-800">
+                          {p.saldoEstoqueTon} t
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono">{p.lotes} lotes</td>
+                        <td className="py-3 px-3 text-right font-mono text-slate-600">
+                          {p.pesoMedioKg} kg
+                        </td>
+                        <td className="py-3 px-3">
+                          {isLowStock ? (
+                            <div className="flex items-center gap-1 text-amber-700 font-semibold text-[11px] bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300 w-fit">
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              Solicitar confirmação de saldo (&lt; 5 ton)
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-emerald-700 font-medium text-[11px]">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Saldo seguro pronta-entrega
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          {isLowStock && (
+                            <Button
+                              size="sm"
+                              variant={isConfirmed ? 'outline' : 'default'}
+                              onClick={() => handleRequestWMS(p.codigo)}
+                              disabled={isConfirmed}
+                              className={cn(
+                                'h-7 text-[11px] gap-1',
+                                isConfirmed
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                  : 'bg-amber-600 hover:bg-amber-700 text-white',
+                              )}
+                            >
+                              <Warehouse className="w-3.5 h-3.5" />
+                              {isConfirmed ? 'WMS Solicitado' : 'Solicitar Confirmação WMS'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 6: OPORTUNIDADES DO CLIENTE */}
+        <TabsContent value="oportunidades" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Oportunidades & Negociações Abertas
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Propostas em andamento no funil comercial da CIAFAL para este cliente.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => toast.info('Nova oportunidade para este cliente.')}
+                className="h-8 gap-1.5 text-xs bg-primary text-white"
+              >
+                <Plus className="w-3.5 h-3.5" /> Adicionar Oportunidade
+              </Button>
+            </div>
+
+            {oportunidades.length === 0 ? (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                Nenhuma oportunidade ativa no funil para este cliente no momento.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {oportunidades.map((op) => (
+                  <Card
+                    key={op.id}
+                    className="bg-slate-50/80 border-border/40 rounded-2xl p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="font-bold text-sm text-primary block">{op.titulo}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Vendedor: {op.vendedorNome} · Previsão: {op.previsaoFechamento}
+                        </span>
+                      </div>
+                      <Badge className="bg-primary/10 text-primary border-none text-xs font-bold capitalize">
+                        {op.etapa}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-b py-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">VALOR TOTAL</span>
+                        <span className="font-serif font-bold text-base text-emerald-600">
+                          {formatBRL(op.valor)}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-muted-foreground block text-[10px]">VOLUME</span>
+                        <span className="font-bold text-slate-800">{op.toneladas} ton</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-muted-foreground block text-[10px]">
+                          PROBABILIDADE
+                        </span>
+                        <span className="font-bold text-primary">{op.probabilidade}%</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-2.5 rounded-xl border border-border/40 text-xs text-slate-700">
+                      <strong className="text-primary">Próxima Ação:</strong> {op.proximaAcao}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

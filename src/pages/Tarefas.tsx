@@ -35,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { PageLoadingState, PageEmptyState } from '@/components/shared/StateFeedback'
 
 export default function Tarefas() {
   const { tasks, loading } = useTasks()
@@ -175,6 +176,13 @@ export default function Tarefas() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* StateFeedback se Loading */}
+      {loading && (
+        <div className="py-4">
+          <PageLoadingState message="Carregando informações..." />
+        </div>
+      )}
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">

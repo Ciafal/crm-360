@@ -40,6 +40,7 @@ import { useDailyActions } from '@/hooks/use-daily-actions'
 import { useToast } from '@/hooks/use-toast'
 import { Customer360Sheet } from '@/components/inativos/Customer360Sheet'
 import type { BICustomerSummary, BIFilters } from '@/providers/BIProvider'
+import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
 import { cn } from '@/lib/utils'
 
 export default function GestaoInativos() {
@@ -597,8 +598,17 @@ export default function GestaoInativos() {
                     ))
                   ) : filteredCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-8 text-center text-muted-foreground">
-                        Nenhum cliente encontrado com os filtros aplicados.
+                      <td colSpan={10} className="p-8">
+                        <PageEmptyState
+                          title="Não existem dados disponíveis para este período."
+                          description="Nenhum cliente atende aos filtros de inatividade aplicados."
+                          actionLabel="Tentar novamente"
+                          onAction={() => {
+                            setSearch('')
+                            setInactivityFilter('todos')
+                            setSegmentFilter('todos')
+                          }}
+                        />
                       </td>
                     </tr>
                   ) : (

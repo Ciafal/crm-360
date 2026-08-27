@@ -21,6 +21,7 @@ import { getAiAgents, createAiAgent, updateAiAgent, deleteAiAgent } from '@/serv
 import { getErrorMessage } from '@/lib/pocketbase/errors'
 import { AgenteCard } from '@/components/agentes/AgenteCard'
 import { AgenteFormDialog } from '@/components/agentes/AgenteFormDialog'
+import { PageLoadingState, PageEmptyState } from '@/components/shared/StateFeedback'
 
 export default function Agentes() {
   const { user } = useAuth()

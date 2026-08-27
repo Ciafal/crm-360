@@ -1,798 +1,1206 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useMemo, useEffect } from 'react'
+import { useAuth } from '@/hooks/use-auth'
 import {
-  Search,
-  MoreVertical,
-  MessageSquare,
-  Trash2,
-  Users,
-  Clock,
-  Building2,
-  Tag,
-  User,
-  ChevronDown,
-  Check,
-  X,
-  SlidersHorizontal,
-  Settings2,
-  List,
-  Columns3,
-  Workflow,
-} from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+  mockClientes,
+  mockFunilOportunidades,
+  ClienteCarteira,
+  OportunidadeFunil,
+  EtapaFunil,
+} from '@/data/mockCommercialData'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Skeleton } from '@/components/ui/skeleton'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Search,
+  Filter,
+  ArrowUpDown,
+  Building2,
+  TrendingUp,
+  Kanban,
+  FileText,
+  DollarSign,
+  Phone,
+  MessageSquare,
+  Mail,
+  MapPin,
+  Calendar,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Briefcase,
+  ChevronRight,
+  RefreshCw,
+  Plus,
+  Sparkles,
+  Layers,
+  BarChart3,
+  ExternalLink,
+} from 'lucide-react'
+import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
+import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { useSearchParams } from 'react-router-dom'
 
-import pb from '@/lib/pocketbase/client'
-import { useInstanciaAtiva } from '@/hooks/use-whatsapp'
-import { useCrmContatos, formatPhoneBR } from '@/hooks/use-crm'
-import { updateCrmContactStage, deleteCrmContact } from '@/services/crm_service'
-import { getDisplayName, isInvalidContactName } from '@/lib/whatsapp-mappers'
-import { CrmContact } from '@/types/models'
-import { CrmContactDetail } from '@/components/crm/CrmContactDetail'
-import { CrmCompaniesList } from '@/components/crm/CrmCompaniesList'
-import { CrmPipelineBoard } from '@/components/crm/CrmPipelineBoard'
-import { PipelineEditorSheet } from '@/components/crm/PipelineEditorSheet'
-import { CategoriesSheet } from '@/components/categories/CategoriesSheet'
-import { useCategories } from '@/hooks/use-categories'
-import { useCrmStages } from '@/hooks/use-crm-stages'
-import { stageStyle } from '@/lib/stage-colors'
-import { CATEGORY_COLOR_MAP } from '@/lib/colors'
-import { useCurrentAccount } from '@/hooks/use-current-account'
-
-const COMPANIES_TAB_ID = 'companies'
-
-type ViewMode = 'lista' | 'pipeline'
+type SortColumn =
+  | 'razaoSocial'
+  | 'faturamento12m'
+  | 'ticketMedio'
+  | 'ultimaCompraData'
+  | 'pVivo'
+  | 'scoreComercial'
+  | 'pipelineValor'
 
 export default function CRM() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { instance } = useInstanciaAtiva()
-  const { contacts, loading, reload } = useCrmContatos(instance?.instance_name)
-  const { accountId } = useCurrentAccount()
-  const { categories } = useCategories(accountId || undefined)
-  // O CRM é a tela "dona" das etapas → faz o lazy seed das 4 padrão se a
-  // conta ainda não tem pipeline.
-  const { stages, loading: stagesLoading } = useCrmStages(accountId || undefined, { seed: true })
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
-  const [isPipelineEditorOpen, setIsPipelineEditorOpen] = useState(false)
 
-  const [viewMode, setViewMode] = useState<ViewMode>('lista')
-  const [activeTab, setActiveTab] = useState('all')
-  const [ownerFilter, setOwnerFilter] = useState<'todos' | 'meus'>('todos')
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
-  const selectedContactId = searchParams.get('contact')
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'carteira')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Filtros da Gestão de Carteira
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [contactToDelete, setContactToDelete] = useState<CrmContact | null>(null)
+  const [vendedorFilter, setVendedorFilter] = useState('todos')
+  const [segmentoFilter, setSegmentoFilter] = useState('todos')
+  const [rfmFilter, setRfmFilter] = useState('todos')
+  const [cidadeFilter, setCidadeFilter] = useState('todos')
+  const [diasContatoMax, setDiasContatoMax] = useState<number | ''>('')
 
-  const isCompanies = activeTab === COMPANIES_TAB_ID
+  // Ordenação da Tabela
+  const [sortColumn, setSortColumn] = useState<SortColumn>('scoreComercial')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
-  const stageByKey = useMemo(() => {
-    const map = new Map<string, (typeof stages)[number]>()
-    for (const s of stages) map.set(s.key, s)
-    return map
-  }, [stages])
-
-  // Abas: "Todos" + uma por etapa (na ordem do pipeline).
-  const tabs = useMemo(
-    () => [{ id: 'all', label: 'Todos' }, ...stages.map((s) => ({ id: s.key, label: s.label }))],
-    [stages],
-  )
+  // Filtros do Funil
+  const [funilVendedorFilter, setFunilVendedorFilter] = useState('todos')
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchTerm)
-    }, 300)
-    return () => clearTimeout(handler)
-  }, [searchTerm])
+    const tabFromUrl = searchParams.get('tab')
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [searchParams])
 
-  // Filtros comuns (busca + responsável + categorias), sem o filtro de
-  // etapa — reutilizado tanto pela lista quanto pelo board.
-  const commonFiltered = useMemo(() => {
-    return contacts.filter((c) => {
-      let matchSearch = true
-      if (debouncedSearch) {
-        const s = debouncedSearch.toLowerCase()
-        const display = getDisplayName(c.contact_name, c.jid).toLowerCase()
-        const name = (c.contact_name || c.push_name || '').toLowerCase()
-        const phone = c.phone || ''
-        matchSearch = display.includes(s) || name.includes(s) || phone.includes(s)
+  const handleTabChange = (val: string) => {
+    setActiveTab(val)
+    setSearchParams({ tab: val })
+  }
+
+  const formatBRL = (val: number) => {
+    return val.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0,
+    })
+  }
+
+  // Identificação do Usuário e RLS (Row Level Security)
+  const userRole = (user?.role || '').toLowerCase()
+  const userEmail = (user?.email || '').toLowerCase()
+  const isVendedorOnly = userRole === 'vendedor' || userRole === 'representante_externo'
+
+  // Clientes visíveis de acordo com o perfil
+  const rawClientes = useMemo(() => {
+    if (isVendedorOnly) {
+      return mockClientes.filter(
+        (c) =>
+          c.vendedorId === user?.id ||
+          (userEmail.includes('vendedor2')
+            ? c.vendedorId === 'qas-vendedor2_teste'
+            : userEmail.includes('representante')
+              ? c.vendedorId === 'qas-representante_teste'
+              : c.vendedorId === 'qas-vendedor_teste'),
+      )
+    }
+    return mockClientes
+  }, [isVendedorOnly, userEmail, user?.id])
+
+  // Filtragem avançada da Gestão de Carteira
+  const filteredClientes = useMemo(() => {
+    return rawClientes.filter((c) => {
+      const matchSearch =
+        c.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.nomeFantasia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.sapCode.includes(searchTerm) ||
+        c.cnpj.includes(searchTerm) ||
+        c.cidade.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchVendedor =
+        vendedorFilter === 'todos' ||
+        c.vendedor.toLowerCase().includes(vendedorFilter.toLowerCase())
+
+      const matchSegmento = segmentoFilter === 'todos' || c.segmento === segmentoFilter
+
+      const matchRfm = rfmFilter === 'todos' || c.rfmSegmento === rfmFilter
+
+      const matchCidade = cidadeFilter === 'todos' || c.cidade === cidadeFilter
+
+      const matchDiasContato = diasContatoMax === '' || c.diasSemContato <= Number(diasContatoMax)
+
+      return (
+        matchSearch && matchVendedor && matchSegmento && matchRfm && matchCidade && matchDiasContato
+      )
+    })
+  }, [
+    rawClientes,
+    searchTerm,
+    vendedorFilter,
+    segmentoFilter,
+    rfmFilter,
+    cidadeFilter,
+    diasContatoMax,
+  ])
+
+  // Ordenação da Gestão de Carteira
+  const sortedClientes = useMemo(() => {
+    const list = [...filteredClientes]
+    list.sort((a, b) => {
+      let valA: any = a[sortColumn]
+      let valB: any = b[sortColumn]
+
+      if (typeof valA === 'string') {
+        return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
       }
 
-      const matchMine = ownerFilter === 'todos' || c.assigned_to === pb.authStore.record?.id
-
-      const matchCategories =
-        selectedCategoryIds.length === 0 ||
-        selectedCategoryIds.every((catId) => c.category_ids?.includes(catId))
-
-      return matchSearch && matchMine && matchCategories
+      return sortDirection === 'asc' ? valA - valB : valB - valA
     })
-  }, [contacts, debouncedSearch, ownerFilter, selectedCategoryIds])
+    return list
+  }, [filteredClientes, sortColumn, sortDirection])
 
-  const filteredContacts = useMemo(() => {
-    if (activeTab === 'all' || isCompanies) return commonFiltered
-    return commonFiltered.filter((c) => c.stage === activeTab)
-  }, [commonFiltered, activeTab, isCompanies])
-
-  const getStageCount = (stageId: string) => {
-    if (stageId === 'all') return contacts.length
-    return contacts.filter((c) => c.stage === stageId).length
-  }
-
-  const handleStageChange = async (id: string, newStage: string) => {
-    try {
-      await updateCrmContactStage(id, newStage)
-      toast.success('Fase atualizada com sucesso')
-    } catch (err) {
-      toast.error('Erro ao atualizar fase')
+  const toggleSort = (col: SortColumn) => {
+    if (sortColumn === col) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(col)
+      setSortDirection('desc')
     }
   }
 
-  const handleDelete = async () => {
-    if (!contactToDelete) return
-    try {
-      await deleteCrmContact(contactToDelete.id)
-      toast.success('Contato removido do CRM')
-      setContactToDelete(null)
-    } catch (err) {
-      toast.error('Erro ao remover contato')
+  // Oportunidades do Funil
+  const rawFunil = useMemo(() => {
+    if (isVendedorOnly) {
+      return mockFunilOportunidades.filter(
+        (op) =>
+          op.vendedorId === user?.id ||
+          (userEmail.includes('vendedor2')
+            ? op.vendedorId === 'qas-vendedor2_teste'
+            : userEmail.includes('representante')
+              ? op.vendedorId === 'qas-representante_teste'
+              : op.vendedorId === 'qas-vendedor_teste'),
+      )
+    }
+    return mockFunilOportunidades
+  }, [isVendedorOnly, userEmail, user?.id])
+
+  const filteredFunil = useMemo(() => {
+    return rawFunil.filter((op) => {
+      if (funilVendedorFilter === 'todos') return true
+      return op.vendedorNome.toLowerCase().includes(funilVendedorFilter.toLowerCase())
+    })
+  }, [rawFunil, funilVendedorFilter])
+
+  // Métricas do Funil
+  // Gap da Meta: R$ 625.000 | Pipeline Aberto: R$ 1.200.000 | Pipeline Ponderado: R$ 780.000 | Cobertura da Meta: 125%
+  const funilMetricas = useMemo(() => {
+    const abertas = filteredFunil.filter(
+      (op) => !['faturado', 'adiado', 'perdido', 'cancelado'].includes(op.etapa),
+    )
+    const pipelineAberto = abertas.reduce((acc, op) => acc + op.valor, 0)
+    const pipelinePonderado = abertas.reduce(
+      (acc, op) => acc + (op.valor * op.probabilidade) / 100,
+      0,
+    )
+    const gapMeta = isVendedorOnly ? 135000 : 625000
+    const cobertura = gapMeta > 0 ? Math.round((pipelineAberto / gapMeta) * 100) : 100
+
+    return {
+      gapMeta,
+      pipelineAberto,
+      pipelinePonderado,
+      cobertura,
+    }
+  }, [filteredFunil, isVendedorOnly])
+
+  // Colunas do Funil Kanban
+  const funilStages: { id: EtapaFunil; label: string; color: string; badgeClass: string }[] = [
+    {
+      id: 'prospeccao',
+      label: '1. Prospecção',
+      color: 'border-slate-400',
+      badgeClass: 'bg-slate-100 text-slate-700',
+    },
+    {
+      id: 'contato',
+      label: '2. Contato',
+      color: 'border-blue-400',
+      badgeClass: 'bg-blue-100 text-blue-800',
+    },
+    {
+      id: 'necessidade',
+      label: '3. Necessidade',
+      color: 'border-indigo-400',
+      badgeClass: 'bg-indigo-100 text-indigo-800',
+    },
+    {
+      id: 'oportunidade',
+      label: '4. Oportunidade',
+      color: 'border-cyan-400',
+      badgeClass: 'bg-cyan-100 text-cyan-800',
+    },
+    {
+      id: 'cotacao',
+      label: '5. Cotação',
+      color: 'border-amber-400',
+      badgeClass: 'bg-amber-100 text-amber-800',
+    },
+    {
+      id: 'negociacao',
+      label: '6. Negociação',
+      color: 'border-orange-400',
+      badgeClass: 'bg-orange-100 text-orange-800',
+    },
+    {
+      id: 'pedido',
+      label: '7. Pedido',
+      color: 'border-emerald-500',
+      badgeClass: 'bg-emerald-100 text-emerald-800',
+    },
+    {
+      id: 'faturado',
+      label: '8. Faturado',
+      color: 'border-green-600',
+      badgeClass: 'bg-green-100 text-green-800',
+    },
+  ]
+
+  // Saídas do Funil
+  const saidasStages: { id: EtapaFunil; label: string; badgeClass: string }[] = [
+    { id: 'adiado', label: 'Adiado', badgeClass: 'bg-purple-100 text-purple-800' },
+    { id: 'perdido', label: 'Perdido', badgeClass: 'bg-rose-100 text-rose-800' },
+    { id: 'cancelado', label: 'Cancelado', badgeClass: 'bg-slate-200 text-slate-800' },
+  ]
+
+  const getCanalIcon = (canal: string) => {
+    switch (canal) {
+      case 'WhatsApp':
+        return <MessageSquare className="w-3.5 h-3.5 text-emerald-600 inline mr-1" />
+      case 'Telefone':
+        return <Phone className="w-3.5 h-3.5 text-blue-600 inline mr-1" />
+      case 'E-mail':
+        return <Mail className="w-3.5 h-3.5 text-indigo-600 inline mr-1" />
+      case 'Visita':
+        return <MapPin className="w-3.5 h-3.5 text-amber-600 inline mr-1" />
+      default:
+        return null
     }
   }
 
-  const openContact = (id: string) => {
-    setSearchParams((prev) => {
-      prev.set('contact', id)
-      return prev
-    })
-  }
-
-  const getContactTitle = (c: CrmContact) =>
-    !isInvalidContactName(c.contact_name)
-      ? c.contact_name!
-      : c.push_name && !isInvalidContactName(c.push_name)
-        ? c.push_name
-        : getDisplayName(undefined, c.jid)
-
-  const formatRelativeTime = (dateStr: string) => {
-    const d = new Date(dateStr)
-    const diff = Math.floor((new Date().getTime() - d.getTime()) / 1000)
-    if (diff < 60) return 'agora'
-    if (diff < 3600) return `Há ${Math.floor(diff / 60)}m`
-    if (diff < 86400) return `Há ${Math.floor(diff / 3600)}h`
-    if (diff < 604800) return `Há ${Math.floor(diff / 86400)}d`
-    return d.toLocaleDateString('pt-BR')
-  }
-
-  if (!instance?.instance_name) {
+  if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center text-muted-foreground">Selecione uma instância primeiro.</div>
+      <div className="max-w-7xl mx-auto py-8">
+        <PageLoadingState message="Carregando informações..." />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto py-8">
+        <PageErrorState
+          title="Não foi possível carregar os dados."
+          description={error}
+          onRetry={() => setLoading(false)}
+        />
       </div>
     )
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div className="flex flex-col gap-1 md:gap-2">
-          <h1 className="font-serif text-3xl font-bold text-primary">CRM</h1>
-          <p className="text-muted-foreground font-sans text-sm md:text-base max-w-2xl">
-            Gerencie seus leads e acompanhe o funil de vendas. Total de {contacts.length} contatos
-            registrados.
-          </p>
-        </div>
-
-        {!isCompanies && (
-          <div className="relative w-full md:w-80 shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar contatos..."
-              className="pl-9 rounded-full bg-white/50 backdrop-blur-sm border-border/40 focus-visible:ring-primary/20 h-10 text-sm w-full shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-col gap-4 mt-2">
-        <div className="flex overflow-x-auto gap-2 items-center pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {/* Alternador Lista / Pipeline */}
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-full border border-border/40 shrink-0">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setViewMode('lista')
-                if (isCompanies) setActiveTab('all')
-              }}
-              className={cn(
-                'h-7 px-3 rounded-full text-sm font-medium gap-1.5',
-                viewMode === 'lista' && !isCompanies
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <List className="w-3.5 h-3.5" />
-              Lista
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setViewMode('pipeline')
-                setActiveTab('all')
-              }}
-              className={cn(
-                'h-7 px-3 rounded-full text-sm font-medium gap-1.5',
-                viewMode === 'pipeline' && !isCompanies
-                  ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Columns3 className="w-3.5 h-3.5" />
-              Pipeline
-            </Button>
-          </div>
-
-          {/* Editar pipeline */}
-          {!isCompanies && (
-            <Button
-              variant="outline"
-              className="rounded-full h-9 px-4 font-sans font-medium whitespace-nowrap shrink-0 bg-white/50 backdrop-blur-sm hover:bg-white/80 border-border/40"
-              onClick={() => setIsPipelineEditorOpen(true)}
-            >
-              <Workflow className="w-3.5 h-3.5 mr-1.5" />
-              Editar pipeline
-            </Button>
-          )}
-
-          <div className="w-px h-5 bg-border/50 mx-1 shrink-0" />
-
-          {/* Abas de etapa — só na visão Lista (no Pipeline as colunas já
-              representam as etapas) */}
-          {viewMode === 'lista' &&
-            !isCompanies &&
-            tabs.map((tab) => (
-              <Button
-                key={tab.id}
-                variant={activeTab === tab.id ? 'default' : 'outline'}
-                className={cn(
-                  'rounded-full h-9 px-4 font-sans font-medium whitespace-nowrap shrink-0',
-                  activeTab === tab.id
-                    ? 'shadow-sm'
-                    : 'bg-white/50 backdrop-blur-sm hover:bg-white/80 border-border/40',
-                )}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-                <span
-                  className={cn(
-                    'ml-2 text-[10px] px-1.5 py-0.5 rounded-full',
-                    activeTab === tab.id
-                      ? 'bg-white/20 text-white'
-                      : 'bg-black/5 text-muted-foreground',
-                  )}
-                >
-                  {getStageCount(tab.id)}
-                </span>
-              </Button>
-            ))}
-
-          {viewMode === 'lista' && !isCompanies && (
-            <div className="w-px h-5 bg-border/50 mx-1 shrink-0" />
-          )}
-
-          {/* Empresas */}
-          <Button
-            variant={isCompanies ? 'default' : 'outline'}
-            className={cn(
-              'rounded-full h-9 px-4 font-sans font-medium whitespace-nowrap shrink-0',
-              isCompanies
-                ? 'shadow-sm'
-                : 'bg-white/50 backdrop-blur-sm hover:bg-white/80 border-border/40',
-            )}
-            onClick={() => setActiveTab(COMPANIES_TAB_ID)}
-          >
-            <Building2 className="w-3.5 h-3.5 mr-1.5" />
-            Empresas
-          </Button>
-
-          {!isCompanies && (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'rounded-full h-9 px-4 font-sans font-medium whitespace-nowrap shrink-0 bg-white/50 backdrop-blur-sm hover:bg-white/80 border-border/40',
-                      ownerFilter === 'meus' && 'border-primary text-primary bg-primary/5',
-                    )}
-                  >
-                    <User className="w-3.5 h-3.5 mr-1.5" />
-                    Responsável
-                    <ChevronDown className="w-3 h-3 ml-1.5 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-1 rounded-xl" align="start">
-                  <div className="flex flex-col">
-                    <button
-                      className="flex items-center w-full px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left font-medium"
-                      onClick={() => setOwnerFilter('todos')}
-                    >
-                      Todos
-                      {ownerFilter === 'todos' && <Check className="w-4 h-4 ml-auto" />}
-                    </button>
-                    <button
-                      className="flex items-center w-full px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left font-medium"
-                      onClick={() => setOwnerFilter('meus')}
-                    >
-                      Meus contatos
-                      {ownerFilter === 'meus' && <Check className="w-4 h-4 ml-auto" />}
-                    </button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'rounded-full h-9 px-4 font-sans font-medium whitespace-nowrap shrink-0 bg-white/50 backdrop-blur-sm hover:bg-white/80 border-border/40',
-                      selectedCategoryIds.length > 0 && 'border-primary text-primary bg-primary/5',
-                    )}
-                  >
-                    <Tag className="w-3.5 h-3.5 mr-1.5" />
-                    Categorias
-                    {selectedCategoryIds.length > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="ml-1.5 rounded-full px-1.5 text-[10px] h-4 leading-none bg-primary text-primary-foreground hover:bg-primary"
-                      >
-                        {selectedCategoryIds.length}
-                      </Badge>
-                    )}
-                    <ChevronDown className="w-3 h-3 ml-1.5 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-1 rounded-xl" align="start">
-                  <div className="flex flex-col max-h-[300px] overflow-y-auto p-1 gap-0.5">
-                    {categories.length === 0 ? (
-                      <div className="p-3 text-center text-sm text-muted-foreground">
-                        Nenhuma categoria
-                      </div>
-                    ) : (
-                      categories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          className="flex items-center w-full px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left"
-                          onClick={() => {
-                            setSelectedCategoryIds((prev) =>
-                              prev.includes(cat.id)
-                                ? prev.filter((id) => id !== cat.id)
-                                : [...prev, cat.id],
-                            )
-                          }}
-                        >
-                          <div
-                            className={cn(
-                              'w-2 h-2 rounded-full mr-2 shrink-0',
-                              CATEGORY_COLOR_MAP[cat.color],
-                            )}
-                          />
-                          <span className="flex-1 truncate">{cat.name}</span>
-                          {selectedCategoryIds.includes(cat.id) && (
-                            <Check className="w-4 h-4 ml-2 shrink-0" />
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                  <div className="p-1 border-t mt-1">
-                    <button
-                      className="flex items-center w-full px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left text-muted-foreground font-medium"
-                      onClick={() => setIsCategoriesOpen(true)}
-                    >
-                      <Settings2 className="w-4 h-4 mr-2" />
-                      Gerenciar categorias
-                    </button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
-        </div>
-
-        {!isCompanies && (ownerFilter !== 'todos' || selectedCategoryIds.length > 0) && (
-          <div className="flex items-center gap-2 flex-wrap text-sm animate-in fade-in slide-in-from-top-1">
-            <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Filtros ativos:
-            </span>
-
-            {ownerFilter === 'meus' && (
-              <Badge
-                variant="secondary"
-                className="rounded-md font-normal pr-1.5 bg-white border border-border/40 text-foreground flex items-center gap-1 h-7"
-              >
-                <User className="w-3 h-3 text-muted-foreground" />
-                Meus contatos
-                <button
-                  onClick={() => setOwnerFilter('todos')}
-                  className="ml-0.5 hover:bg-muted rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-
-            {selectedCategoryIds.map((catId) => {
-              const cat = categories.find((c) => c.id === catId)
-              if (!cat) return null
-              return (
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
+      {/* Topo do Módulo CRM */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 bg-primary/10 rounded-2xl">
+              <Building2 className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
+                  CRM 360º & Gestão Comercial
+                </h1>
                 <Badge
-                  key={catId}
-                  variant="secondary"
-                  className="rounded-md font-normal pr-1.5 bg-white border border-border/40 text-foreground flex items-center gap-1.5 h-7"
+                  variant="outline"
+                  className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300"
                 >
-                  <div
-                    className={cn('w-2 h-2 rounded-full shrink-0', CATEGORY_COLOR_MAP[cat.color])}
-                  />
-                  <span className="truncate max-w-[150px]">{cat.name}</span>
-                  <button
-                    onClick={() =>
-                      setSelectedCategoryIds((prev) => prev.filter((id) => id !== catId))
-                    }
-                    className="ml-0.5 hover:bg-muted rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  {isVendedorOnly ? 'Visão Carteira Pessoal' : 'Visão Gerencial Completa'}
                 </Badge>
-              )
-            })}
-
-            <button
-              className="text-xs text-muted-foreground hover:text-primary transition-colors ml-1 font-medium"
-              onClick={() => {
-                setOwnerFilter('todos')
-                setSelectedCategoryIds([])
-              }}
-            >
-              Limpar tudo
-            </button>
+              </div>
+              <p className="text-sm text-muted-foreground font-sans mt-0.5">
+                Gestão da carteira de clientes, pipeline integrado ao SAP S/4HANA e funil de vendas
+                preditivo.
+              </p>
+            </div>
           </div>
-        )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true)
+              setTimeout(() => setLoading(false), 200)
+            }}
+            className="h-9 gap-1.5 text-xs text-muted-foreground"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Atualizar SAP
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => toast.info('Abertura de nova cotação integrada ao SAP.')}
+            className="h-9 gap-1.5 text-xs bg-primary text-white"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nova Oportunidade
+          </Button>
+        </div>
       </div>
 
-      {isCompanies && <CrmCompaniesList />}
+      {/* Navegação por Abas do CRM */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full space-y-6">
+        <div className="border-b border-border/40 pb-px">
+          <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap">
+            <TabsTrigger
+              value="carteira"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <Building2 className="w-4 h-4" /> Gestão de Carteira ({sortedClientes.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="funil"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <Kanban className="w-4 h-4" /> Funil de Vendas ({filteredFunil.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="oportunidades"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <TrendingUp className="w-4 h-4" /> Oportunidades
+            </TabsTrigger>
+            <TabsTrigger
+              value="cotacoes"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <FileText className="w-4 h-4" /> Cotações SAP
+            </TabsTrigger>
+            <TabsTrigger
+              value="pipeline"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <BarChart3 className="w-4 h-4" /> Pipeline & Forecast
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      {/* Visão Pipeline (Kanban) */}
-      {!isCompanies &&
-        viewMode === 'pipeline' &&
-        (contacts.length === 0 && !loading ? (
-          <Card className="border-border/40 shadow-sm bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden">
-            <div className="h-[400px] flex flex-col items-center justify-center text-center p-6">
-              <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-primary/40" />
+        {/* ABA 1: GESTÃO DE CARTEIRA (GRID PRINCIPAL) */}
+        <TabsContent value="carteira" className="space-y-4 m-0">
+          {/* BARRA DE FILTROS */}
+          <Card className="bg-white/80 backdrop-blur-md border-border/40 shadow-xs rounded-2xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              {/* Busca por Razão/Fantasia/SAP/CNPJ */}
+              <div className="lg:col-span-2 relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar Razão Social, Fantasia, SAP ou CNPJ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-10 text-xs rounded-xl"
+                />
               </div>
-              <h3 className="font-serif text-xl font-bold text-primary mb-2">Seu CRM está vazio</h3>
-              <p className="text-muted-foreground font-sans max-w-md text-sm mb-6">
-                Vá para as suas conversas e clique em "Adicionar ao CRM" para começar a construir
-                seu funil de vendas.
-              </p>
-              <Button onClick={() => navigate('/conversas')}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Ir para Conversas
-              </Button>
+
+              {/* Vendedor */}
+              {!isVendedorOnly && (
+                <div>
+                  <Select value={vendedorFilter} onValueChange={setVendedorFilter}>
+                    <SelectTrigger className="h-10 text-xs rounded-xl">
+                      <SelectValue placeholder="Vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos Vendedores</SelectItem>
+                      <SelectItem value="Carlos Mendonça">Carlos Mendonça</SelectItem>
+                      <SelectItem value="Mariana Azevedo">Mariana Azevedo</SelectItem>
+                      <SelectItem value="João Pedro">João Pedro Representações</SelectItem>
+                      <SelectItem value="Marcos Vinícius">Marcos Vinícius (Sup)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Segmento */}
+              <div>
+                <Select value={segmentoFilter} onValueChange={setSegmentoFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Segmento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos Segmentos</SelectItem>
+                    <SelectItem value="Construção Civil">Construção Civil</SelectItem>
+                    <SelectItem value="Indústria">Indústria</SelectItem>
+                    <SelectItem value="Agronegócio">Agronegócio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* RFM */}
+              <div>
+                <Select value={rfmFilter} onValueChange={setRfmFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Status RFM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos RFM</SelectItem>
+                    <SelectItem value="Campeões">Campeões</SelectItem>
+                    <SelectItem value="Leais">Leais</SelectItem>
+                    <SelectItem value="Potenciais">Potenciais</SelectItem>
+                    <SelectItem value="Precisam de Atenção">Precisam de Atenção</SelectItem>
+                    <SelectItem value="Em Risco">Em Risco</SelectItem>
+                    <SelectItem value="Hibernando">Hibernando</SelectItem>
+                    <SelectItem value="Perdidos">Perdidos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Cidade */}
+              <div>
+                <Select value={cidadeFilter} onValueChange={setCidadeFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="Cidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas Cidades</SelectItem>
+                    <SelectItem value="Contagem">Contagem / MG</SelectItem>
+                    <SelectItem value="Betim">Betim / MG</SelectItem>
+                    <SelectItem value="Belo Horizonte">Belo Horizonte / MG</SelectItem>
+                    <SelectItem value="Uberlândia">Uberlândia / MG</SelectItem>
+                    <SelectItem value="Juiz de Fora">Juiz de Fora / MG</SelectItem>
+                    <SelectItem value="Divinópolis">Divinópolis / MG</SelectItem>
+                    <SelectItem value="Pouso Alegre">Pouso Alegre / MG</SelectItem>
+                    <SelectItem value="Ipatinga">Ipatinga / MG</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </Card>
-        ) : (
-          <CrmPipelineBoard
-            contacts={commonFiltered}
-            stages={stages}
-            categories={categories}
-            loading={loading || stagesLoading}
-            getContactTitle={getContactTitle}
-            onOpenContact={openContact}
-            onAskDelete={setContactToDelete}
-          />
-        ))}
 
-      {/* Visão Lista */}
-      {!isCompanies && viewMode === 'lista' && (
-        <Card className="border-border/40 shadow-sm bg-white/50 backdrop-blur-sm rounded-2xl overflow-hidden min-h-[400px]">
-          {loading ? (
-            <div className="flex flex-col gap-0 divide-y divide-border/30">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-4 flex items-center gap-4">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-8 w-24 rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : contacts.length === 0 ? (
-            <div className="h-[400px] flex flex-col items-center justify-center text-center p-6">
-              <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-primary/40" />
+          {/* TABELA AVANÇADA DA GESTÃO DE CARTEIRA */}
+          <Card className="bg-white/90 backdrop-blur-md border-border/40 shadow-sm rounded-3xl overflow-hidden">
+            <div className="p-4 border-b border-border/40 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Exibindo <strong>{sortedClientes.length}</strong> clientes de sua carteira
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px]">
+                  Dica: Clique no cliente para abrir o <strong>Cliente 360º</strong>
+                </span>
               </div>
-              <h3 className="font-serif text-xl font-bold text-primary mb-2">Seu CRM está vazio</h3>
-              <p className="text-muted-foreground font-sans max-w-md text-sm mb-6">
-                Vá para as suas conversas e clique em "Adicionar ao CRM" para começar a construir
-                seu funil de vendas.
-              </p>
-              <Button onClick={() => navigate('/conversas')}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Ir para Conversas
-              </Button>
             </div>
-          ) : filteredContacts.length === 0 ? (
-            <div className="h-[400px] flex flex-col items-center justify-center text-center p-6">
-              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Search className="w-5 h-5 text-muted-foreground" />
+
+            {sortedClientes.length === 0 ? (
+              <div className="p-8">
+                <PageEmptyState
+                  title="Não existem dados disponíveis para este período."
+                  description="Nenhum cliente atende aos filtros selecionados na carteira."
+                  actionLabel="Tentar novamente"
+                  onAction={() => {
+                    setSearchTerm('')
+                    setVendedorFilter('todos')
+                    setSegmentoFilter('todos')
+                    setRfmFilter('todos')
+                    setCidadeFilter('todos')
+                  }}
+                />
               </div>
-              <h3 className="font-serif text-lg font-bold text-primary mb-1">Nenhum resultado</h3>
-              <p className="text-muted-foreground font-sans text-sm">
-                Não encontramos contatos com os filtros atuais.
-              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50/90 text-muted-foreground uppercase text-[10px] tracking-wider border-b border-border/40">
+                    <tr>
+                      <th className="py-3 px-3 font-bold text-center">SAP</th>
+                      <th
+                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors min-w-[220px]"
+                        onClick={() => toggleSort('razaoSocial')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Cliente (Razão / Fantasia)
+                          <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-2 font-bold">Cidade/UF</th>
+                      <th className="py-3 px-2 font-bold">Segmento</th>
+                      <th className="py-3 px-2 font-bold">Vendedor</th>
+                      <th
+                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('ticketMedio')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Ticket Médio
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th
+                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('faturamento12m')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Fat. 12m
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center">Ton 12m</th>
+                      <th className="py-3 px-2 font-bold text-center">Recorrência</th>
+                      <th
+                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('ultimaCompraData')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Última Compra
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-3 font-bold">Último Contato</th>
+                      <th className="py-3 px-2 font-bold text-center">Dias S/ Contato</th>
+                      <th className="py-3 px-3 font-bold">Próx. Compra</th>
+                      <th
+                        className="py-3 px-2 font-bold text-center cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('pVivo')}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          P(vivo)
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center">RFM</th>
+                      <th
+                        className="py-3 px-2 font-bold text-center cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('scoreComercial')}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Score
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-3 font-bold text-right">Crédito Disp.</th>
+                      <th
+                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => toggleSort('pipelineValor')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Pipeline R$
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </th>
+                      <th className="py-3 px-3 font-bold min-w-[180px]">Próxima Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {sortedClientes.map((c) => {
+                      return (
+                        <tr
+                          key={c.id}
+                          onClick={() => navigate(`/crm/${c.id}`)}
+                          className="hover:bg-primary/5 cursor-pointer transition-colors group"
+                        >
+                          {/* SAP */}
+                          <td className="py-3 px-3 text-center font-mono font-bold text-primary">
+                            {c.sapCode}
+                          </td>
+
+                          {/* Razão / Fantasia */}
+                          <td className="py-3 px-3">
+                            <div>
+                              <span className="font-bold text-slate-900 group-hover:text-primary transition-colors block text-xs">
+                                {c.razaoSocial}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground block">
+                                {c.nomeFantasia} · {c.cnpj}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Cidade/UF */}
+                          <td className="py-3 px-2 whitespace-nowrap text-slate-700">
+                            {c.cidade}/{c.uf}
+                          </td>
+
+                          {/* Segmento */}
+                          <td className="py-3 px-2">
+                            <span className="text-[11px] font-medium text-slate-800 block">
+                              {c.segmento}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {c.subsegmento}
+                            </span>
+                          </td>
+
+                          {/* Vendedor */}
+                          <td className="py-3 px-2 whitespace-nowrap text-slate-600 text-[11px]">
+                            {c.vendedor}
+                          </td>
+
+                          {/* Ticket Médio */}
+                          <td className="py-3 px-3 text-right font-medium text-slate-700">
+                            {formatBRL(c.ticketMedio)}
+                          </td>
+
+                          {/* Faturamento 12m */}
+                          <td className="py-3 px-3 text-right font-serif font-bold text-slate-900">
+                            {formatBRL(c.faturamento12m)}
+                          </td>
+
+                          {/* Toneladas 12m */}
+                          <td className="py-3 px-2 text-center font-mono text-slate-700">
+                            {c.toneladas12m} t
+                          </td>
+
+                          {/* Recorrência */}
+                          <td className="py-3 px-2 text-center">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] bg-slate-50 text-slate-700 border-slate-300"
+                            >
+                              {c.recorrencia}
+                            </Badge>
+                          </td>
+
+                          {/* Última Compra */}
+                          <td className="py-3 px-3">
+                            <span className="font-medium text-slate-800 block text-[11px]">
+                              {c.ultimaCompraData}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-semibold block">
+                              {formatBRL(c.ultimaCompraValor)}
+                            </span>
+                          </td>
+
+                          {/* Último Contato */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="text-[11px] font-medium text-slate-800 flex items-center">
+                              {getCanalIcon(c.ultimoContatoCanal)}
+                              {c.ultimoContatoData}
+                            </span>
+                          </td>
+
+                          {/* Dias Sem Contato */}
+                          <td className="py-3 px-2 text-center">
+                            <Badge
+                              className={cn(
+                                'text-[10px] font-bold border-none',
+                                c.diasSemContato <= 7
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : c.diasSemContato <= 20
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-rose-100 text-rose-800',
+                              )}
+                            >
+                              {c.diasSemContato}d
+                            </Badge>
+                          </td>
+
+                          {/* Próx. Compra Estimada */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="text-[11px] text-slate-700 font-medium block">
+                              {c.proximaCompraEstimada}
+                            </span>
+                            <span className="text-[10px] text-primary font-semibold block">
+                              em {c.diasProximaCompra} dias
+                            </span>
+                          </td>
+
+                          {/* P(vivo) */}
+                          <td className="py-3 px-2 text-center">
+                            <Badge
+                              className={cn(
+                                'text-[10px] font-mono font-bold border-none',
+                                c.pVivo >= 80
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : c.pVivo >= 50
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-rose-100 text-rose-800',
+                              )}
+                            >
+                              {c.pVivo}%
+                            </Badge>
+                          </td>
+
+                          {/* RFM */}
+                          <td className="py-3 px-2 text-center">
+                            <RFMSegmentBadge segment={c.rfmSegmento} />
+                          </td>
+
+                          {/* Score Comercial */}
+                          <td className="py-3 px-2 text-center font-bold text-primary">
+                            {c.scoreComercial}
+                          </td>
+
+                          {/* Crédito Disponível */}
+                          <td className="py-3 px-3 text-right">
+                            <span className="font-semibold text-slate-800 block text-[11px]">
+                              {formatBRL(c.creditoDisponivel)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              de {formatBRL(c.limiteCredito)}
+                            </span>
+                          </td>
+
+                          {/* Pipeline Valor */}
+                          <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
+                            {formatBRL(c.pipelineValor)}
+                          </td>
+
+                          {/* Próxima Ação */}
+                          <td className="py-3 px-3">
+                            <span className="text-[11px] text-slate-700 font-medium line-clamp-1 group-hover:text-primary transition-colors">
+                              {c.proximaAcao}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* ABA 2: FUNIL DE VENDAS (KANBAN 8 ETAPAS + SAÍDAS + BARRA DE RESUMO) */}
+        <TabsContent value="funil" className="space-y-6 m-0">
+          {/* BARRA DE RESUMO OBRIGATÓRIA DO FUNIL */}
+          {/* Gap da Meta: R$ 625.000 | Pipeline Aberto: R$ 1.200.000 | Pipeline Ponderado: R$ 780.000 | Cobertura da Meta: 125% */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                Gap da Meta
+              </span>
+              <div className="mt-1">
+                <span className="font-serif text-2xl font-bold text-amber-600">
+                  {formatBRL(funilMetricas.gapMeta)}
+                </span>
+                <span className="text-[11px] text-muted-foreground block mt-0.5">
+                  Valor faltante para bater a meta mensal
+                </span>
+              </div>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                Pipeline Aberto
+              </span>
+              <div className="mt-1">
+                <span className="font-serif text-2xl font-bold text-primary">
+                  {formatBRL(funilMetricas.pipelineAberto)}
+                </span>
+                <span className="text-[11px] text-muted-foreground block mt-0.5">
+                  Total em negociação ativa no funil
+                </span>
+              </div>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                Pipeline Ponderado
+              </span>
+              <div className="mt-1">
+                <span className="font-serif text-2xl font-bold text-emerald-600">
+                  {formatBRL(funilMetricas.pipelinePonderado)}
+                </span>
+                <span className="text-[11px] text-emerald-700 font-semibold block mt-0.5">
+                  Ajustado por probabilidade de fechamento
+                </span>
+              </div>
+            </Card>
+
+            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
+                  Cobertura da Meta
+                </span>
+                <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold border-none">
+                  {funilMetricas.cobertura}%
+                </Badge>
+              </div>
+              <div className="mt-1">
+                <span className="font-serif text-2xl font-bold text-emerald-600">
+                  {funilMetricas.cobertura}%
+                </span>
+                <span className="text-[11px] text-muted-foreground block mt-0.5">
+                  1.9x sobre o Gap necessário
+                </span>
+              </div>
+            </Card>
+          </div>
+
+          {/* Filtro por vendedor no funil */}
+          {!isVendedorOnly && (
+            <div className="flex items-center justify-between bg-white/70 backdrop-blur-md p-3 rounded-2xl border border-border/40">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-semibold text-primary">
+                  Filtrar oportunidades do funil:
+                </span>
+              </div>
+              <Select value={funilVendedorFilter} onValueChange={setFunilVendedorFilter}>
+                <SelectTrigger className="w-64 h-9 text-xs rounded-xl">
+                  <SelectValue placeholder="Vendedor / Representante" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Toda a Equipe Comercial</SelectItem>
+                  <SelectItem value="Carlos Mendonça">Carlos Mendonça</SelectItem>
+                  <SelectItem value="Mariana Azevedo">Mariana Azevedo</SelectItem>
+                  <SelectItem value="João Pedro">João Pedro Representações</SelectItem>
+                  <SelectItem value="Marcos Vinícius">Marcos Vinícius (Supervisor)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          ) : (
-            <div className="flex flex-col p-4 space-y-2">
-              {filteredContacts.map((contact) => {
-                const st = stageByKey.get(contact.stage)
-                const stLabel = st?.label || contact.stage
-                const stBadge = stageStyle(st?.color).badge
+          )}
+
+          {/* QUADRO KANBAN — 8 ETAPAS HORIZONTAIS */}
+          <div className="space-y-4">
+            <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+              <Kanban className="w-5 h-5 text-primary" /> Etapas do Funil Comercial
+            </h3>
+
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {funilStages.map((stage) => {
+                const stageOps = filteredFunil.filter((op) => op.etapa === stage.id)
+                const stageTotal = stageOps.reduce((acc, op) => acc + op.valor, 0)
+                const stageTon = stageOps.reduce((acc, op) => acc + op.toneladas, 0)
 
                 return (
                   <div
-                    key={contact.id}
-                    className="bg-white border border-border/60 rounded-xl px-4 py-3 hover:border-primary/40 hover:shadow-sm transition-all group cursor-pointer flex flex-col sm:flex-row sm:items-center gap-4"
-                    onClick={() => openContact(contact.id)}
+                    key={stage.id}
+                    className="min-w-[280px] w-[280px] shrink-0 flex flex-col bg-slate-100/70 border border-border/60 rounded-2xl p-3"
                   >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="shrink-0">
-                        <Avatar className="h-11 w-11 ring-2 ring-background">
-                          <AvatarImage src={contact.avatar_url} />
-                          <AvatarFallback className="bg-primary/10 text-primary font-serif font-bold">
-                            {getContactTitle(contact).charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                    {/* Header da Coluna */}
+                    <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                      <div>
+                        <span className="text-xs font-bold text-primary block">{stage.label}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatBRL(stageTotal)} · {stageTon.toFixed(1)}t
+                        </span>
                       </div>
-
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-serif font-bold text-primary text-base truncate">
-                            {getContactTitle(contact)}
-                          </h4>
-                          {contact.category_ids && contact.category_ids.length > 0 && (
-                            <div className="flex items-center gap-1 shrink-0">
-                              {contact.category_ids.slice(0, 3).map((id) => {
-                                const cat = categories.find((c) => c.id === id)
-                                if (!cat) return null
-                                return (
-                                  <Badge
-                                    key={cat.id}
-                                    variant="secondary"
-                                    className={cn(
-                                      'text-[10px] px-1.5 py-0 border-0 text-white font-medium leading-tight h-4',
-                                      CATEGORY_COLOR_MAP[cat.color],
-                                    )}
-                                  >
-                                    {cat.name}
-                                  </Badge>
-                                )
-                              })}
-                              {contact.category_ids.length > 3 && (
-                                <span className="text-[10px] text-muted-foreground font-medium">
-                                  +{contact.category_ids.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
-                          <span className="font-mono text-xs">{formatPhoneBR(contact.phone)}</span>
-                          {contact.email && (
-                            <>
-                              <span className="text-muted-foreground/40">·</span>
-                              <span className="truncate">{contact.email}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
+                      <Badge className={cn('text-[10px] font-bold border-none', stage.badgeClass)}>
+                        {stageOps.length}
+                      </Badge>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0">
-                      <div className="flex flex-col sm:items-end gap-1.5 shrink-0">
-                        <Badge
-                          variant="secondary"
-                          className={cn('text-xs font-medium border-0 w-fit sm:ml-auto', stBadge)}
-                        >
-                          {stLabel}
-                        </Badge>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          {contact.expand?.assigned_to && (
-                            <div
-                              className="flex items-center gap-1.5 bg-black/5 rounded-full pl-1 pr-2 py-0.5"
-                              title={`Responsável: ${contact.expand.assigned_to.name || contact.expand.assigned_to.email}`}
-                            >
-                              <Avatar className="w-4 h-4">
-                                <AvatarImage
-                                  src={
-                                    contact.expand.assigned_to.avatar
-                                      ? pb.files.getUrl(
-                                          contact.expand.assigned_to,
-                                          contact.expand.assigned_to.avatar,
-                                          { thumb: '100x100' },
-                                        )
-                                      : undefined
-                                  }
-                                />
-                                <AvatarFallback className="text-[8px] bg-primary/10 text-primary">
-                                  {contact.expand.assigned_to.name?.charAt(0) ||
-                                    contact.expand.assigned_to.email?.charAt(0)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="hidden sm:inline font-medium">
-                                {contact.expand.assigned_to.name?.split(' ')[0] ||
-                                  contact.expand.assigned_to.email?.split('@')[0]}
+                    {/* Cards de Oportunidade */}
+                    <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[500px]">
+                      {stageOps.length === 0 ? (
+                        <div className="text-center py-6 text-[11px] text-muted-foreground/60 border border-dashed rounded-xl border-border/40">
+                          Nenhuma oportunidade
+                        </div>
+                      ) : (
+                        stageOps.map((op) => (
+                          <Card
+                            key={op.id}
+                            onClick={() => navigate(`/crm/${op.clienteId}`)}
+                            className="bg-white border-border/50 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer rounded-xl p-3 space-y-2"
+                          >
+                            <div className="flex items-start justify-between gap-1">
+                              <div>
+                                <span className="font-semibold text-xs text-primary block leading-tight hover:underline">
+                                  {op.clienteNome}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  SAP {op.clienteSap} · {op.vendedorNome}
+                                </span>
+                              </div>
+                              <Badge className="text-[9px] bg-primary/10 text-primary border-none font-bold">
+                                {op.probabilidade}%
+                              </Badge>
+                            </div>
+
+                            <p className="text-[11px] text-slate-700 font-medium line-clamp-2">
+                              {op.titulo}
+                            </p>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-border/20 text-[11px]">
+                              <span className="font-serif font-bold text-emerald-600">
+                                {formatBRL(op.valor)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-semibold">
+                                {op.toneladas} ton
                               </span>
                             </div>
-                          )}
-                          <div
-                            className="flex items-center gap-1"
-                            title={new Date(contact.updated).toLocaleString('pt-BR')}
-                          >
-                            <Clock className="w-3 h-3" />
-                            {formatRelativeTime(contact.updated)}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div
-                        className="shrink-0 sm:opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-full w-8 h-8">
-                              <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
-                            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5">
-                              Ações
-                            </DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/conversas?chat=${contact.jid}`)}
-                              className="text-sm px-3 py-2 cursor-pointer font-medium"
-                            >
-                              <MessageSquare className="w-4 h-4 mr-2 text-muted-foreground" />
-                              Abrir conversa
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => openContact(contact.id)}
-                              className="text-sm px-3 py-2 cursor-pointer font-medium"
-                            >
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 pt-1.5">
-                              Alterar fase
-                            </DropdownMenuLabel>
-                            {stages.map((s) => (
-                              <DropdownMenuItem
-                                key={s.id}
-                                onClick={() => handleStageChange(contact.id, s.key)}
-                                className="text-sm px-3 py-2 cursor-pointer font-medium"
-                              >
-                                <span
-                                  className={cn(
-                                    'w-2 h-2 rounded-full mr-2',
-                                    stageStyle(s.color).dot,
-                                  )}
-                                />
-                                {s.label}
-                                {contact.stage === s.key && (
-                                  <div className="ml-auto w-2 h-2 rounded-full bg-primary" />
-                                )}
-                              </DropdownMenuItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => setContactToDelete(contact)}
-                              className="text-sm px-3 py-2 cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-amber-500" /> {op.agingDias}d no
+                                funil
+                              </span>
+                              <span className="text-primary font-medium">
+                                Prev: {op.previsaoFechamento}
+                              </span>
+                            </div>
+
+                            <div className="bg-slate-50 p-1.5 rounded-lg text-[10px] text-slate-600">
+                              <strong className="text-primary">Próx. Ação:</strong> {op.proximaAcao}
+                            </div>
+                          </Card>
+                        ))
+                      )}
                     </div>
                   </div>
                 )
               })}
             </div>
-          )}
-        </Card>
-      )}
+          </div>
 
-      {/* Delete Confirmation */}
-      <Dialog open={!!contactToDelete} onOpenChange={(o) => !o && setContactToDelete(null)}>
-        <DialogContent className="sm:max-w-md rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Remover do CRM?</DialogTitle>
-            <DialogDescription>
-              Você está prestes a remover{' '}
-              <strong>{contactToDelete && getContactTitle(contactToDelete)}</strong> do CRM. Esta
-              ação não apaga a conversa no WhatsApp, mas remove o registro do funil de vendas.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:justify-end mt-4">
-            <Button variant="ghost" onClick={() => setContactToDelete(null)} className="rounded-xl">
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} className="rounded-xl">
-              Remover
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          {/* SAÍDAS DO FUNIL (ADIADO / PERDIDO / CANCELADO) */}
+          <div className="pt-4 border-t border-border/40 space-y-3">
+            <h3 className="font-serif text-md font-bold text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" /> Saídas do Funil Comercial
+            </h3>
 
-      <CrmContactDetail
-        contactId={selectedContactId}
-        onClose={() => {
-          setSearchParams((prev) => {
-            prev.delete('contact')
-            return prev
-          })
-        }}
-        onUpdate={reload}
-        onDelete={reload}
-      />
-      {accountId && (
-        <CategoriesSheet
-          open={isCategoriesOpen}
-          onOpenChange={setIsCategoriesOpen}
-          accountId={accountId}
-        />
-      )}
-      <PipelineEditorSheet
-        open={isPipelineEditorOpen}
-        onOpenChange={setIsPipelineEditorOpen}
-        stages={stages}
-      />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {saidasStages.map((saida) => {
+                const ops = filteredFunil.filter((op) => op.etapa === saida.id)
+                return (
+                  <Card key={saida.id} className="bg-slate-50/70 border-border/40 rounded-2xl p-4">
+                    <div className="flex items-center justify-between border-b pb-2 mb-3">
+                      <span className="font-bold text-xs text-slate-700">{saida.label}</span>
+                      <Badge className={cn('text-[10px] border-none font-bold', saida.badgeClass)}>
+                        {ops.length}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2">
+                      {ops.map((op) => (
+                        <div
+                          key={op.id}
+                          className="bg-white p-3 rounded-xl border border-border/40 space-y-1"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs text-primary">{op.clienteNome}</span>
+                            <span className="font-bold text-xs text-slate-700">
+                              {formatBRL(op.valor)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600">{op.titulo}</p>
+                          {op.motivoPerda && (
+                            <p className="text-[10px] text-rose-600 font-medium">
+                              <strong>Motivo:</strong> {op.motivoPerda}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )
+              })}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ABA 3: OPORTUNIDADES */}
+        <TabsContent value="oportunidades" className="space-y-4 m-0">
+          <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Lista de Oportunidades Comerciais
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Visão em lista de todas as negociações em andamento com probabilidade e volume.
+                </p>
+              </div>
+              <Badge className="bg-primary text-white text-xs">
+                {rawFunil.length} oportunidades
+              </Badge>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
+                  <tr>
+                    <th className="py-3 px-3">Cliente</th>
+                    <th className="py-3 px-3">Título Oportunidade</th>
+                    <th className="py-3 px-3">Etapa</th>
+                    <th className="py-3 px-3 text-right">Valor R$</th>
+                    <th className="py-3 px-3 text-center">Ton</th>
+                    <th className="py-3 px-3 text-center">Prob.</th>
+                    <th className="py-3 px-3 text-center">Aging</th>
+                    <th className="py-3 px-3">Vendedor</th>
+                    <th className="py-3 px-3">Próxima Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {rawFunil.map((op) => (
+                    <tr
+                      key={op.id}
+                      onClick={() => navigate(`/crm/${op.clienteId}`)}
+                      className="hover:bg-primary/5 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-3 font-bold text-primary">{op.clienteNome}</td>
+                      <td className="py-3 px-3 text-slate-800 font-medium">{op.titulo}</td>
+                      <td className="py-3 px-3">
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {op.etapa}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
+                        {formatBRL(op.valor)}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono">{op.toneladas}t</td>
+                      <td className="py-3 px-3 text-center font-bold text-primary">
+                        {op.probabilidade}%
+                      </td>
+                      <td className="py-3 px-3 text-center text-muted-foreground">
+                        {op.agingDias}d
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">{op.vendedorNome}</td>
+                      <td className="py-3 px-3 text-slate-700">{op.proximaAcao}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 4: COTAÇÕES */}
+        <TabsContent value="cotacoes" className="space-y-4 m-0">
+          <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary">
+                  Cotações SAP S/4HANA Integradas
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Propostas geradas diretamente no SAP com status de aprovação e vigência de tabela.
+                </p>
+              </div>
+              <Badge
+                variant="outline"
+                className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs"
+              >
+                Sincronização Online
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-primary/10 text-primary rounded-xl font-bold font-mono">
+                    COT-98104
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-primary">Metalúrgica Santa Rita Ltda</h4>
+                    <span className="text-xs text-muted-foreground">
+                      16.5t Perfis W 200x26.6 · Emissão: Ontem · Vencimento: 26/10/2024
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-serif font-bold text-lg text-emerald-600 block">
+                    R$ 95.000,00
+                  </span>
+                  <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-none">
+                    Aguardando Aceite
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-primary/10 text-primary rounded-xl font-bold font-mono">
+                    COT-98088
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-primary">
+                      Aços & Caldeiraria Betim S.A.
+                    </h4>
+                    <span className="text-xs text-muted-foreground">
+                      22.0t Chapas Grossas ASTM A36 · Emissão: 12/10/2024 · Vencimento: 22/10/2024
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-serif font-bold text-lg text-emerald-600 block">
+                    R$ 120.000,00
+                  </span>
+                  <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold border-none">
+                    Em Negociação
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 5: PIPELINE */}
+        <TabsContent value="pipeline" className="space-y-4 m-0">
+          <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
+            <h3 className="font-serif text-lg font-bold text-primary mb-2">
+              Projeção de Pipeline & Forecast Preditivo
+            </h3>
+            <p className="text-xs text-muted-foreground mb-6">
+              Modelo preditivo CIAFAL calibrado com histórico de 12 meses e probabilidade de
+              fechamento por etapa.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Pipeline Nominal
+                </span>
+                <span className="font-serif text-2xl font-bold text-primary block">
+                  R$ 1.200.000
+                </span>
+                <span className="text-[11px] text-muted-foreground">Total de propostas ativas</span>
+              </div>
+              <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-2">
+                <span className="text-xs font-semibold text-emerald-800">Forecast Ponderado</span>
+                <span className="font-serif text-2xl font-bold text-emerald-700 block">
+                  R$ 780.000
+                </span>
+                <span className="text-[11px] text-emerald-700 font-medium">
+                  Previsão real de faturamento
+                </span>
+              </div>
+              <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-2">
+                <span className="text-xs font-semibold text-blue-800">Cobertura do Gap</span>
+                <span className="font-serif text-2xl font-bold text-blue-700 block">125%</span>
+                <span className="text-[11px] text-blue-700 font-medium">
+                  Suficiente para atingir 100% da meta
+                </span>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

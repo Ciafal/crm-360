@@ -33,6 +33,8 @@ interface PageEmptyStateProps {
   description?: string
   icon?: React.ComponentType<{ className?: string }>
   action?: React.ReactNode
+  actionLabel?: string
+  onAction?: () => void
   className?: string
 }
 
@@ -41,6 +43,8 @@ export function PageEmptyState({
   description,
   icon: Icon = Inbox,
   action,
+  actionLabel,
+  onAction,
   className,
 }: PageEmptyStateProps) {
   return (
@@ -58,6 +62,17 @@ export function PageEmptyState({
         <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
+      {!action && actionLabel && onAction && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAction}
+          className="mt-4 gap-2 border-border/80 hover:bg-muted text-xs"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          {actionLabel}
+        </Button>
+      )}
     </div>
   )
 }
