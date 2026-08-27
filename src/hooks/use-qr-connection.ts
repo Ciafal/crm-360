@@ -53,11 +53,6 @@ export function useQrConnection(
     } catch (e: any) {
       setPollErrors((prev) => prev + 1)
 
-      if (e?.status === 401) {
-        pb.authStore.clear()
-        return
-      }
-
       toast({
         title: 'Atenção',
         description: 'Não foi possível gerar o QR Code. Verifique sua conexão e tente novamente.',
