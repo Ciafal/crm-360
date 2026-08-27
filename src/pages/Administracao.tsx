@@ -40,8 +40,13 @@ import {
   initialAutomationRules,
   initialDynamicFormFields,
 } from '@/data/mockPlaybooksAndWorkflows'
-import type {
+import {
+  defaultActionEvidenceRules,
+  ActionEvidenceRule,
+} from '@/services/action_evidence_validator'
+import {
   CommercialPlaybook,
+  CommercialArchetype,
   RelationshipEvent,
   CommercialAutomationRule,
   DynamicFormField,
@@ -51,6 +56,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
@@ -71,7 +85,13 @@ export default function Administracao() {
   const { toast } = useToast()
 
   const [adminTab, setAdminTab] = useState<
-    'geral' | 'assinaturas' | 'playbooks' | 'relacionamento' | 'workflows' | 'formularios'
+    | 'geral'
+    | 'assinaturas'
+    | 'playbooks'
+    | 'relacionamento'
+    | 'workflows'
+    | 'formularios'
+    | 'evidencias'
   >('geral')
 
   // Configuração de Assinatura Digital
@@ -87,6 +107,11 @@ export default function Administracao() {
   const [playbooks, setPlaybooks] = useState<CommercialPlaybook[]>(initialCommercialPlaybooks)
   const [selectedPlaybook, setSelectedPlaybook] = useState<CommercialPlaybook | null>(null)
   const [playbookModalOpen, setPlaybookModalOpen] = useState(false)
+  const [importPlaybookModalOpen, setImportPlaybookModalOpen] = useState(false)
+  const [importContent, setImportContent] = useState('')
+  const [importArchetype, setImportArchetype] = useState<CommercialArchetype>('INDÚSTRIA')
+  const [isAiProcessingPlaybook, setIsAiProcessingPlaybook] = useState(false)
+  const [evidenceRules, setEvidenceRules] = useState(defaultActionEvidenceRules)
 
   const [relEvents, setRelEvents] = useState<RelationshipEvent[]>(initialRelationshipEvents)
   const [rules, setRules] = useState<CommercialAutomationRule[]>(initialAutomationRules)
@@ -271,6 +296,17 @@ export default function Administracao() {
           )}
         >
           <Layers className="w-4 h-4 mr-1.5" /> 6. Formulários Dinâmicos ({formFields.length})
+        </Button>
+        <Button
+          size="sm"
+          variant={adminTab === 'evidencias' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('evidencias')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'evidencias' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <Shield className="w-4 h-4 mr-1.5" /> 7. Governança de Evidências ({evidenceRules.length})
         </Button>
       </div>
 
@@ -512,22 +548,32 @@ export default function Administracao() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
             <div>
               <h3 className="font-serif text-xl font-bold text-primary">
-                Playbooks Comerciais por Arquétipo
+                Playbooks Comerciais por Arquétipo & Versionamento
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Definição de diretrizes, perguntas-chave, canais, cadência e anti-patterns com
-                versionamento completo.
+                versionamento auditável e importação inteligente via IA.
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => {
-                toast({ title: 'Novo playbook de arquétipo comercial iniciado.' })
-              }}
-              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
-            >
-              <Plus className="w-3.5 h-3.5" /> Adicionar Playbook
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setImportPlaybookModalOpen(true)}
+                className="h-8 gap-1.5 text-xs border-primary/30 text-primary font-semibold hover:bg-primary/5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Importar Playbook (IA)
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  toast({ title: 'Novo playbook de arquétipo comercial iniciado.' })
+                }}
+                className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+              >
+                <Plus className="w-3.5 h-3.5" /> Adicionar Playbook
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -562,12 +608,117 @@ export default function Administracao() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
+                      const newVer = `1.${parseInt(pb.version.split('.')[1] || '0') + 1}.0`
+                      const updated = playbooks.map((item) =>
+                        item.id === pb.id
+                          ? {
+                              ...item,
+                              version: newVer,
+                              updated_at: new Date().toISOString().split('T')[0],
+                            }
+                          : item,
+                      )
+                      setPlaybooks(updated)
+                      toast({
+                        title: `Nova versão gerada: v${newVer}`,
+                        description: `Playbook para ${pb.customer_archetype} versionado com sucesso.`,
+                      })
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" /> Nova Versão
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
                       toast({ title: `Editando playbook para ${pb.customer_archetype}` })
                     }}
                     className="h-7 text-xs"
                   >
                     <Edit2 className="w-3 h-3 mr-1" /> Editar
                   </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ABA 7: GOVERNANÇA DE EVIDÊNCIAS DE AÇÕES (ActionEvidenceRules) */}
+      {adminTab === 'evidencias' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-xl font-bold text-primary">
+                  Regras de Governança de Evidências (ActionEvidenceRules)
+                </h3>
+                <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px] font-bold">
+                  IA com Supervisão
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Critérios auditáveis que exigem comprovação real de canais (WhatsApp, VoIP, E-mail)
+                para avanço ou conclusão de Ações do Dia.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                toast({
+                  title: 'Regras de Evidência Atualizadas',
+                  description:
+                    'Novos parâmetros de threshold e canais aplicados ao validador de IA.',
+                })
+              }}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+            >
+              <Check className="w-3.5 h-3.5" /> Salvar Regras
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {evidenceRules.map((rule) => (
+              <div
+                key={rule.action_type}
+                className="p-4 rounded-2xl border border-border/60 bg-slate-50 space-y-3"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-slate-900">{rule.action_type}</span>
+                    <Badge variant="outline" className="text-[10px] bg-white font-mono">
+                      Threshold Relevância: {rule.min_confidence_score}%
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-muted-foreground font-semibold">
+                      Canais Válidos:
+                    </span>
+                    {rule.allowed_channels.map((ch) => (
+                      <Badge
+                        key={ch}
+                        className="bg-primary/10 text-primary border-primary/20 text-[9px] font-bold"
+                      >
+                        {ch}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-3 rounded-xl border border-border/40">
+                  <div>
+                    <span className="font-bold text-emerald-700 block text-[11px] mb-1">
+                      Critérios para Status "CONCLUIDA":
+                    </span>
+                    <p className="text-slate-600">{rule.completion_criteria}</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-amber-700 block text-[11px] mb-1">
+                      Critérios para "AGUARDANDO RETORNO":
+                    </span>
+                    <p className="text-slate-600">{rule.waiting_return_criteria}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1287,6 +1438,131 @@ export default function Administracao() {
           </Card>
         </>
       )}
+      {/* MODAL DE IMPORTAÇÃO DE PLAYBOOK COM IA */}
+      <Dialog open={importPlaybookModalOpen} onOpenChange={setImportPlaybookModalOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-amber-500/10 text-amber-600 rounded-xl">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <DialogTitle className="font-serif text-lg font-bold text-primary">
+                Importar Playbook Comercial com Inteligência Artificial
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs">
+              Cole o conteúdo textual, procedimento operacional ou diretrizes (PDF/DOCX/TXT) para a
+              IA extrair objetivos, perguntas, objeções, cadência e anti-patterns.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div>
+              <label className="font-bold text-slate-800 block mb-1">Arquétipo Alvo</label>
+              <select
+                value={importArchetype}
+                onChange={(e) => setImportArchetype(e.target.value as CommercialArchetype)}
+                className="w-full h-9 rounded-xl border border-input bg-white px-3 font-semibold text-primary text-xs"
+              >
+                <option value="INDÚSTRIA">INDÚSTRIA</option>
+                <option value="REVENDA">REVENDA</option>
+                <option value="SERRALHERIA">SERRALHERIA</option>
+                <option value="CONSUMIDOR_FINAL">CONSUMIDOR FINAL</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-800 block mb-1">
+                Conteúdo do Documento Comercial
+              </label>
+              <Textarea
+                placeholder="Cole aqui o texto do playbook, diretrizes de negociação ou manual da equipe..."
+                value={importContent}
+                onChange={(e) => setImportContent(e.target.value)}
+                className="min-h-[140px] text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportPlaybookModalOpen(false)}
+              className="text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={isAiProcessingPlaybook || !importContent.trim()}
+              onClick={async () => {
+                setIsAiProcessingPlaybook(true)
+                toast({
+                  title: 'Processando com IA...',
+                  description: 'Extraindo diretrizes, objeções e cadência do documento.',
+                })
+
+                setTimeout(() => {
+                  const newPb: CommercialPlaybook = {
+                    id: `pb-import-${Date.now()}`,
+                    customer_archetype: importArchetype,
+                    name: `Playbook ${importArchetype} — Versão Extraída por IA`,
+                    objectives: [
+                      'Garantir atendimento consultivo de alta conversão',
+                      'Alinhamento com capacidade de entrega e estoque do CD Contagem',
+                      'Prevenir rupturas com follow-up proativo em D-5',
+                    ],
+                    recommended_approach:
+                      importContent.slice(0, 180) ||
+                      'Abordagem comercial orientada a valor, especificações técnicas e pontualidade de fornecimento.',
+                    questions_to_ask: [
+                      'Qual o cronograma previsto para este fornecimento?',
+                      'Existe requisito de certificado de qualidade de usina?',
+                    ],
+                    signals_to_watch: [
+                      'Aumento de consumo ou novas obras na região',
+                      'Oscilações de estoque ou troca de fornecedor',
+                    ],
+                    objections: [
+                      {
+                        objection: 'Preço acima do concorrente',
+                        recommended_response:
+                          'Apresentamos nosso diferencial de estoque pulmão com frete CIF pontual e certificado rastreável de 1ª linha.',
+                      },
+                    ],
+                    recommended_channels: ['WhatsApp', 'Ligação', 'Visita'],
+                    recommended_cadence: 'Follow-up semanal via WhatsApp com visita técnica mensal',
+                    forbidden_patterns: [
+                      'Oferecer produto sem confirmação de saldo no WMS',
+                      'Deixar cotação sem retorno em mais de 24h',
+                    ],
+                    created_by: `${user?.name || 'Administrador'} (IA Ingestion)`,
+                    version: '1.0.0 (DRAFT)',
+                    status: 'ATIVO',
+                    updated_at: new Date().toISOString().split('T')[0],
+                    change_reason:
+                      'Importação automática via IA a partir de documento de diretrizes.',
+                  }
+
+                  setPlaybooks([newPb, ...playbooks])
+                  setIsAiProcessingPlaybook(false)
+                  setImportPlaybookModalOpen(false)
+                  setImportContent('')
+                  toast({
+                    title: 'Playbook Importado com Sucesso!',
+                    description: `Playbook para ${importArchetype} criado em DRAFT/ATIVO pronto para revisão humana.`,
+                  })
+                }, 1200)
+              }}
+              className="text-xs bg-primary text-white font-bold gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isAiProcessingPlaybook ? 'Analisando...' : 'Processar e Salvar Playbook'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

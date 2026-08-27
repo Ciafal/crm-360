@@ -41,6 +41,8 @@ export default function Tarefas() {
   const { tasks, loading } = useTasks()
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('todas')
+  const [sourceFilter, setSourceFilter] = useState('todas')
+  const [sortBy, setSortBy] = useState<'impacto' | 'urgencia' | 'vencimento' | 'padrao'>('impacto')
   const [filterMine, setFilterMine] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
@@ -49,15 +51,40 @@ export default function Tarefas() {
   const [dialogOpen, setDialogOpen] = useState(false)
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
+    const list = tasks.filter((t) => {
       const matchSearch =
         t.title.toLowerCase().includes(search.toLowerCase()) ||
-        (t.description || '').toLowerCase().includes(search.toLowerCase())
+        (t.description || '').toLowerCase().includes(search.toLowerCase()) ||
+        (t.customer_name || '').toLowerCase().includes(search.toLowerCase())
       const matchPriority = priorityFilter === 'todas' || t.priority === priorityFilter
+      const matchSource =
+        sourceFilter === 'todas' ||
+        (t.source_type && t.source_type.toLowerCase() === sourceFilter.toLowerCase())
       const matchMine = !filterMine || t.assigned_to === pb.authStore.record?.id
-      return matchSearch && matchPriority && matchMine
+      return matchSearch && matchPriority && matchSource && matchMine
     })
-  }, [tasks, search, priorityFilter, filterMine])
+
+    // Ordenação por Impacto na Meta, Urgência ou Vencimento
+    return list.sort((a, b) => {
+      if (sortBy === 'impacto') {
+        const impA = a.impact_meta_tons || 0
+        const impB = b.impact_meta_tons || 0
+        if (impB !== impA) return impB - impA
+      }
+      if (sortBy === 'urgencia') {
+        const priorityScore: Record<string, number> = { urgente: 4, alta: 3, media: 2, baixa: 1 }
+        const scoreA = priorityScore[a.priority] || 0
+        const scoreB = priorityScore[b.priority] || 0
+        if (scoreB !== scoreA) return scoreB - scoreA
+      }
+      if (sortBy === 'vencimento') {
+        if (!a.due_date) return 1
+        if (!b.due_date) return -1
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      }
+      return 0
+    })
+  }, [tasks, search, priorityFilter, sourceFilter, sortBy, filterMine])
 
   const kpis = useMemo(() => {
     const total = tasks.length
@@ -111,8 +138,21 @@ export default function Tarefas() {
     <div className="flex flex-col gap-6 h-full max-h-[calc(100vh-6rem)] overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-primary">Tarefas</h1>
-          <p className="text-muted-foreground mt-1">Gerencie as demandas da equipe.</p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-3xl font-bold text-primary">
+              Central de Tarefas Comerciais
+            </h1>
+            <Badge
+              variant="outline"
+              className="text-[10px] bg-primary/10 text-primary border-primary/30 font-bold"
+            >
+              Consolidação Multissistema
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Acompanhamento integrado de Follow-ups, Cotações, Reclamações de Qualidade, Ocorrências
+            TMS, WMS, Visitas e Alertas de IA.
+          </p>
         </div>
       </div>
 
@@ -133,48 +173,91 @@ export default function Tarefas() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 shrink-0 items-center">
-        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
-          <Button
-            variant={!filterMine ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterMine(false)}
-            className={cn('h-8 px-3 text-sm rounded-md', !filterMine && 'bg-background shadow-sm')}
-          >
-            Todas
-          </Button>
-          <Button
-            variant={filterMine ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterMine(true)}
-            className={cn('h-8 px-3 text-sm rounded-md', filterMine && 'bg-background shadow-sm')}
-          >
-            Minhas
-          </Button>
+      {/* Filters & Sorting */}
+      <div className="flex flex-col md:flex-row gap-3 shrink-0 items-stretch md:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-lg border">
+            <Button
+              variant={!filterMine ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterMine(false)}
+              className={cn(
+                'h-8 px-3 text-xs rounded-md',
+                !filterMine && 'bg-background shadow-sm font-semibold',
+              )}
+            >
+              Todas
+            </Button>
+            <Button
+              variant={filterMine ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterMine(true)}
+              className={cn(
+                'h-8 px-3 text-xs rounded-md',
+                filterMine && 'bg-background shadow-sm font-semibold',
+              )}
+            >
+              Minhas
+            </Button>
+          </div>
+
+          <div className="relative min-w-[200px] flex-1 sm:flex-none">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar tarefa, cliente..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 bg-background h-8 text-xs"
+            />
+          </div>
+
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-[140px] bg-background h-8 text-xs">
+              <SelectValue placeholder="Prioridade" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas prioridades</SelectItem>
+              {TASK_PRIORITIES.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-[140px] bg-background h-8 text-xs">
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas origens</SelectItem>
+              <SelectItem value="CRM">CRM</SelectItem>
+              <SelectItem value="Cotação">Cotação / Proposta</SelectItem>
+              <SelectItem value="Reclamação">Reclamação (Qualidade)</SelectItem>
+              <SelectItem value="TMS">TMS (Logística)</SelectItem>
+              <SelectItem value="WMS">WMS (Estoque)</SelectItem>
+              <SelectItem value="Visita">Visita Comercial</SelectItem>
+              <SelectItem value="IA">IA & Recomendações</SelectItem>
+              <SelectItem value="Relacionamento">Relacionamento</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar tarefas..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-background"
-          />
+
+        {/* Seletor de Ordenação Inteligente */}
+        <div className="flex items-center gap-1.5 self-end md:self-auto text-xs">
+          <span className="text-[11px] text-muted-foreground font-semibold">Ordenar por:</span>
+          <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+            <SelectTrigger className="w-[160px] bg-background h-8 text-xs font-semibold text-primary">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="impacto">🎯 Impacto na Meta (t)</SelectItem>
+              <SelectItem value="urgencia">⚡ Urgência / Prioridade</SelectItem>
+              <SelectItem value="vencimento">📅 Data de Vencimento</SelectItem>
+              <SelectItem value="padrao">Padrão</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-background">
-            <SelectValue placeholder="Prioridade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas as prioridades</SelectItem>
-            {TASK_PRIORITIES.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* StateFeedback se Loading */}
@@ -281,23 +364,30 @@ function TaskCard({
   return (
     <Card
       className={cn(
-        'p-3 cursor-pointer hover:shadow-md transition-all group bg-background border shadow-sm relative active:cursor-grabbing',
+        'p-3 cursor-pointer hover:shadow-md transition-all group bg-background border shadow-sm relative active:cursor-grabbing space-y-2',
         isDragging && 'opacity-50 scale-95 shadow-none',
       )}
       draggable
       onDragStart={(e) => onDragStart(e, task.id)}
       onClick={onClick}
     >
-      <div className="flex justify-between items-start mb-2">
-        <Badge
-          variant="outline"
-          className={cn(
-            'text-[10px] font-medium px-1.5 py-0 border-transparent',
-            priorityMeta.color,
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-[10px] font-medium px-1.5 py-0 border-transparent',
+              priorityMeta.color,
+            )}
+          >
+            {priorityMeta.label}
+          </Badge>
+          {task.source_type && (
+            <Badge className="text-[9px] bg-slate-100 text-slate-700 border-slate-300 font-mono">
+              Origem: {task.source_type}
+            </Badge>
           )}
-        >
-          {priorityMeta.label}
-        </Badge>
+        </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -334,11 +424,21 @@ function TaskCard({
         </DropdownMenu>
       </div>
 
-      <h4 className="text-sm font-semibold leading-tight mb-2">{task.title}</h4>
+      <h4 className="text-sm font-semibold leading-tight">{task.title}</h4>
+
+      {task.customer_name && (
+        <div className="text-xs text-primary font-bold">Cliente: {task.customer_name}</div>
+      )}
+
+      {task.impact_meta_tons && (
+        <div className="text-[11px] text-amber-700 font-medium">
+          Impacto na Meta: <strong>{task.impact_meta_tons} toneladas</strong>
+        </div>
+      )}
 
       {task.description && (
         <div
-          className="text-xs text-muted-foreground line-clamp-2 mb-3 [&>p]:m-0 [&>*]:m-0"
+          className="text-xs text-muted-foreground line-clamp-2 [&>p]:m-0 [&>*]:m-0"
           dangerouslySetInnerHTML={{ __html: task.description }}
         />
       )}

@@ -516,12 +516,60 @@ export type CommercialActionType =
   | 'nao_priorizar'
 
 export type CommercialActionStatus =
+  | 'PLANEJADA'
+  | 'EM_ANDAMENTO'
+  | 'AGUARDANDO_RETORNO'
+  | 'CONCLUIDA'
+  | 'SEM_SUCESSO'
+  | 'REAGENDADA'
+  | 'CANCELADA'
+  // Compatibilidade legada
   | 'pendente'
   | 'em_andamento'
   | 'concluida'
   | 'reagendada'
   | 'nao_realizada'
   | 'cancelada'
+
+export type BusinessOutcome =
+  | 'RESPONDEU'
+  | 'SEM_RESPOSTA'
+  | 'INTERESSADO'
+  | 'NÃO_INTERESSADO'
+  | 'OPORTUNIDADE'
+  | 'COTAÇÃO'
+  | 'NEGOCIAÇÃO'
+  | 'PEDIDO'
+  | 'REAGENDADO'
+  | 'OUTRO'
+
+export interface ActionExecutionEvidence {
+  id: string
+  action_id: string
+  interaction_id?: string
+  channel: 'WhatsApp' | 'Telefone' | 'E-mail' | 'Visita' | 'Outro'
+  customer_id: string
+  contact_id?: string
+  started_at: string
+  completed_at?: string
+  content_reference: string
+  ai_relevance_score: number // 0-100%
+  ai_analysis_reason?: string
+  validation_status: 'VALIDADO_FORTE' | 'INSUFICIENTE' | 'REJEITADO' | 'PENDENTE'
+  business_outcome?: BusinessOutcome
+  validated_by_agent?: string
+  created_at: string
+}
+
+export interface ActionEvidenceRule {
+  id: string
+  action_type: string
+  min_relevance_score: number // default 80
+  valid_channels: string[]
+  auto_start_on_evidence: boolean
+  requires_response_for_conclusion: boolean // se true, follow-up vai pra AGUARDANDO_RETORNO
+  enabled: boolean
+}
 
 export interface DailyCommercialAction extends RecordModel {
   id: string
@@ -549,11 +597,121 @@ export interface DailyCommercialAction extends RecordModel {
   potential_revenue?: number
   potential_tons?: number
   product_family?: string
+  // Novos campos de evidência e auditoria operacional
+  execution_status?:
+    | 'PLANEJADA'
+    | 'EM_ANDAMENTO'
+    | 'AGUARDANDO_RETORNO'
+    | 'CONCLUIDA'
+    | 'SEM_SUCESSO'
+    | 'REAGENDADA'
+    | 'CANCELADA'
+  business_outcome?: BusinessOutcome
+  evidence?: ActionExecutionEvidence
+  evidence_required?: boolean
+  evidence_summary?: string
+  ai_relevance_confidence?: number
+  manual_override?: boolean
+  manual_override_justification?: string
+  manual_override_by?: string
+  manual_override_at?: string
   expand?: {
     seller_id?: User
   }
   created: string
   updated: string
+}
+
+// ==========================================
+// CONTATOS & INTERAÇÕES OMNICHANNEL
+// ==========================================
+
+export type CommercialContactChannel = 'WhatsApp' | 'Telefone' | 'E-mail' | 'Visita'
+export type ContactDirection = 'ENTRADA' | 'SAIDA' | 'INBOUND' | 'OUTBOUND'
+export type ContactResponseStatus = 'RESPONDIDO' | 'SEM_RESPOSTA' | 'AGUARDANDO_RETORNO'
+
+export interface CommercialContactInteraction {
+  id: string
+  customer_id: string
+  customer_name: string
+  contact_name: string
+  contact_phone?: string
+  contact_email?: string
+  seller_id: string
+  seller_name: string
+  representative_name?: string
+  channel: CommercialContactChannel
+  direction: ContactDirection
+  date_time: string
+  summary: string
+  detailed_content?: string
+  result: BusinessOutcome | string
+  opportunity_id?: string
+  opportunity_title?: string
+  next_action?: string
+  next_action_date?: string
+  status: ContactResponseStatus
+  // Metadados técnicos por canal
+  call_id?: string
+  call_duration_seconds?: number
+  call_status?: 'COMPLETADA' | 'OCUPADO' | 'NAO_ATENDEU' | 'CAIXA_POSTAL'
+  audio_url?: string
+  transcription?: string
+  ai_summary?: string
+  conversation_id?: string
+  thread_id?: string
+  email_subject?: string
+  attachments?: string[]
+  created_at: string
+}
+
+// ==========================================
+// RECONHECIMENTO & FEEDBACK POSITIVO
+// ==========================================
+
+export interface RecognitionInteraction {
+  id: string
+  supervisor_id: string
+  supervisor_name: string
+  seller_id: string
+  seller_name: string
+  reason: string
+  related_result: string
+  channel: 'EMAIL' | 'WHATSAPP'
+  message_content: string
+  evidence_cited: string
+  sent_at: string
+  status: 'RASCUNHO' | 'REVISADO' | 'ENVIADO'
+}
+
+// ==========================================
+// VERSIONAMENTO DE PLAYBOOKS
+// ==========================================
+
+export type PlaybookVersionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
+
+export interface PlaybookVersion {
+  id: string
+  playbook_id: string
+  version: string
+  created_by: string
+  created_at: string
+  change_reason: string
+  source_document?: {
+    file_name: string
+    file_type: 'PDF' | 'DOCX' | 'TXT' | 'MARKDOWN' | 'MANUAL_IMPORT'
+    imported_at: string
+    extracted_by_ai: boolean
+  }
+  status: PlaybookVersionStatus
+  objectives: string[]
+  recommended_approach: string
+  questions_to_ask: string[]
+  signals_to_watch: string[]
+  objections: Array<{ objection: string; recommended_response: string }>
+  recommended_channels: string[]
+  recommended_cadence: string
+  forbidden_patterns: string[]
 }
 
 export type RfmSegment =
@@ -756,6 +914,19 @@ export interface WhatsappMessage extends RecordModel {
   updated: string
 }
 
+export type TaskSourceType =
+  | 'CRM'
+  | 'COTACAO'
+  | 'RECLAMACAO'
+  | 'TMS'
+  | 'WMS'
+  | 'VISITA'
+  | 'IA'
+  | 'RELACIONAMENTO'
+  | 'POS_VENDA'
+  | 'MARKETING'
+  | 'CREDITO'
+
 export interface Task extends RecordModel {
   id: string
   account_id?: string
@@ -765,6 +936,21 @@ export interface Task extends RecordModel {
   status: 'pendente' | 'em_andamento' | 'concluida' | 'cancelada'
   priority: 'baixa' | 'media' | 'alta' | 'urgente'
   due_date?: string
+  due_at?: string
+  source_type?: TaskSourceType
+  source_id?: string
+  customer_id?: string
+  customer_name?: string
+  contact_id?: string
+  contact_name?: string
+  owner_id?: string
+  evidence_required?: boolean
+  evidence_id?: string
+  business_outcome?: BusinessOutcome
+  impact_meta_tons?: number
+  potential_value?: number
+  sla_hours?: number
+  created_by?: string
   crm_contact_id?: string
   crm_company_id?: string
   conversation_id?: string

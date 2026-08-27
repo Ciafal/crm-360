@@ -175,8 +175,11 @@ export const HUB_APPLICATION_REGISTRY: HubModule[] = [
     subItems: [
       { id: 'crm-pipeline', name: 'Pipeline & Funil', path: '/crm' },
       { id: 'crm-meu-dia', name: 'Meu Dia / Ações', path: '/home' },
+      { id: 'crm-contatos', name: 'Contatos & Interações', path: '/contatos' },
       { id: 'crm-inativos', name: 'Gestão de Inativos', path: '/inativos' },
       { id: 'crm-visitas', name: 'Visitas & Roteiros', path: '/visitas' },
+      { id: 'crm-tarefas', name: 'Central de Tarefas', path: '/tarefas' },
+      { id: 'crm-equipe', name: 'Equipe Comercial', path: '/equipe' },
       { id: 'crm-conversas', name: 'Conversas & WhatsApp', path: '/conversas' },
     ],
   },

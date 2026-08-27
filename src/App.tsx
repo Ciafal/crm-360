@@ -23,6 +23,7 @@ import Setup from './pages/Setup'
 import SolicitacoesCorporativas from './pages/SolicitacoesCorporativas'
 import HCMCompliance from './pages/HCMCompliance'
 import ImportacaoPlanejamentoEstrategico from './pages/ImportacaoPE'
+import { ContatosPage } from './pages/Contatos'
 import IndicadoresComerciais from './pages/IndicadoresComerciais'
 import Hypercare from './pages/Hypercare'
 import RelatorioRelease from './pages/RelatorioRelease'
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="/inativos" element={<GestaoInativos />} />
                 <Route path="/gestao-inativos" element={<GestaoInativos />} />
                 <Route path="/gestao-do-dia" element={<GestaoDoDia />} />
+                <Route path="/contatos" element={<ContatosPage />} />
                 <Route path="/visitas" element={<Visitas />} />
                 <Route path="/agentes" element={<Agentes />} />
                 <Route path="/tarefas" element={<Tarefas />} />

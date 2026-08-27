@@ -28,6 +28,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SecondaryTargetAxisChart } from '@/components/shared/SecondaryTargetAxisChart'
+import { mockCommercialContacts } from '@/data/mockCommercialContacts'
 import {
   ArrowLeft,
   Building2,
@@ -746,10 +748,16 @@ export default function Cliente360() {
               <Package className="w-3.5 h-3.5" /> 6. Produtos & Abandonados ({produtos.length})
             </TabsTrigger>
             <TabsTrigger
+              value="contatos"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+            >
+              <MessageSquare className="w-3.5 h-3.5" /> 7. Contatos & Omnichannel
+            </TabsTrigger>
+            <TabsTrigger
               value="timeline"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <Clock className="w-3.5 h-3.5" /> 7. Timeline & Visitas ({timeline.length})
+              <Clock className="w-3.5 h-3.5" /> 8. Timeline Completa ({timeline.length})
             </TabsTrigger>
             <TabsTrigger
               value="oportunidades"
@@ -1051,71 +1059,51 @@ export default function Cliente360() {
             </Card>
           </div>
 
-          {/* GRÁFICOS RECHARTS: EVOLUÇÃO 12 MESES & MIX DE PRODUTOS */}
+          {/* GRÁFICOS: EVOLUÇÃO COM PADRÃO META EM LINHA NO SEGUNDO EIXO & IA EXPLICATIVA */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 bg-white/95 border-border/50 rounded-3xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-serif text-lg font-bold text-primary">
-                    Evolução Histórica de Compras (
-                    {commercialMetric === 'TONS' ? 'Toneladas Mensais' : 'Faturamento Mensal'})
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Comparativo dos últimos 12 meses vs Meta/Expectativa programada
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs bg-slate-50">
-                  {commercialMetric === 'TONS' ? 'Foco: Toneladas' : 'Foco: Faturamento R$'}
-                </Badge>
-              </div>
-
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  {commercialMetric === 'TONS' ? (
-                    <BarChart data={monthlyData24m}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} unit=" t" />
-                      <RechartsTooltip formatter={(value: any) => [`${value} t`, 'Volume']} />
-                      <Legend />
-                      <Bar
-                        dataKey="toneladas"
-                        name="Toneladas Faturadas"
-                        fill="#003A70"
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="metaToneladas"
-                        name="Meta Mensal"
-                        fill="#94A3B8"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  ) : (
-                    <LineChart data={monthlyData24m}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                      <YAxis
-                        tick={{ fontSize: 11 }}
-                        tickFormatter={(val) => `R$ ${(val / 1000).toFixed(0)}k`}
-                      />
-                      <RechartsTooltip
-                        formatter={(value: any) => [formatBRL(value), 'Faturamento']}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="faturamento"
-                        name="Faturamento Realizado"
-                        stroke="#003A70"
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  )}
-                </ResponsiveContainer>
-              </div>
-            </Card>
+            <div className="lg:col-span-2">
+              <SecondaryTargetAxisChart
+                title={`Evolução Histórica de Compras — ${commercialMetric === 'TONS' ? 'Toneladas' : 'Faturamento'}`}
+                subtitle="Barras: Realizado (Fato) | Linha Segundo Eixo: Meta & Expectativa Mensal | Tracejado: Forecast"
+                data={monthlyData24m.map((d, i) => ({
+                  label: d.month,
+                  realizado: commercialMetric === 'TONS' ? d.toneladas : d.faturamento,
+                  meta:
+                    commercialMetric === 'TONS'
+                      ? d.metaToneladas
+                      : Math.round(d.faturamento * 1.15),
+                  forecast:
+                    i >= 9
+                      ? commercialMetric === 'TONS'
+                        ? Math.round(d.metaToneladas * 1.05)
+                        : Math.round(d.faturamento * 1.2)
+                      : undefined,
+                }))}
+                unit={commercialMetric === 'TONS' ? 't' : 'R$'}
+                metricType={commercialMetric === 'TONS' ? 'TONELADAS' : 'REAIS'}
+                isCurrency={commercialMetric === 'REVENUE'}
+                aiAnalysis={{
+                  summary: `Cliente ${cliente.nomeFantasia} apresenta gap residual de 14.5 t no ciclo atual em relação à meta Qlik, com 82% da demanda concentrada em Perfis W e Chapas A36.`,
+                  factors: [
+                    {
+                      title: 'Cotação Aberta sem Follow-up > 48h',
+                      impactTons: 8.5,
+                      source: 'CRM',
+                      evidence:
+                        'Cotação COT-SAP-98104 de 16.5t enviada e aguardando retorno do comprador Eduardo.',
+                    },
+                    {
+                      title: 'Estoque de Perfis W200 no WMS Contagem',
+                      impactTons: 6.0,
+                      source: 'WMS',
+                      evidence: 'Saldo físico de 24t liberado no pátio para pronta expedição.',
+                    },
+                  ],
+                  recommendation:
+                    'Realizar contato via WhatsApp com o comprador Eduardo para alinhamento de frete CIF e liberação da ordem SAP ECC.',
+                }}
+              />
+            </div>
 
             <Card className="bg-white/95 border-border/50 rounded-3xl p-6 flex flex-col justify-between">
               <div>
@@ -1803,7 +1791,100 @@ export default function Cliente360() {
           </Card>
         </TabsContent>
 
-        {/* ABA 7: TIMELINE & VISITAS */}
+        {/* ABA 7: CONTATOS & HISTÓRICO OMNICHANNEL */}
+        <TabsContent value="contatos" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-lg font-bold text-primary">
+                    Contatos & Comunicações Omnichannel
+                  </h3>
+                  <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px]">
+                    WhatsApp · Telefone VoIP · E-mail Graph
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Memória completa do relacionamento comercial sem depender de preenchimento manual.
+                </p>
+              </div>
+
+              {/* Resumo IA dos Últimos 30 dias */}
+              <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200/70 text-xs max-w-md">
+                <span className="font-bold text-amber-900 flex items-center gap-1 text-[11px] mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Resumo IA dos Últimos 30 Dias:
+                </span>
+                <p className="text-amber-950 text-[11px] leading-tight">
+                  Cliente realizou 4 interações recentes. Última negociação: confirmação de frete
+                  CIF para cotação COT-SAP-98104. Próximo retorno acordado para hoje às 14:00.
+                </p>
+              </div>
+            </div>
+
+            {/* Timeline Omnichannel de Contatos do Cliente */}
+            <div className="space-y-3">
+              {mockCommercialContacts
+                .filter(
+                  (c) =>
+                    c.customer_id === cliente.id || c.customer_name.includes(cliente.nomeFantasia),
+                )
+                .concat(
+                  mockCommercialContacts
+                    .filter(
+                      (c) =>
+                        c.customer_id !== cliente.id &&
+                        !c.customer_name.includes(cliente.nomeFantasia),
+                    )
+                    .slice(0, 2),
+                )
+                .map((contact) => (
+                  <div
+                    key={contact.id}
+                    className="p-4 bg-slate-50 rounded-2xl border border-border/40 hover:bg-slate-100/60 transition-colors space-y-2"
+                  >
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          {contact.channel}
+                        </Badge>
+                        <Badge
+                          className={cn(
+                            'text-[9px]',
+                            contact.direction === 'ENTRADA'
+                              ? 'bg-sky-100 text-sky-800'
+                              : 'bg-slate-200 text-slate-800',
+                          )}
+                        >
+                          {contact.direction}
+                        </Badge>
+                        <strong className="text-xs text-slate-900">{contact.contact_name}</strong>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">{contact.date_time}</span>
+                    </div>
+
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                      {contact.detailed_content || contact.summary}
+                    </p>
+
+                    {contact.transcription && (
+                      <div className="p-2.5 bg-white rounded-xl border border-sky-200 text-[11px] text-sky-900">
+                        <strong>Transcrição Gravada VoIP:</strong> "{contact.transcription}"
+                      </div>
+                    )}
+
+                    {contact.next_action && (
+                      <div className="text-[11px] text-amber-800 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">
+                        <strong>Próxima Ação:</strong> {contact.next_action} (
+                        {contact.next_action_date})
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA 8: TIMELINE COMPLETA */}
         <TabsContent value="timeline" className="space-y-4 m-0">
           <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <div className="flex items-center justify-between border-b pb-4 mb-4">

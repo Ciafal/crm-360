@@ -39,6 +39,9 @@ import {
   mockLatenciaData,
   type MembroEquipe,
 } from '@/data/mockCommercialData'
+import { CommercialPaceThermometer } from '@/components/shared/CommercialPaceThermometer'
+import { SecondaryTargetAxisChart } from '@/components/shared/SecondaryTargetAxisChart'
+import { AIGapExplainerPanel } from '@/components/shared/AIGapExplainerPanel'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -546,54 +549,32 @@ export default function GestaoDoDia() {
           </div>
         </div>
 
-        {/* RITMO FINANCEIRO E TONELADAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50/80 p-4 rounded-2xl border border-border/40">
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              RITMO ATUAL (R$/DIA)
-            </span>
-            <span className="font-serif text-lg font-bold text-emerald-700 block mt-0.5">
-              R$ 133.928 / dia
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              Base: R$ 1.875.000 / 14 dias úteis
-            </span>
-          </div>
-
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              RITMO NECESSÁRIO (R$/DIA)
-            </span>
-            <span className="font-serif text-lg font-bold text-primary block mt-0.5">
-              R$ 78.125 / dia
-            </span>
-            <span className="text-[10px] text-emerald-600 font-semibold">
-              Gap R$ 625k / 8 dias restantes
-            </span>
-          </div>
-
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              RITMO ATUAL (TONELADAS/DIA)
-            </span>
-            <span className="font-serif text-lg font-bold text-slate-800 block mt-0.5">
-              45.5 t / dia
-            </span>
-            <span className="text-[10px] text-muted-foreground">Base: 637 toneladas / 14 dias</span>
-          </div>
-
-          <div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
-              RITMO NECESSÁRIO (TONELADAS/DIA)
-            </span>
-            <span className="font-serif text-lg font-bold text-primary block mt-0.5">
-              26.6 t / dia
-            </span>
-            <span className="text-[10px] text-emerald-600 font-semibold">
-              Gap 213t / 8 dias restantes
-            </span>
-          </div>
+        {/* TERMÔMETRO CORPORATIVO DE RITMO COMERCIAL (NOVO PADRÃO CIAFAL) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <CommercialPaceThermometer
+            title="Ritmo em Toneladas (Equipe Vendas)"
+            ritmoAtual={kpis.ritmoAtualTonsDia}
+            ritmoNecessario={kpis.ritmoNecessarioTonsDia}
+            unidade="t/dia"
+            diasUteisPassados={kpis.diasUteisPassados}
+            diasUteisRestantes={kpis.diasUteisRestantes}
+            realizadoVolume={kpis.realizadoToneladas}
+            metaVolume={kpis.metaToneladas}
+            gapVolume={kpis.gapToneladas}
+          />
+          <CommercialPaceThermometer
+            title="Ritmo Financeiro R$ (Supervisão)"
+            ritmoAtual={kpis.ritmoAtualDia}
+            ritmoNecessario={kpis.ritmoNecessarioDia}
+            unidade="R$/dia"
+            diasUteisPassados={kpis.diasUteisPassados}
+            diasUteisRestantes={kpis.diasUteisRestantes}
+            isSupervisor={true}
+          />
         </div>
+
+        {/* DIAGNÓSTICO DE GAP POR IA EXPLICATIVA */}
+        <AIGapExplainerPanel gapTons={kpis.gapToneladas} gapBrl={kpis.gap} confidence={96} />
 
         {/* CADÊNCIA COMERCIAL E LATÊNCIA */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">

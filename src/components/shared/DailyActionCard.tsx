@@ -1,336 +1,381 @@
 import React, { useState } from 'react'
-import {
-  Sparkles,
-  Phone,
-  MessageSquare,
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  ExternalLink,
-  ShieldCheck,
-  FileEdit,
-  AlertTriangle,
-} from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { cn } from '@/lib/utils'
-import type { DailyCommercialAction, CommercialActionType } from '@/types/models'
-import { PriorityBadge } from '@/components/shared/PriorityBadge'
-import { ConfidenceIndicator } from '@/components/shared/ConfidenceIndicator'
-import { DataSourceBadge } from '@/components/shared/DataSourceBadge'
-import { ActionStatusBadge } from '@/components/shared/ActionStatusBadge'
+import { ActionStatusBadge } from './ActionStatusBadge'
+import { PriorityBadge } from './PriorityBadge'
+import { ABCBadge } from './ABCBadge'
+import { DataSourceBadge } from './DataSourceBadge'
+import {
+  Sparkles,
+  ArrowRight,
+  Phone,
+  MessageSquare,
+  Calendar,
+  Layers,
+  TrendingUp,
+  FileText,
+  MapPin,
+  CheckCircle2,
+  Clock,
+  ShieldCheck,
+  AlertTriangle,
+  Send,
+} from 'lucide-react'
+import { AcaoDoDia, ActionExecutionEvidence } from '@/types/models'
+import { formatCurrency, formatWeight } from '@/lib/utils'
+import { globalActionEvidenceValidator } from '@/services/action_evidence_validator'
+import { useToast } from '@/hooks/use-toast'
 
 interface DailyActionCardProps {
-  action: DailyCommercialAction
-  onComplete: (action: DailyCommercialAction) => Promise<void>
-  onJustify: (action: DailyCommercialAction, justification: string) => Promise<void>
-  onReschedule: (
-    action: DailyCommercialAction,
-    newDate: string,
-    justification?: string,
-  ) => Promise<void>
+  action: AcaoDoDia
+  onExecute?: (action: AcaoDoDia) => void
   onOpenCustomer360?: (customerId: string) => void
-  onNavigateConversas?: (phoneOrJid?: string) => void
-}
-
-const ACTION_TYPE_CONFIG: Record<
-  CommercialActionType,
-  { label: string; badgeClass: string; borderClass: string; icon: any }
-> = {
-  atacar_agora: {
-    label: 'Atacar Agora',
-    badgeClass: 'bg-emerald-500/15 text-emerald-700 border-emerald-300 font-bold',
-    borderClass: 'border-l-4 border-l-emerald-500',
-    icon: Sparkles,
-  },
-  follow_up: {
-    label: 'Follow-up Obrigatório',
-    badgeClass: 'bg-blue-500/15 text-blue-700 border-blue-300 font-bold',
-    borderClass: 'border-l-4 border-l-blue-500',
-    icon: Clock,
-  },
-  recuperar: {
-    label: 'Recuperar Inativo',
-    badgeClass: 'bg-amber-500/15 text-amber-700 border-amber-300 font-bold',
-    borderClass: 'border-l-4 border-l-amber-500',
-    icon: AlertTriangle,
-  },
-  resolver_impedimento: {
-    label: 'Resolver Impedimento',
-    badgeClass: 'bg-rose-500/15 text-rose-700 border-rose-300 font-bold',
-    borderClass: 'border-l-4 border-l-rose-500',
-    icon: AlertCircle,
-  },
-  nao_priorizar: {
-    label: 'Não Priorizar Agora',
-    badgeClass: 'bg-slate-500/15 text-slate-700 border-slate-300 font-medium',
-    borderClass: 'border-l-4 border-l-slate-400 opacity-75',
-    icon: ShieldCheck,
-  },
+  onActionUpdated?: (updatedAction: AcaoDoDia) => void
 }
 
 export function DailyActionCard({
   action,
-  onComplete,
-  onJustify,
-  onReschedule,
+  onExecute,
   onOpenCustomer360,
-  onNavigateConversas,
+  onActionUpdated,
 }: DailyActionCardProps) {
-  const [justificationModalOpen, setJustificationModalOpen] = useState(false)
-  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false)
-  const [justificationText, setJustificationText] = useState('')
-  const [rescheduleDate, setRescheduleDate] = useState('')
+  const { toast } = useToast()
+  const [isSimulatingChannel, setIsSimulatingChannel] = useState(false)
+  const [selectedChannel, setSelectedChannel] = useState<
+    'WhatsApp' | 'Telefone' | 'E-mail' | 'Visita'
+  >('WhatsApp')
+  const [simulatedContent, setSimulatedContent] = useState('')
+  const [overrideDialogOpen, setOverrideDialogOpen] = useState(false)
+  const [overrideJustification, setOverrideJustification] = useState('')
 
-  const config = ACTION_TYPE_CONFIG[action.action_type] || ACTION_TYPE_CONFIG.atacar_agora
-  const Icon = config.icon
+  // Status normalizado
+  const currentStatus = (action.status || 'PLANEJADA').toUpperCase()
+  const isConcluida = currentStatus === 'CONCLUIDA'
+  const isEmAndamento = currentStatus === 'EM_ANDAMENTO'
+  const isAguardando = currentStatus === 'AGUARDANDO_RETORNO'
 
-  const formatBRL = (val?: number) => {
-    if (!val) return 'R$ 0'
-    return val.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 0,
+  // Simulação de disparo de canal com validação IA de evidência em tempo real
+  const handleSimulateChannelExecution = (
+    channel: 'WhatsApp' | 'Telefone' | 'E-mail' | 'Visita',
+  ) => {
+    setSelectedChannel(channel)
+    if (channel === 'WhatsApp') {
+      setSimulatedContent(
+        `Olá! Referente à cotação ${action.detalhes?.codigoCotacao || 'COT-SAP-98104'} de ${action.impactoEstimadoVolume || 15}t, confirmamos a liberação do lote com faturamento SAP ECC.`,
+      )
+    } else if (channel === 'E-mail') {
+      setSimulatedContent(
+        `Prezado cliente, enviamos a minuta comercial da cotação ${action.detalhes?.codigoCotacao || 'COT-98104'} com tabela de preços atualizada.`,
+      )
+    } else if (channel === 'Telefone') {
+      setSimulatedContent(
+        `Ligação VoIP de 4 min: Comprador confirmou interesse e alinhou condições de entrega para próxima semana.`,
+      )
+    } else {
+      setSimulatedContent(
+        `Visita técnica presencial realizada para validação dimensional de chapas e tubos.`,
+      )
+    }
+    setIsSimulatingChannel(true)
+  }
+
+  // Validação IA da evidência
+  const handleValidateAndApplyEvidence = () => {
+    const result = globalActionEvidenceValidator.evaluateActionInteraction(action, {
+      channel: selectedChannel,
+      content: simulatedContent,
+      subject: `Ação Comercial - ${action.clienteNome}`,
+      hasResponse: selectedChannel === 'WhatsApp' && simulatedContent.includes('confirmamos'),
     })
+
+    const updatedAction: AcaoDoDia = {
+      ...action,
+      status: result.newStatus as any,
+      execution_status: result.newStatus as any,
+      business_outcome: result.businessOutcome,
+      evidence: result.evidence,
+      ai_relevance_confidence: result.confidenceScore,
+      evidence_summary: `${selectedChannel}: ${result.reasons[0]}`,
+    }
+
+    setIsSimulatingChannel(false)
+    if (onActionUpdated) {
+      onActionUpdated(updatedAction)
+    }
+
+    if (result.confidenceScore < 75 && !result.canConclude) {
+      toast({
+        title: 'Evidência Parcial / Insuficiente',
+        description: `Score IA: ${result.confidenceScore}%. Status alterado para ${result.newStatus}. Mensagem genérica não conclui automaticamente a ação.`,
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title: 'Evidência Validada pela IA!',
+        description: `Canal ${selectedChannel} registrou execução. Status: ${result.newStatus} (Score: ${result.confidenceScore}%).`,
+      })
+    }
   }
 
-  const handleJustifySubmit = async () => {
-    await onJustify(action, justificationText)
-    setJustificationModalOpen(false)
-    setJustificationText('')
-  }
+  // Exceção manual para supervisor
+  const handleSaveManualOverride = () => {
+    if (!overrideJustification.trim()) {
+      toast({
+        title: 'Justificativa Obrigatória',
+        description: 'Supervisores devem registrar o motivo da exceção manual para auditoria.',
+        variant: 'destructive',
+      })
+      return
+    }
 
-  const handleRescheduleSubmit = async () => {
-    await onReschedule(action, rescheduleDate, justificationText)
-    setRescheduleModalOpen(false)
-    setRescheduleDate('')
-    setJustificationText('')
+    const updatedAction: AcaoDoDia = {
+      ...action,
+      status: 'CONCLUIDA' as any,
+      execution_status: 'CONCLUIDA',
+      manual_override: true,
+      manual_override_justification: overrideJustification,
+      manual_override_by: 'Supervisor Comercial (Auditoria)',
+      manual_override_at: new Date().toISOString(),
+    }
+
+    setOverrideDialogOpen(false)
+    if (onActionUpdated) {
+      onActionUpdated(updatedAction)
+    }
+    toast({
+      title: 'Exceção Manual Registrada',
+      description: 'Ação concluída com auditoria e justificativa gravada.',
+    })
   }
 
   return (
     <>
-      <Card
-        className={cn(
-          'bg-white/80 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-200 rounded-2xl overflow-hidden flex flex-col justify-between border border-border/50',
-          config.borderClass,
-        )}
-      >
-        <CardHeader className="p-4 pb-2">
-          <div className="flex items-start justify-between gap-2">
+      <Card className="p-4 rounded-2xl border border-border/70 hover:border-primary/40 hover:shadow-md transition-all duration-200 bg-card space-y-3">
+        {/* Top Header: Origem, Cliente, Classificação e Status */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge
-                variant="outline"
-                className={cn('text-[11px] py-0.5 px-2 flex items-center gap-1', config.badgeClass)}
-              >
-                <Icon className="w-3 h-3" />
-                {config.label}
-              </Badge>
-              {action.priority !== undefined && <PriorityBadge priority={action.priority} />}
-              {action.source && <DataSourceBadge source={action.source} />}
-              <ActionStatusBadge status={action.status} />
-            </div>
-            {action.confidence !== undefined && (
-              <ConfidenceIndicator confidence={action.confidence} />
-            )}
-          </div>
-
-          <div className="mt-2.5 flex items-baseline justify-between">
-            <div>
-              <h3 className="font-serif font-bold text-lg text-primary leading-tight">
-                {action.customer_name || action.customer_id}
-              </h3>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                Cód: {action.customer_id}{' '}
-                {action.product_family ? `· Família: ${action.product_family}` : ''}
-              </p>
-            </div>
-            <div className="text-right">
-              <span className="text-xs text-muted-foreground block">Potencial estimado</span>
-              <span className="font-bold font-serif text-base text-primary">
-                {formatBRL(action.potential_revenue)}
-              </span>
-              {action.potential_tons ? (
-                <span className="text-[11px] text-muted-foreground block">
-                  ({action.potential_tons} ton)
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-4 pt-1 flex flex-col gap-3">
-          {/* Recomendação e Rationale */}
-          <div className="bg-slate-50/80 rounded-xl p-3 border border-slate-100 flex flex-col gap-1.5">
-            <p className="text-xs text-slate-700 font-medium leading-relaxed">
-              <span className="font-bold text-primary">Ação Recomendada:</span>{' '}
-              {action.recommendation}
-            </p>
-            {action.rationale && (
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-slate-600">Por quê:</span> {action.rationale}
-              </p>
-            )}
-          </div>
-
-          {/* Barra de Ações Operacionais */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/30 gap-1.5">
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2.5 text-xs text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                onClick={() => onNavigateConversas && onNavigateConversas(action.customer_name)}
-                title="Abrir WhatsApp"
-              >
-                <MessageSquare className="w-3.5 h-3.5 mr-1" />
-                WhatsApp
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2.5 text-xs text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                title="Registrar Ligação Telefônica"
-                onClick={() => onNavigateConversas && onNavigateConversas()}
-              >
-                <Phone className="w-3.5 h-3.5 mr-1" />
-                Ligar
-              </Button>
-              {onOpenCustomer360 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2.5 text-xs text-primary border-primary/20 hover:bg-primary/10"
-                  onClick={() => onOpenCustomer360(action.customer_id)}
-                  title="Visão 360 do Cliente"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                  Cliente 360º
-                </Button>
+              <PriorityBadge priority={action.prioridade} />
+              {action.clienteClassificacao && (
+                <ABCBadge classification={action.clienteClassificacao} size="sm" />
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 text-xs text-blue-600 hover:bg-blue-50"
-                onClick={() => {
-                  window.location.href = '/crm'
-                }}
-                title="Criar Oportunidade"
-              >
-                + Oportunidade
-              </Button>
+              {action.origem && <DataSourceBadge source={action.origem} size="sm" />}
+              <ActionStatusBadge status={action.execution_status || action.status} />
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 text-xs text-muted-foreground hover:text-slate-800"
-                onClick={() => setRescheduleModalOpen(true)}
-                title="Reagendar Ação"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 text-xs text-muted-foreground hover:text-slate-800"
-                onClick={() => setJustificationModalOpen(true)}
-                title="Justificar Não Realização"
-              >
-                <FileEdit className="w-3.5 h-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="default"
-                className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                onClick={() => onComplete(action)}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                Concluir
-              </Button>
-            </div>
+            <button
+              onClick={() => onOpenCustomer360?.(action.clienteId)}
+              className="text-left font-serif font-bold text-base text-primary hover:underline block pt-1"
+            >
+              {action.clienteNome}
+            </button>
           </div>
-        </CardContent>
+
+          {/* Impacto Comercial */}
+          <div className="text-right shrink-0">
+            {action.impactoEstimadoVolume && (
+              <span className="text-sm font-bold text-slate-800 block">
+                {formatWeight(action.impactoEstimadoVolume)}
+              </span>
+            )}
+            {action.impactoEstimadoValor && (
+              <span className="text-xs text-muted-foreground block font-mono">
+                {formatCurrency(action.impactoEstimadoValor)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Recomendação da IA / Objetivo da Ação */}
+        <div className="bg-primary/5 rounded-xl p-3 border border-primary/10 space-y-1">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span>{action.tipoAcao || 'Ação Recomendada pela IA'}</span>
+          </div>
+          <p className="text-xs text-slate-700 leading-relaxed font-medium">
+            {action.recomendacao}
+          </p>
+        </div>
+
+        {/* Justificativa de Fato & Correlação Multissistema */}
+        {action.justificativa && (
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            <strong>Contexto Operacional:</strong> {action.justificativa}
+          </p>
+        )}
+
+        {/* EVIDÊNCIA COMPROVADA (SE EXISTIR) */}
+        {action.evidence && (
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 flex items-center gap-1 text-[11px]">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                Evidência Detectada: Canal {action.evidence.channel}
+              </span>
+              <Badge className="bg-emerald-100 text-emerald-800 text-[9px] border-none font-mono">
+                Score IA: {action.evidence.ai_relevance_score}%
+              </Badge>
+            </div>
+            <p className="text-[11px] text-slate-600 italic">
+              "{action.evidence.content_reference}"
+            </p>
+          </div>
+        )}
+
+        {/* BOTÕES DE AÇÃO RÁPIDA / MONITORAMENTO DE CANAL INTEGRADO */}
+        <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 text-xs bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              onClick={() => handleSimulateChannelExecution('WhatsApp')}
+              title="Iniciar conversa via WhatsApp integrado"
+            >
+              <MessageSquare className="w-3.5 h-3.5 mr-1" /> WhatsApp
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 text-xs bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100"
+              onClick={() => handleSimulateChannelExecution('Telefone')}
+              title="Disparar ligação via VoIP Telephony"
+            >
+              <Phone className="w-3.5 h-3.5 mr-1" /> Ligar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+              onClick={() => handleSimulateChannelExecution('E-mail')}
+              title="Enviar e-mail comercial via Microsoft Graph"
+            >
+              <FileText className="w-3.5 h-3.5 mr-1" /> E-mail
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-[11px] text-muted-foreground hover:text-slate-900"
+              onClick={() => setOverrideDialogOpen(true)}
+              title="Exceção manual permitida apenas com justificativa de auditoria"
+            >
+              Exceção Manual
+            </Button>
+
+            <Button
+              size="sm"
+              className="h-8 px-3 text-xs bg-primary text-white hover:bg-primary/90"
+              onClick={() => onOpenCustomer360?.(action.clienteId)}
+            >
+              Abrir 360º <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </Button>
+          </div>
+        </div>
       </Card>
 
-      {/* Modal Justificativa */}
-      <Dialog open={justificationModalOpen} onOpenChange={setJustificationModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* MODAL DE SIMULAÇÃO / TESTE DE CAPTURA AUTOMÁTICA DE CANAL */}
+      <Dialog open={isSimulatingChannel} onOpenChange={setIsSimulatingChannel}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif text-primary">Justificar Não Realização</DialogTitle>
-            <DialogDescription>
-              Explique por que esta ação não será executada hoje para calibrar os modelos da CIAFAL.
-            </DialogDescription>
+            <DialogTitle className="font-serif text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              Simular Contato no Canal: {selectedChannel}
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-3">
-            <Textarea
-              placeholder="Ex: Cliente em férias coletivas até a próxima semana..."
-              value={justificationText}
-              onChange={(e) => setJustificationText(e.target.value)}
-              rows={4}
-            />
+
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              O CRM 360º CIAFAL monitora os canais em segundo plano. Teste a validação da IA
+              enviando uma mensagem adequada ou um texto genérico ("Bom dia") para auditar a regra.
+            </p>
+
+            <div className="p-2.5 rounded-xl bg-slate-50 border text-xs">
+              <strong>Objetivo da Ação:</strong> {action.recomendacao}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">
+                Conteúdo Capturado do Canal {selectedChannel}:
+              </label>
+              <Textarea
+                rows={4}
+                value={simulatedContent}
+                onChange={(e) => setSimulatedContent(e.target.value)}
+                placeholder="Digite o texto da interação..."
+                className="text-xs"
+              />
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setJustificationModalOpen(false)}>
-              Cancelar
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSimulatedContent('Bom dia')}
+              className="text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+            >
+              Testar "Bom dia" (Inválido)
             </Button>
-            <Button onClick={handleJustifySubmit} disabled={!justificationText.trim()}>
-              Salvar Justificativa
+            <Button
+              size="sm"
+              className="text-xs bg-primary text-white"
+              onClick={handleValidateAndApplyEvidence}
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Avaliar com IA & Registrar
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Reagendamento */}
-      <Dialog open={rescheduleModalOpen} onOpenChange={setRescheduleModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* MODAL DE AUDITORIA PARA EXCEÇÃO MANUAL */}
+      <Dialog open={overrideDialogOpen} onOpenChange={setOverrideDialogOpen}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif text-primary">Reagendar Ação Comercial</DialogTitle>
-            <DialogDescription>
-              Defina a nova data para retomar esta oportunidade.
-            </DialogDescription>
+            <DialogTitle className="font-serif text-lg text-primary flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+              Justificativa de Exceção Manual
+            </DialogTitle>
           </DialogHeader>
-          <div className="py-3 flex flex-col gap-3">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                Nova Data
-              </label>
-              <input
-                type="date"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-                value={rescheduleDate}
-                onChange={(e) => setRescheduleDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                Motivo do reagendamento (opcional)
+
+          <div className="space-y-3 py-2 text-xs">
+            <p className="text-slate-600 leading-relaxed">
+              <strong>Regra Corporativa:</strong> Vendedores não concluem ações sem evidência
+              automática de canal. Exceções manuais exigem justificativa formal registrada no log de
+              auditoria.
+            </p>
+
+            <div className="space-y-1">
+              <label className="font-bold text-slate-800">
+                Motivo / Justificativa da Conclusão Manual:
               </label>
               <Textarea
-                placeholder="Ex: Solicitado retorno após reunião de compras..."
-                value={justificationText}
-                onChange={(e) => setJustificationText(e.target.value)}
                 rows={3}
+                placeholder="Ex: Cliente fechou verbalmente durante almoço de negócios presencial..."
+                value={overrideJustification}
+                onChange={(e) => setOverrideJustification(e.target.value)}
               />
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRescheduleModalOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setOverrideDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleRescheduleSubmit} disabled={!rescheduleDate}>
-              Reagendar
+            <Button size="sm" className="bg-primary text-white" onClick={handleSaveManualOverride}>
+              Gravar com Auditoria
             </Button>
           </DialogFooter>
         </DialogContent>

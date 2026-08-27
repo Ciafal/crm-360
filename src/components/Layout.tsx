@@ -94,10 +94,11 @@ export default function Layout() {
   // Atalhos rápidos no TopNav
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
+    { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
     { name: 'CRM 360º', path: '/crm' },
-    { name: 'KPIs Comerciais', path: '/kpis-comerciais', badge: 'Novo' },
-    { name: 'Solicitações', path: '/solicitacoes', badge: 'Novo' },
-    { name: 'HCM & Compliance', path: '/hcm' },
+    { name: 'Tarefas', path: '/tarefas' },
+    { name: 'Equipe', path: '/equipe' },
+    { name: 'KPIs Comerciais', path: '/kpis-comerciais' },
   ]
 
   return (

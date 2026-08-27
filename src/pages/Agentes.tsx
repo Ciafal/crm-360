@@ -147,6 +147,50 @@ export default function Agentes() {
     priority: 'Alta',
   })
 
+  // Modal para Reconhecimento / Feedback Positivo por E-mail ou WhatsApp
+  const [recognitionModalOpen, setRecognitionModalOpen] = useState(false)
+  const [recognitionData, setRecognitionData] = useState<{
+    vendedor: string
+    destaque: string
+    evidencia: string
+    channel: 'EMAIL' | 'WHATSAPP'
+    message: string
+  }>({
+    vendedor: '',
+    destaque: '',
+    evidencia: '',
+    channel: 'EMAIL',
+    message: '',
+  })
+
+  const handleOpenRecognitionModal = (
+    vendedor: string,
+    destaque: string,
+    evidencia: string,
+    channel: 'EMAIL' | 'WHATSAPP',
+  ) => {
+    const aiDraftMessage =
+      channel === 'EMAIL'
+        ? `Prezado(a) ${vendedor},\n\nParabéns pelo excelente desempenho comercial demonstrado! Reconhecemos formalmente sua atuação em: "${destaque}".\n\nEvidência apurada pelo CRM 360º: ${evidencia}.\n\nEssa prática reforça os padrões de excelência da CIAFAL e contribui diretamente para os resultados da equipe.\n\nAtenciosamente,\nSupervisão Comercial CIAFAL`
+        : `Olá ${vendedor}! 👏 Parabéns pelo ótimo resultado com ${destaque}! O CRM 360º registrou sua evidência de sucesso (${evidencia}). Continue com esse ritmo! 🚀`
+
+    setRecognitionData({
+      vendedor,
+      destaque,
+      evidencia,
+      channel,
+      message: aiDraftMessage,
+    })
+    setRecognitionModalOpen(true)
+  }
+
+  const handleSendRecognition = () => {
+    setRecognitionModalOpen(false)
+    toast.success(`Reconhecimento enviado com sucesso via ${recognitionData.channel}!`, {
+      description: `Registrado no histórico de RecognitionInteraction para auditoria comercial da CIAFAL.`,
+    })
+  }
+
   const handleOpenActionModal = (recomendacao: string, vendedor: string) => {
     setActionData({
       title: recomendacao,
@@ -370,6 +414,36 @@ export default function Agentes() {
                   <p className="text-[11px] text-emerald-200 font-medium">
                     <strong>Prática:</strong> {fp.pratica}
                   </p>
+
+                  {/* Ações de Reconhecimento por E-mail ou WhatsApp (Requisito Obrigatório) */}
+                  <div className="pt-2 border-t border-emerald-500/20 flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleOpenRecognitionModal(fp.vendedor, fp.destaque, fp.evidencia, 'EMAIL')
+                      }
+                      className="h-7 px-2.5 text-[11px] bg-white/10 hover:bg-white/20 text-white border-white/20"
+                    >
+                      <Mail className="w-3 h-3 mr-1 text-sky-400" /> Reconhecer por E-mail
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleOpenRecognitionModal(
+                          fp.vendedor,
+                          fp.destaque,
+                          fp.evidencia,
+                          'WHATSAPP',
+                        )
+                      }
+                      className="h-7 px-2.5 text-[11px] bg-emerald-600/60 hover:bg-emerald-600 text-white border-emerald-400/40"
+                    >
+                      <MessageSquare className="w-3 h-3 mr-1 text-emerald-300" /> Reconhecer por
+                      WhatsApp
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -512,6 +586,57 @@ export default function Agentes() {
             </Button>
             <Button onClick={handleConfirmAction} className="bg-primary text-white font-semibold">
               Confirmar & Criar Ação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE ENVIO DE RECONHECIMENTO GERADO POR IA (SUPERVISOR REVISA & CONFIRMA) */}
+      <Dialog open={recognitionModalOpen} onOpenChange={setRecognitionModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-primary flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              Enviar Reconhecimento Comercial ({recognitionData.channel})
+            </DialogTitle>
+            <DialogDescription>
+              A IA elaborou esta mensagem baseada em fatos reais. Você pode revisar e editar antes
+              do envio.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="p-3 bg-slate-50 rounded-xl border space-y-1">
+              <div className="flex justify-between font-semibold">
+                <span>Destinatário: {recognitionData.vendedor}</span>
+                <Badge variant="outline">{recognitionData.channel}</Badge>
+              </div>
+              <p className="text-muted-foreground text-[11px]">
+                <strong>Fato apurado:</strong> {recognitionData.evidencia}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="font-bold text-slate-800">
+                Mensagem de Reconhecimento (Editável):
+              </label>
+              <textarea
+                rows={6}
+                value={recognitionData.message}
+                onChange={(e) =>
+                  setRecognitionData({ ...recognitionData, message: e.target.value })
+                }
+                className="w-full p-2.5 rounded-xl border border-input text-xs font-sans focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecognitionModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSendRecognition} className="bg-primary text-white font-semibold">
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Confirmar & Enviar Reconhecimento
             </Button>
           </DialogFooter>
         </DialogContent>
