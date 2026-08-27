@@ -18,6 +18,7 @@ import GestaoInativos from './pages/GestaoInativos'
 import Cliente360 from './pages/Cliente360'
 import GestaoDoDia from './pages/GestaoDoDia'
 import Administracao from './pages/Administracao'
+import Setup from './pages/Setup'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -37,6 +38,7 @@ const App = () => (
           <Routes>
             {/* Routes without Global Layout */}
             <Route path="/" element={<Index />} />
+            <Route path="/setup" element={<Setup />} />
 
             {/* Routes with Global Layout */}
             <Route element={<ProtectedRoute />}>

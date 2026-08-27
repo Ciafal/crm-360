@@ -178,7 +178,7 @@ export default function Administracao() {
               <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
                 Usuários de Teste
               </span>
-              <span className="font-bold text-emerald-700 text-base">6 Contas Criadas</span>
+              <span className="font-bold text-emerald-700 text-base">5 Contas Ativas (v0.0.6)</span>
             </div>
           </div>
         </Card>
@@ -246,6 +246,16 @@ export default function Administracao() {
               </p>
             </div>
           ) : (
+            <div className="p-4 bg-muted/20 border-b border-border/40 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between gap-2">
+              <span>
+                <strong>Como utilizar o OTP:</strong> Quando o Representante Externo (
+                <code>representante.teste@crm360.local</code>) tentar logar com{' '}
+                <code>teste123</code>, o OTP de 6 dígitos aparece aqui. Copie e informe ao testador
+                para concluir o acesso.
+              </span>
+            </div>
+          )}
+          {filteredEmails.length > 0 && (
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-border/60 text-[11px] uppercase font-bold text-muted-foreground tracking-wider">

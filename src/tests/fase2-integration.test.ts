@@ -159,6 +159,54 @@ export async function runFase2TestSuite(): Promise<{
     assert(false, 'Meu Dia - Idempotência', 'Erro no teste de idempotência', String(err))
   }
 
+  // 3.1 Teste de RLS: Vendedor 1 NÃO consulta carteira do Vendedor 2 e vice-versa
+  try {
+    const v1Id = 'vendedor-teste-01'
+    const v2Id = 'vendedor-teste-02'
+    const supId = 'supervisor-teste-01'
+    const repId = 'representante-externo-01'
+
+    const v1AccessV2 = defaultIdentityProvider.canAccessCustomer(v1Id, 'vendedor', v2Id)
+    assert(
+      v1AccessV2 === false,
+      'RLS & Carteiras',
+      'Vendedor 1 NÃO consulta clientes do Vendedor 2',
+    )
+
+    const v2AccessV1 = defaultIdentityProvider.canAccessCustomer(v2Id, 'vendedor', v1Id)
+    assert(
+      v2AccessV1 === false,
+      'RLS & Carteiras',
+      'Vendedor 2 NÃO consulta clientes do Vendedor 1',
+    )
+
+    const supAccessV1 = defaultIdentityProvider.canAccessCustomer(supId, 'supervisor', v1Id)
+    const supAccessV2 = defaultIdentityProvider.canAccessCustomer(supId, 'supervisor', v2Id)
+    assert(
+      supAccessV1 === true && supAccessV2 === true,
+      'RLS & Carteiras',
+      'Supervisor consulta clientes de ambos os vendedores (Vendedor 1 e Vendedor 2)',
+    )
+
+    const repAccessOwn = defaultIdentityProvider.canAccessCustomer(
+      repId,
+      'representante_externo' as any,
+      repId,
+    )
+    const repAccessV1 = defaultIdentityProvider.canAccessCustomer(
+      repId,
+      'representante_externo' as any,
+      v1Id,
+    )
+    assert(
+      repAccessOwn === true && repAccessV1 === false,
+      'RLS & Carteiras',
+      'Representante externo só acessa própria carteira e não acessa vendedor interno',
+    )
+  } catch (err) {
+    assert(false, 'RLS & Carteiras', 'Erro nos testes de isolamento de carteiras', String(err))
+  }
+
   // 4. Teste Gestão de Inativos: Cliente inativo na carteira correta
   try {
     const sellerId = 'ciafal-seller-01'
