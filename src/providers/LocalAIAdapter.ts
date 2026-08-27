@@ -162,6 +162,84 @@ export class LocalSalesSupervisorAgent implements SalesSupervisorAgent {
       '2 cotações SAP aguardando aprovação de alçada de margem pela gerência.',
     ]
   }
+
+  async runFullSupervisorDiagnostic(): Promise<{
+    diagnosticoGeral: string
+    pontosAtencao: Array<{
+      id: string
+      vendedor: string
+      problema: string
+      evidencia: string
+      impacto: string
+      recomendacao: string
+      tipo: 'RITMO' | 'LATENCIA' | 'CADENCIA' | 'CARTEIRA'
+    }>
+    feedbacksPositivos: Array<{
+      id: string
+      vendedor: string
+      destaque: string
+      evidencia: string
+      pratica: string
+    }>
+  }> {
+    return {
+      diagnosticoGeral:
+        'A equipe atingiu 75% da meta com R$ 1.875.000 faturados e 637t entregues. O pipeline ponderado (R$ 720k) cobre com folga o Gap de R$ 625k nos 8 dias úteis restantes. Recomenda-se acelerar o follow-up de 8 cotações abertas.',
+      pontosAtencao: [
+        {
+          id: 'pa-1',
+          vendedor: 'João Pedro Representações',
+          problema: 'Ritmo atual abaixo da trajetória e cadência comercial reduzida.',
+          evidencia: 'Atingimento de 57.5% da meta (R$ 230k de R$ 400k) e 8 ações atrasadas.',
+          impacto: 'Risco de não entrega de R$ 170k no fechamento mensal.',
+          recomendacao:
+            'Focar em visitas de reativação presencial na linha de cortes a laser em Patos de Minas.',
+          tipo: 'RITMO',
+        },
+        {
+          id: 'pa-2',
+          vendedor: 'Carlos Mendonça',
+          problema: 'Latência elevada em cotações SAP no estágio inicial.',
+          evidencia:
+            '3 propostas abertas (R$ 280k) aguardando retorno há mais de 48h sem follow-up ativo.',
+          impacto: 'Perda de timing para concorrentes regionais que oferecem entrega imediata.',
+          recomendacao:
+            'Disparar mensagens de follow-up via WhatsApp com tabela CIF garantida para Contagem e Betim.',
+          tipo: 'LATENCIA',
+        },
+        {
+          id: 'pa-3',
+          vendedor: 'Mariana Azevedo',
+          problema: 'Concentração de pipeline em poucas contas de grande porte.',
+          evidencia:
+            '68% do volume previsto depende de apenas 2 propostas em Juiz de Fora e Divinópolis.',
+          impacto: 'Vulnerabilidade caso ocorra adiamento de cronograma de obras dos clientes.',
+          recomendacao:
+            'Ativar 4 clientes em janela de recompra com mix de telas soldadas e vergalhões.',
+          tipo: 'CARTEIRA',
+        },
+      ],
+      feedbacksPositivos: [
+        {
+          id: 'fp-1',
+          vendedor: 'Carlos Mendonça',
+          destaque: 'Excelente assertividade técnica em campo.',
+          evidencia:
+            'Aprovação de laudo dimensional em tubos sanitários e chapas grossas na Usina Vale.',
+          pratica:
+            'Uso consistente do formulário de visita técnica e coleta de requisitos de qualidade.',
+        },
+        {
+          id: 'fp-2',
+          vendedor: 'Marcos Vinícius (Supervisor)',
+          destaque: 'Alta conversão em contas estratégicas da diretoria.',
+          evidencia:
+            'Renovação do contrato trimestral de 26t de tarugos com a Siderúrgica Itaúna (R$ 152k).',
+          pratica: 'Alinhamento direto de condições de pagamento com diretores de compras.',
+        },
+      ],
+    }
+  }
 }
 
 export class LocalAIAdapter implements AIProvider {

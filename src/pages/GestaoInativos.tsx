@@ -578,11 +578,12 @@ export default function GestaoInativos() {
                     <th className="py-3 px-4 font-bold"># / Score</th>
                     <th className="py-3 px-4 font-bold">Cliente</th>
                     <th className="py-3 px-4 font-bold">Dias Inativo</th>
+                    <th className="py-3 px-4 font-bold">Última Visita</th>
+                    <th className="py-3 px-4 font-bold">Próxima Visita</th>
                     <th className="py-3 px-4 font-bold">Histórico</th>
                     <th className="py-3 px-4 font-bold">Potencial R$</th>
                     <th className="py-3 px-4 font-bold">P(vivo)</th>
                     <th className="py-3 px-4 font-bold">Crédito</th>
-                    <th className="py-3 px-4 font-bold">Estoque</th>
                     <th className="py-3 px-4 font-bold">Ação Recomendada</th>
                     <th className="py-3 px-4 font-bold text-right">Ação</th>
                   </tr>
@@ -665,6 +666,24 @@ export default function GestaoInativos() {
                           </span>
                         </td>
 
+                        {/* Última Visita */}
+                        <td className="py-3 px-4">
+                          <span className="font-medium text-slate-800 block text-[11px]">
+                            {idx === 0
+                              ? '08/10/2024 (6d)'
+                              : idx === 1
+                                ? '03/10/2024 (11d)'
+                                : 'Há 45+ dias'}
+                          </span>
+                        </td>
+
+                        {/* Próxima Visita */}
+                        <td className="py-3 px-4">
+                          <span className="font-semibold text-emerald-700 block text-[11px]">
+                            {idx === 0 ? 'Hoje 09:30' : idx === 1 ? '16/10 14:30' : 'Não agendada'}
+                          </span>
+                        </td>
+
                         {/* Histórico */}
                         <td className="py-3 px-4">
                           <span className="font-semibold text-primary block">
@@ -727,13 +746,23 @@ export default function GestaoInativos() {
 
                         {/* Botão Ação */}
                         <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs"
-                            onClick={() => handleGenerateAction(cust)}
-                          >
-                            Criar Ação
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-[11px] text-primary border-primary/30 hover:bg-primary/10"
+                              onClick={() => navigate('/visitas')}
+                            >
+                              Agendar Visita
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-8 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs"
+                              onClick={() => handleGenerateAction(cust)}
+                            >
+                              Criar Ação
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))

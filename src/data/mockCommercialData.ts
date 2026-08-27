@@ -42,6 +42,11 @@ export interface ClienteCarteira {
   proximaAcao: string
   potencial12m: number
   frequenciaDias: number
+  ultimaVisitaData?: string
+  proximaVisitaData?: string
+  diasSemVisita?: number
+  latitude?: number
+  longitude?: number
 }
 
 export interface MembroEquipe {
@@ -57,15 +62,35 @@ export interface MembroEquipe {
   gap: number
   atingimentoPercent: number
   pipeline: number
+  pipelinePonderado?: number
   forecast: number
+  ritmoAtual?: number // R$/dia
+  ritmoNecessario?: number // R$/dia
   toneladasMeta: number
   toneladasRealizado: number
   acoesPendentes: number
   visitasMes: number
   conversaoPercent: number
+  cadenciaScore?: string
+  latenciaMediaHoras?: number
+  tendenciaStatus?: 'ACIMA DA META' | 'NA TRAJETÓRIA' | 'EM RISCO' | 'CRÍTICO'
   telefone: string
   ramal: string
   avatarUrl?: string
+}
+
+export interface CadenciaCanal {
+  canal: string
+  quantidade: number
+  resultadosGerados: string
+  taxaConversao: number
+}
+
+export interface LatenciaEtapa {
+  etapa: string
+  tempoMedio: string
+  slaEsperado: string
+  status: 'normal' | 'alerta' | 'critico'
 }
 
 export type EtapaFunil =
@@ -165,7 +190,7 @@ export interface AcaoDoDia {
   horarioSugerido: string
 }
 
-// 1. MOCK EQUIPE (5 membros)
+// 1. MOCK EQUIPE (5 membros completos com Ritmo, Forecast, Tendência, Cadência e Latência)
 export const mockEquipe: MembroEquipe[] = [
   {
     id: 'eq-admin',
@@ -180,12 +205,18 @@ export const mockEquipe: MembroEquipe[] = [
     gap: 625000,
     atingimentoPercent: 75,
     pipeline: 1200000,
-    forecast: 780000,
-    toneladasMeta: 400,
-    toneladasRealizado: 305,
+    pipelinePonderado: 720000,
+    forecast: 2250000,
+    ritmoAtual: 133928, // ~133.9k/dia
+    ritmoNecessario: 78125, // ~78.1k/dia
+    toneladasMeta: 850,
+    toneladasRealizado: 637,
     acoesPendentes: 3,
     visitasMes: 18,
-    conversaoPercent: 72,
+    conversaoPercent: 75,
+    cadenciaScore: 'Alta (84/100)',
+    latenciaMediaHoras: 18.5,
+    tendenciaStatus: 'NA TRAJETÓRIA',
     telefone: '(11) 98888-0000',
     ramal: '4099',
   },
@@ -202,12 +233,18 @@ export const mockEquipe: MembroEquipe[] = [
     gap: 320000,
     atingimentoPercent: 78.6,
     pipeline: 840000,
-    forecast: 540000,
+    pipelinePonderado: 512000,
+    forecast: 1450000,
+    ritmoAtual: 84285,
+    ritmoNecessario: 40000,
     toneladasMeta: 240,
     toneladasRealizado: 192,
     acoesPendentes: 5,
     visitasMes: 14,
-    conversaoPercent: 76,
+    conversaoPercent: 78,
+    cadenciaScore: 'Excelente (91/100)',
+    latenciaMediaHoras: 14.2,
+    tendenciaStatus: 'ACIMA DA META',
     telefone: '(11) 98888-0001',
     ramal: '4090',
   },
@@ -215,7 +252,7 @@ export const mockEquipe: MembroEquipe[] = [
     id: 'eq-vend1',
     userId: 'qas-vendedor_teste',
     email: 'vendedor.teste@ciafal.local',
-    name: 'Carlos Mendonça (Vendedor 1)',
+    name: 'Carlos Mendonça',
     role: 'VENDEDOR',
     cargo: 'Vendedor Sênior - Indústria & Obras',
     carteiraQtd: 38,
@@ -224,12 +261,18 @@ export const mockEquipe: MembroEquipe[] = [
     gap: 135000,
     atingimentoPercent: 77.5,
     pipeline: 380000,
-    forecast: 245000,
+    pipelinePonderado: 245000,
+    forecast: 580000,
+    ritmoAtual: 33214,
+    ritmoNecessario: 16875,
     toneladasMeta: 95,
     toneladasRealizado: 74,
     acoesPendentes: 6,
     visitasMes: 9,
     conversaoPercent: 78,
+    cadenciaScore: 'Alta (86/100)',
+    latenciaMediaHoras: 16.0,
+    tendenciaStatus: 'NA TRAJETÓRIA',
     telefone: '(11) 98888-0002',
     ramal: '4091',
   },
@@ -237,7 +280,7 @@ export const mockEquipe: MembroEquipe[] = [
     id: 'eq-vend2',
     userId: 'qas-vendedor2_teste',
     email: 'vendedor2.teste@ciafal.local',
-    name: 'Mariana Azevedo (Vendedor 2)',
+    name: 'Mariana Azevedo',
     role: 'VENDEDOR',
     cargo: 'Vendedora Pleno - Construção Civil',
     carteiraQtd: 32,
@@ -246,12 +289,18 @@ export const mockEquipe: MembroEquipe[] = [
     gap: 120000,
     atingimentoPercent: 76.0,
     pipeline: 290000,
-    forecast: 185000,
+    pipelinePonderado: 185000,
+    forecast: 490000,
+    ritmoAtual: 27142,
+    ritmoNecessario: 15000,
     toneladasMeta: 80,
     toneladasRealizado: 61,
     acoesPendentes: 4,
     visitasMes: 7,
     conversaoPercent: 74,
+    cadenciaScore: 'Média (72/100)',
+    latenciaMediaHoras: 22.4,
+    tendenciaStatus: 'NA TRAJETÓRIA',
     telefone: '(11) 98888-0003',
     ramal: '4092',
   },
@@ -268,14 +317,106 @@ export const mockEquipe: MembroEquipe[] = [
     gap: 170000,
     atingimentoPercent: 57.5,
     pipeline: 190000,
-    forecast: 110000,
+    pipelinePonderado: 110000,
+    forecast: 310000,
+    ritmoAtual: 16428,
+    ritmoNecessario: 21250,
     toneladasMeta: 65,
     toneladasRealizado: 38,
     acoesPendentes: 8,
     visitasMes: 12,
     conversaoPercent: 62,
+    cadenciaScore: 'Crítica (48/100)',
+    latenciaMediaHoras: 38.0,
+    tendenciaStatus: 'EM RISCO',
     telefone: '(11) 98888-0005',
     ramal: '4095',
+  },
+]
+
+// MOCK CADÊNCIA COMERCIAL
+export const mockCadenciaData: CadenciaCanal[] = [
+  {
+    canal: 'WhatsApp',
+    quantidade: 142,
+    resultadosGerados: '48 Cotações geradas / 19 pedidos fechados',
+    taxaConversao: 33.8,
+  },
+  {
+    canal: 'Ligações',
+    quantidade: 68,
+    resultadosGerados: '22 Alinhamentos técnicos / 12 cotações',
+    taxaConversao: 32.3,
+  },
+  {
+    canal: 'E-mails',
+    quantidade: 54,
+    resultadosGerados: '31 Propostas e catálogos enviados',
+    taxaConversao: 24.0,
+  },
+  {
+    canal: 'Visitas Comerciais & Técnicas',
+    quantidade: 20,
+    resultadosGerados: '14 Oportunidades avançadas / 8 pedidos',
+    taxaConversao: 70.0,
+  },
+  {
+    canal: 'Follow-ups Ativos',
+    quantidade: 86,
+    resultadosGerados: '38 Propostas resgatadas de estagnação',
+    taxaConversao: 44.2,
+  },
+  {
+    canal: 'Cotações SAP Emitidas',
+    quantidade: 36,
+    resultadosGerados: '21 Fechamentos confirmados no mês',
+    taxaConversao: 58.3,
+  },
+  {
+    canal: 'Oportunidades no Funil',
+    quantidade: 20,
+    resultadosGerados: 'R$ 1.200.000 em volume trabalhado',
+    taxaConversao: 65.0,
+  },
+]
+
+// MOCK LATÊNCIA DO FUNIL
+export const mockLatenciaData: LatenciaEtapa[] = [
+  {
+    etapa: 'Contato → Resposta Inicial',
+    tempoMedio: '2.4 horas',
+    slaEsperado: '≤ 4 horas',
+    status: 'normal',
+  },
+  {
+    etapa: 'Resposta → Oportunidade Qualificada',
+    tempoMedio: '1.2 dias',
+    slaEsperado: '≤ 2 dias',
+    status: 'normal',
+  },
+  {
+    etapa: 'Oportunidade → Cotação SAP',
+    tempoMedio: '3.8 horas',
+    slaEsperado: '≤ 6 horas',
+    status: 'normal',
+  },
+  {
+    etapa: 'Cotação → Follow-up Ativo',
+    tempoMedio: '44 horas',
+    slaEsperado: '≤ 24 horas',
+    status: 'alerta',
+  },
+  {
+    etapa: 'Cotação → Aceite / Pedido',
+    tempoMedio: '4.5 dias',
+    slaEsperado: '≤ 5 dias',
+    status: 'normal',
+  },
+  {
+    etapa: 'Pedido → Faturamento & Expedição',
+    tempoMedio: '1.8 dias',
+    slaEsperado: '≤ 2 dias',
+    status: 'normal',
   },
 ]
 
@@ -318,6 +459,11 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Apresentar proposta de 12t Perfis W com frete CIF',
     potencial12m: 950000,
     frequenciaDias: 30,
+    ultimaVisitaData: '08/10/2024',
+    proximaVisitaData: 'Hoje 09:30',
+    diasSemVisita: 6,
+    latitude: -19.9328,
+    longitude: -44.0539,
   },
   {
     id: 'cli-100002',
@@ -356,6 +502,11 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Confirmar disponibilidade de estoque em Contagem',
     potencial12m: 1100000,
     frequenciaDias: 35,
+    ultimaVisitaData: '08/10/2024',
+    proximaVisitaData: 'Hoje 14:00',
+    diasSemVisita: 6,
+    latitude: -19.9678,
+    longitude: -44.1983,
   },
   {
     id: 'cli-100003',
@@ -1896,6 +2047,303 @@ export const mockNFsCliente: Record<string, NFCliente[]> = {
     },
   ],
 }
+
+// 8. MOCK VISITAS (10 visitas mock: 3 hoje, 3 próximas, 2 concluídas, 2 pendentes/atrasadas)
+import type { Visit } from '@/types/models'
+
+export const mockVisitas: Visit[] = [
+  // 3 PARA HOJE (2 comerciais, 1 técnica)
+  {
+    id: 'vis-001',
+    customer_id: 'cli-100001',
+    customer_name: 'Metalúrgica Santa Rita Ltda',
+    sap_code: '100001',
+    city: 'Contagem',
+    uf: 'MG',
+    contact_name: 'Eduardo Silveira (Gerente de Compras)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: new Date().toISOString().split('T')[0],
+    planned_time: '09:30',
+    objective:
+      'Apresentar proposta formal de 16.5t de Perfis W com tabela CIF para entrega na 1ª quinzena de novembro.',
+    participants: 'Carlos Mendonça, Eduardo Silveira, Roberto (Engenharia)',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -19.9328,
+    target_longitude: -44.0539,
+    next_action: 'Enviar cotação atualizada COT-SAP-98104',
+    next_action_date: '18/10/2024',
+    form_data: {
+      objective: 'Apresentar proposta formal de 16.5t de Perfis W com tabela CIF',
+      participants: 'Carlos Mendonça, Eduardo Silveira',
+      customer_contact: 'Eduardo Silveira',
+      product: 'Perfil W Laminado 200 x 26.6 kg/m',
+      product_family: 'Perfis Laminados',
+      quantity: '16.5 toneladas',
+      discussed_price: 'R$ 6,85 / kg',
+      potential_volume: '95000',
+      commercial_conditions: '28/42 DDL com frete CIF incluso',
+      next_action: 'Emitir cotação SAP com validade de 10 dias',
+    },
+  },
+  {
+    id: 'vis-002',
+    customer_id: 'cli-100002',
+    customer_name: 'Aços & Caldeiraria Betim S.A.',
+    sap_code: '100002',
+    city: 'Betim',
+    uf: 'MG',
+    contact_name: 'Eng. Roberto Vasconcelos',
+    type: 'TECHNICAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: new Date().toISOString().split('T')[0],
+    planned_time: '14:00',
+    objective:
+      'Inspeção técnica dimensional em chanfros e testes de soldabilidade das Chapas Grossas ASTM A36 para tanques de 50m³.',
+    participants: 'Carlos Mendonça, Eng. Roberto, Inspetor de Qualidade',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -19.9678,
+    target_longitude: -44.1983,
+    next_action: 'Emitir laudo técnico e liberar lote no WMS Contagem',
+    next_action_date: '16/10/2024',
+    form_data: {
+      technical_objective: 'Inspeção dimensional e ensaio de soldabilidade em Chapas A36 12.5mm',
+      application: 'Fabricação de tanques de armazenagem 50m³',
+      product: 'Chapa Grossa A36 12.50mm x 1500 x 6000',
+      material: 'ASTM A36 / SAE 1020',
+      dimension: '12.50mm x 1500mm x 6000mm',
+      technical_recommendation: 'Aprovado para processo de calandragem e solda MIG/MAG',
+      next_action: 'Anexar laudo de usina Gerdau ao pedido',
+    },
+  },
+  {
+    id: 'vis-003',
+    customer_id: 'cli-100009',
+    customer_name: 'Engenharia & Pré-Moldados Juiz de Fora Ltda',
+    sap_code: '100009',
+    city: 'Juiz de Fora',
+    uf: 'MG',
+    contact_name: 'Cláudio Ferreira (Diretor de Suprimentos)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: new Date().toISOString().split('T')[0],
+    planned_time: '16:30',
+    objective:
+      'Alinhar cronograma de entrega semanal de 15t Telas Soldadas Q196 e vergalhões 10mm para a obra do Viaduto Norte.',
+    participants: 'Mariana Azevedo, Cláudio Ferreira',
+    user_id: 'qas-vendedor2_teste',
+    seller_name: 'Mariana Azevedo',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -21.7642,
+    target_longitude: -43.3496,
+    next_action: 'Liberar ordem de carregamento programado no SAP',
+    next_action_date: '17/10/2024',
+  },
+
+  // 3 PRÓXIMAS (amanhã e depois)
+  {
+    id: 'vis-004',
+    customer_id: 'cli-100003',
+    customer_name: 'Construtora Horizonte Belo Ltda',
+    sap_code: '100003',
+    city: 'Belo Horizonte',
+    uf: 'MG',
+    contact_name: 'Eng. Marcelo Antunes',
+    type: 'TECHNICAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: '16/10/2024',
+    planned_time: '10:00',
+    objective:
+      'Coleta de amostra de Vergalhão CA-50 no canteiro de obras do Belvedere para ensaio de tração e dobra.',
+    participants: 'Carlos Mendonça, Eng. Marcelo Antunes',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -19.9217,
+    target_longitude: -43.9378,
+    next_action: 'Encaminhar amostra ao laboratório credenciado',
+    next_action_date: '17/10/2024',
+  },
+  {
+    id: 'vis-005',
+    customer_id: 'cli-100010',
+    customer_name: 'Montagens Industriais Divinópolis S.A.',
+    sap_code: '100010',
+    city: 'Divinópolis',
+    uf: 'MG',
+    contact_name: 'Luciano Diniz (Gerente Industrial)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: '16/10/2024',
+    planned_time: '14:30',
+    objective:
+      'Fechamento de contrato de fornecimento de 14t Perfis I & H Açominas com condição 35 DDL.',
+    participants: 'Mariana Azevedo, Luciano Diniz',
+    user_id: 'qas-vendedor2_teste',
+    seller_name: 'Mariana Azevedo',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -20.1439,
+    target_longitude: -44.8919,
+    next_action: 'Assinatura eletrônica do contrato de fornecimento',
+    next_action_date: '18/10/2024',
+  },
+  {
+    id: 'vis-006',
+    customer_id: 'cli-100016',
+    customer_name: 'Implementos Agrícolas Alto Paranaíba Ltda',
+    sap_code: '100016',
+    city: 'Patos de Minas',
+    uf: 'MG',
+    contact_name: 'Marcos Vinícius Cunha (Diretor)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: '17/10/2024',
+    planned_time: '11:00',
+    objective:
+      'Revisão técnica e comercial de cortes a laser em Vigas U para a linha de plantio 2025.',
+    participants: 'João Pedro, Marcos Vinícius Cunha',
+    user_id: 'qas-representante_teste',
+    seller_name: 'João Pedro Representações',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -18.5789,
+    target_longitude: -46.5181,
+    next_action: 'Emitir pedido de 13.5t no SAP S/4HANA',
+    next_action_date: '18/10/2024',
+  },
+
+  // 2 CONCLUÍDAS
+  {
+    id: 'vis-007',
+    customer_id: 'cli-100006',
+    customer_name: 'Inox Vale do Aço Tubos Especiais Ltda',
+    sap_code: '100006',
+    city: 'Ipatinga',
+    uf: 'MG',
+    contact_name: 'Valéria Andrade (Engenheira Química)',
+    type: 'TECHNICAL_VISIT',
+    status: 'CONCLUIDA',
+    planned_date: '08/10/2024',
+    planned_time: '11:00',
+    objective:
+      'Validação de rugosidade Ra < 0.8um em Tubos Inox Sanitários 304 para indústria de laticínios.',
+    participants: 'Carlos Mendonça, Valéria Andrade',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    latitude: -19.4688,
+    longitude: -42.5369,
+    target_latitude: -19.4688,
+    target_longitude: -42.5369,
+    gps_accuracy: 8,
+    is_within_geofence: true,
+    geofence_distance_meters: 15,
+    started_at: '2024-10-08T11:02:10Z',
+    ended_at: '2024-10-08T12:15:30Z',
+    duration_minutes: 73,
+    audio_transcription:
+      'Realizada medição de rugosidade com rugosímetro Mitutoyo. Lote de tubos polidos 304 aprovado com média Ra 0.45um. Engenharia do cliente liberou a cotação de 7.2 toneladas.',
+    ai_summary:
+      'Visita técnica concluída com sucesso. Rugosidade dos Tubos Sanitários 304 aprovada em 0.45um. Engenharia liberou cotação COT-98110 de 7.2 toneladas. Próxima ação: enviar certificado de usina Gerdau.',
+    ai_summary_status: 'ACCEPTED',
+    next_action: 'Enviar cotação com certificado de conformidade sanitária',
+    next_action_date: '10/10/2024',
+    form_data: {
+      technical_objective: 'Validação de rugosidade em tubos sanitários',
+      application: 'Linha de pasteurização de leite e iogurte',
+      product: 'Tubo Sanitário OD Polido 304 2"',
+      material: 'AISI 304',
+      tests_performed: 'Rugosimetria Ra, dimensional e estanqueidade',
+      technical_recommendation: 'Lote 100% aprovado para aplicação grau alimentício',
+      next_action: 'Emitir cotação formal com prazo 28 DDL',
+    },
+  },
+  {
+    id: 'vis-008',
+    customer_id: 'cli-100019',
+    customer_name: 'Siderúrgica & Fundição Itaúna S.A.',
+    sap_code: '100019',
+    city: 'Itaúna',
+    uf: 'MG',
+    contact_name: 'Dr. Geraldo Nogueira (Diretor)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'CONCLUIDA',
+    planned_date: '03/10/2024',
+    planned_time: '15:00',
+    objective:
+      'Renovação do contrato trimestral de tarugos laminados 1020 e sucata prensada (26 toneladas).',
+    participants: 'Marcos Vinícius, Dr. Geraldo Nogueira',
+    user_id: 'qas-supervisor_teste',
+    seller_name: 'Marcos Vinícius',
+    supervisor_id: 'qas-admin_teste',
+    latitude: -20.0754,
+    longitude: -44.5768,
+    target_latitude: -20.0754,
+    target_longitude: -44.5768,
+    gps_accuracy: 12,
+    is_within_geofence: true,
+    geofence_distance_meters: 25,
+    started_at: '2024-10-03T15:05:00Z',
+    ended_at: '2024-10-03T16:30:00Z',
+    duration_minutes: 85,
+    ai_summary:
+      'Reunião comercial de alta diretoria. Contrato trimestral de 26t de Tarugos Laminados 1020 renovado no valor de R$ 152.000,00. NF-0098421 já faturada.',
+    ai_summary_status: 'ACCEPTED',
+    next_action: 'Acompanhar entrega rodoviária da 1ª remessa',
+    next_action_date: '07/10/2024',
+  },
+
+  // 2 PENDENTES / ATRASADAS
+  {
+    id: 'vis-009',
+    customer_id: 'cli-100008',
+    customer_name: 'Estruturas Metálicas Sete Lagoas Ltda',
+    sap_code: '100008',
+    city: 'Sete Lagoas',
+    uf: 'MG',
+    contact_name: 'Antônio Prado (Sócio-proprietário)',
+    type: 'COMMERCIAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: '05/10/2024', // Atrasada
+    planned_time: '14:00',
+    objective:
+      'Visita de reativação presencial da linha de Perfis U e Cantoneiras após 55 dias de inatividade.',
+    participants: 'Carlos Mendonça, Antônio Prado',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -19.4589,
+    target_longitude: -44.2483,
+    next_action: 'Reagendar visita com urgência e ofertar desconto de frete',
+    next_action_date: '19/10/2024',
+  },
+  {
+    id: 'vis-010',
+    customer_id: 'cli-100021',
+    customer_name: 'Metalmecânica Zona da Mata Ltda',
+    sap_code: '100021',
+    city: 'Ubá',
+    uf: 'MG',
+    contact_name: 'Renato Guimarães',
+    type: 'TECHNICAL_VISIT',
+    status: 'PLANEJADA',
+    planned_date: '09/10/2024', // Atrasada
+    planned_time: '09:00',
+    objective:
+      'Análise de tolerância de conformação a frio em Tubos Finos Oblongos 20x40 para linha moveleira.',
+    participants: 'Carlos Mendonça, Renato Guimarães',
+    user_id: 'qas-vendedor_teste',
+    seller_name: 'Carlos Mendonça',
+    supervisor_id: 'qas-supervisor_teste',
+    target_latitude: -21.1206,
+    target_longitude: -42.9431,
+    next_action: 'Contatar engenharia de produto para remarcar teste prático',
+    next_action_date: '20/10/2024',
+  },
+]
 
 // 7. MOCK AÇÕES DO DIA (MEU DIA)
 export const mockAcoesDoDia: AcaoDoDia[] = [

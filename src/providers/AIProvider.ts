@@ -115,6 +115,25 @@ export interface SalesSupervisorAgent {
     coachingRecommendation: string
   }>
   identifyBottlenecks(teamId?: string): Promise<string[]>
+  runFullSupervisorDiagnostic?(): Promise<{
+    diagnosticoGeral: string
+    pontosAtencao: Array<{
+      id: string
+      vendedor: string
+      problema: string
+      evidencia: string
+      impacto: string
+      recomendacao: string
+      tipo: 'RITMO' | 'LATENCIA' | 'CADENCIA' | 'CARTEIRA'
+    }>
+    feedbacksPositivos: Array<{
+      id: string
+      vendedor: string
+      destaque: string
+      evidencia: string
+      pratica: string
+    }>
+  }>
 }
 
 import type {

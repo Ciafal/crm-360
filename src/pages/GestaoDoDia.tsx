@@ -1,36 +1,56 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Users,
   TrendingUp,
   Target,
+  AlertTriangle,
   CheckCircle2,
   Clock,
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-  ShieldAlert,
-  ChevronRight,
-  PlusCircle,
-  Calendar,
-  Sparkles,
-  MessageSquare,
-  Phone,
-  RotateCcw,
-  UserCheck,
-  FileText,
   DollarSign,
+  Briefcase,
+  ChevronRight,
+  Sparkles,
+  ArrowUpRight,
+  ShieldAlert,
+  Flame,
+  UserCheck,
+  Calendar,
   Layers,
-  Search,
+  PhoneCall,
+  MessageSquare,
+  Mail,
+  MapPin,
+  RefreshCw,
+  Activity,
+  Award,
+  ArrowRight,
+  Plus,
   Eye,
-  Filter,
+  Info,
 } from 'lucide-react'
-import { useAuth } from '@/hooks/use-auth'
-import { useToast } from '@/hooks/use-toast'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  mockEquipe,
+  mockClientes,
+  mockFunilOportunidades,
+  mockAcoesDoDia,
+  mockVisitas,
+  mockCadenciaData,
+  mockLatenciaData,
+  type MembroEquipe,
+} from '@/data/mockCommercialData'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -39,608 +59,1090 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Textarea } from '@/components/ui/textarea'
-import { defaultBIProvider } from '@/providers/QlikProvider'
-import { defaultAIProvider } from '@/providers/LocalAIAdapter'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-interface SellerKPI {
-  id: string
-  name: string
-  role: string
-  avatar?: string
-  plannedActions: number
-  completedActions: number
-  pendingActions: number
-  overdueActions: number
-  rescheduledActions: number
-  opportunities: number
-  potentialRevenue: number
-  potentialTons: number
-  conversionRate: number
-}
-
-const MOCK_SELLERS: SellerKPI[] = [
-  {
-    id: 'vendedor-001',
-    name: 'Carlos Mendonça',
-    role: 'Vendedor Sênior',
-    plannedActions: 10,
-    completedActions: 8,
-    pendingActions: 1,
-    overdueActions: 1,
-    rescheduledActions: 0,
-    opportunities: 3,
-    potentialRevenue: 485000,
-    potentialTons: 62.5,
-    conversionRate: 80,
-  },
-  {
-    id: 'vendedor-002',
-    name: 'Mariana Azevedo',
-    role: 'Vendedora Pleno',
-    plannedActions: 8,
-    completedActions: 6,
-    pendingActions: 2,
-    overdueActions: 0,
-    rescheduledActions: 1,
-    opportunities: 2,
-    potentialRevenue: 340000,
-    potentialTons: 44.0,
-    conversionRate: 75,
-  },
-  {
-    id: 'vendedor-003',
-    name: 'Lucas Brandão',
-    role: 'Vendedor Júnior',
-    plannedActions: 6,
-    completedActions: 4,
-    pendingActions: 2,
-    overdueActions: 1,
-    rescheduledActions: 1,
-    opportunities: 1,
-    potentialRevenue: 210000,
-    potentialTons: 28.0,
-    conversionRate: 66,
-  },
-  {
-    id: 'vendedor-004',
-    name: 'Juliana Paes',
-    role: 'Especialista Inox',
-    plannedActions: 9,
-    completedActions: 8,
-    pendingActions: 0,
-    overdueActions: 0,
-    rescheduledActions: 1,
-    opportunities: 4,
-    potentialRevenue: 620000,
-    potentialTons: 82.0,
-    conversionRate: 88,
-  },
-  {
-    id: 'vendedor-005',
-    name: 'Rafael Guimarães',
-    role: 'Vendedor Pleno',
-    plannedActions: 7,
-    completedActions: 4,
-    pendingActions: 2,
-    overdueActions: 1,
-    rescheduledActions: 0,
-    opportunities: 1,
-    potentialRevenue: 195000,
-    potentialTons: 25.0,
-    conversionRate: 57,
-  },
-]
-
 export default function GestaoDoDia() {
-  const { user } = useAuth()
   const navigate = useNavigate()
-  const { toast } = useToast()
 
-  const [dateFilter, setDateFilter] = useState<'hoje' | 'ontem' | '7dias' | 'custom'>('hoje')
-  const [selectedSeller, setSelectedSeller] = useState<SellerKPI | null>(null)
-  const [search, setSearch] = useState('')
-  const [managerActionOpen, setManagerActionOpen] = useState(false)
-  const [actionFormData, setActionFormData] = useState({
-    customerId: '',
-    customerName: '',
-    recommendation: '',
-    managerNote: '',
-    priority: 5,
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [periodo, setPeriodo] = useState('mes')
+  const [activeTab, setActiveTab] = useState('geral')
+
+  // Estado para Drill-down do vendedor
+  const [selectedSeller, setSelectedSeller] = useState<MembroEquipe | null>(null)
+  const [drilldownModalOpen, setDrilldownModalOpen] = useState(false)
+
+  // Ação criada via alerta
+  const [actionModalOpen, setActionModalOpen] = useState(false)
+  const [actionData, setActionData] = useState({
+    title: '',
+    seller: '',
+    priority: 'Alta',
+    dueDate: 'Hoje',
   })
 
-  const formatBRL = (val: number) => {
-    return val.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 0,
+  // Métricas Consolidadas do Supervisor
+  const kpis = useMemo(() => {
+    return {
+      metaMensal: 2500000,
+      realizadoMensal: 1875000,
+      gap: 625000,
+      atingimento: 75.0,
+      metaToneladas: 850,
+      realizadoToneladas: 637,
+      gapToneladas: 213,
+      metaAnual: 30000000,
+      realizadoAnual: 9375000,
+      forecastMensal: 2250000,
+      pipelineAberto: 1200000,
+      pipelinePonderado: 720000,
+      coberturaMeta: 125, // %
+      // Execução
+      acoesPlanejadas: 24,
+      acoesConcluidas: 18,
+      acoesPendentes: 4,
+      acoesVencidas: 2,
+      visitasPlanejadas: 12,
+      visitasRealizadas: 8,
+      // Carteira
+      clientesAtivos: 25,
+      clientesEmRisco: 4,
+      clientesRecompra: 6,
+      clientesInativos: 3,
+      clientesReativadosMes: 2,
+      // Funil
+      totalOportunidades: 20,
+      cotacoesQtd: 8,
+      cotacoesValor: 420000,
+      negociacoesQtd: 5,
+      negociacoesValor: 310000,
+      pedidosQtd: 3,
+      pedidosValor: 185000,
+      // Ritmo
+      diasUteisPassados: 14,
+      diasUteisRestantes: 8,
+      ritmoAtualDia: 133928, // 1875000 / 14
+      ritmoNecessarioDia: 78125, // 625000 / 8
+      ritmoAtualTonsDia: 45.5,
+      ritmoNecessarioTonsDia: 26.6,
+    }
+  }, [])
+
+  const handleOpenDrilldown = (seller: MembroEquipe) => {
+    setSelectedSeller(seller)
+    setDrilldownModalOpen(true)
+  }
+
+  const handleCreateActionFromAlert = (title: string, sellerName: string) => {
+    setActionData({
+      title,
+      seller: sellerName,
+      priority: 'Alta',
+      dueDate: 'Hoje',
+    })
+    setActionModalOpen(true)
+  }
+
+  const handleConfirmAction = () => {
+    setActionModalOpen(false)
+    toast.success('Ação de intervenção criada com sucesso!', {
+      description: `Atribuída para ${actionData.seller}. Notificação enviada. Origem: AI_SUPERVISOR_RECOMMENDATION`,
     })
   }
 
-  // KPIs consolidados da equipe
-  const totals = useMemo(() => {
-    return MOCK_SELLERS.reduce(
-      (acc, s) => {
-        acc.sellersCount += 1
-        acc.planned += s.plannedActions
-        acc.completed += s.completedActions
-        acc.pending += s.pendingActions
-        acc.overdue += s.overdueActions
-        acc.rescheduled += s.rescheduledActions
-        acc.opportunities += s.opportunities
-        acc.potentialRevenue += s.potentialRevenue
-        acc.potentialTons += s.potentialTons
-        return acc
-      },
-      {
-        sellersCount: 0,
-        planned: 0,
-        completed: 0,
-        pending: 0,
-        overdue: 0,
-        rescheduled: 0,
-        opportunities: 0,
-        potentialRevenue: 0,
-        potentialTons: 0,
-      },
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto py-8">
+        <PageLoadingState message="Carregando Dashboard do Supervisor CIAFAL..." />
+      </div>
     )
-  }, [])
+  }
 
-  // Compromissos comerciais do Microsoft 365
-  const commercialMeetings = useMemo(() => {
-    return [
-      {
-        id: 'mtg-1',
-        seller: 'Carlos Mendonça',
-        title: 'Reunião Comercial de Alinhamento Safra - Metalúrgica Santa Rita',
-        time: '14:30 - 15:30',
-        type: 'Microsoft Teams',
-        customer: 'Metalúrgica Santa Rita Ltda',
-        isCommercial: true,
-      },
-      {
-        id: 'mtg-2',
-        seller: 'Carlos Mendonça',
-        title: 'Visita Técnica e Negociação Inox 316L - Tanques Paulista',
-        time: 'Amanhã às 10:00',
-        type: 'Presencial / Sertãozinho',
-        customer: 'Caldeiraria & Tanques Industrial Paulista',
-        isCommercial: true,
-      },
-    ]
-  }, [])
-
-  const filteredSellers = useMemo(() => {
-    if (!search) return MOCK_SELLERS
-    return MOCK_SELLERS.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-  }, [search])
-
-  const handleCreateManagerAction = () => {
-    if (!actionFormData.customerName || !actionFormData.recommendation) {
-      toast({
-        title: 'Campos obrigatórios',
-        description: 'Informe o cliente e a recomendação comercial.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    toast({
-      title: 'Ação Gerencial Atribuída',
-      description: `Ação para ${actionFormData.customerName} enviada para ${selectedSeller?.name}. Origem auditada (MANAGER_ASSIGNED).`,
-    })
-    setManagerActionOpen(false)
-    setActionFormData({
-      customerId: '',
-      customerName: '',
-      recommendation: '',
-      managerNote: '',
-      priority: 5,
-    })
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto py-8">
+        <PageErrorState
+          title="Erro ao carregar Dashboard do Supervisor."
+          description={error}
+          onRetry={() => {
+            setError(null)
+            setLoading(false)
+          }}
+        />
+      </div>
+    )
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6 pb-20 animate-fade-in">
-      {/* Banner de Modo Gerencial se Vendedor Selecionado */}
-      {selectedSeller && (
-        <div className="bg-primary text-white p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/20 rounded-xl">
-              <Eye className="w-5 h-5 text-white" />
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
+      {/* CABEÇALHO DO SUPERVISOR */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="p-2.5 bg-primary/10 rounded-2xl">
+              <Award className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <span className="text-xs uppercase font-bold tracking-wider text-blue-200 block">
-                Visualização Gerencial do Supervisor
-              </span>
-              <p className="text-sm font-semibold text-white">
-                Visualizando Meu Dia de: <strong>{selectedSeller.name}</strong> · Data:{' '}
-                {new Date().toLocaleDateString('pt-BR')}
+              <div className="flex items-center gap-2">
+                <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
+                  Gestão do Dia & Painel do Supervisor
+                </h1>
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-emerald-50 text-emerald-700 border-emerald-300"
+                >
+                  Supervisão Regional CIAFAL
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground font-sans mt-0.5">
+                Monitoramento em tempo real de metas, ritmo, funil, visitas presenciais, cadência e
+                latência da equipe.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-xs"
-              onClick={() => {
-                setManagerActionOpen(true)
-              }}
-            >
-              <PlusCircle className="w-3.5 h-3.5 mr-1" /> Atribuir Ação Gerencial
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="text-xs text-primary bg-white hover:bg-white/90 font-semibold"
-              onClick={() => setSelectedSeller(null)}
-            >
-              Voltar ao Cockpit
-            </Button>
-          </div>
         </div>
-      )}
 
-      {/* Header do Cockpit */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
-              Gestão do Dia
-            </h1>
-            <Badge
-              variant="outline"
-              className="text-xs bg-primary/5 text-primary border-primary/20"
-            >
-              Cockpit do Supervisor
-            </Badge>
+        <div className="flex items-center gap-3">
+          <Select value={periodo} onValueChange={setPeriodo}>
+            <SelectTrigger className="h-9 w-36 text-xs rounded-xl">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hoje">Hoje</SelectItem>
+              <SelectItem value="semana">Esta Semana</SelectItem>
+              <SelectItem value="mes">Mês Atual (Outubro)</SelectItem>
+              <SelectItem value="ano">Ano 2024</SelectItem>
+              <SelectItem value="personalizado">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            size="sm"
+            onClick={() => {
+              setLoading(true)
+              setTimeout(() => {
+                setLoading(false)
+                toast.success('Métricas atualizadas com o SAP S/4HANA!')
+              }, 300)
+            }}
+            className="h-9 gap-1.5 text-xs bg-primary text-white font-semibold"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Atualizar Dados
+          </Button>
+        </div>
+      </div>
+
+      {/* ALERTAS INTELIGENTES DO SUPERVISOR */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/30 text-white p-3.5 rounded-2xl flex flex-col justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+            <TrendingUp className="w-4 h-4" /> Projeção de Fechamento
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Acompanhamento consolidado de execução comercial, metas do dia e suporte aos vendedores.
+          <p className="text-xs text-slate-200 font-medium">
+            Ritmo atual projeta fechamento em <strong>89%</strong> da meta mensal com base no
+            histórico de dias úteis.
           </p>
+          <div className="text-[10px] text-emerald-300 font-semibold flex items-center justify-between pt-1 border-t border-white/10">
+            <span>Forecast: R$ 2.25M</span>
+            <span>+14% vs mês anterior</span>
+          </div>
         </div>
 
-        {/* Filtros de Período */}
-        <div className="flex items-center gap-1.5 bg-white/80 p-1 rounded-full border border-border/60 shadow-xs">
+        <div className="bg-gradient-to-br from-amber-950 to-slate-900 border border-amber-500/30 text-white p-3.5 rounded-2xl flex flex-col justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4" /> Alerta de Gap / Funil
+          </div>
+          <p className="text-xs text-slate-200 font-medium">
+            Pipeline ponderado (<strong>R$ 720k</strong>) cobre o Gap (<strong>R$ 625k</strong>),
+            mas exige aceleração de cotações em 48h.
+          </p>
           <Button
+            variant="ghost"
             size="sm"
-            variant={dateFilter === 'hoje' ? 'default' : 'ghost'}
-            className="rounded-full text-xs h-8 px-3"
-            onClick={() => setDateFilter('hoje')}
+            onClick={() =>
+              handleCreateActionFromAlert(
+                'Acelerar follow-up de propostas abertas com vendedor',
+                'Carlos Mendonça',
+              )
+            }
+            className="h-6 text-[10px] text-amber-300 hover:text-white p-0 justify-start"
           >
-            Hoje
+            + Criar ação para equipe
           </Button>
+        </div>
+
+        <div className="bg-gradient-to-br from-rose-950 to-slate-900 border border-rose-500/30 text-white p-3.5 rounded-2xl flex flex-col justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2 text-rose-400 font-bold text-xs uppercase tracking-wider">
+            <Clock className="w-4 h-4" /> Latência em Cotações
+          </div>
+          <p className="text-xs text-slate-200 font-medium">
+            Existem <strong>R$ 420 mil</strong> em 8 cotações sem follow-up há mais de 48h (João
+            Pedro e Carlos).
+          </p>
           <Button
+            variant="ghost"
             size="sm"
-            variant={dateFilter === 'ontem' ? 'default' : 'ghost'}
-            className="rounded-full text-xs h-8 px-3"
-            onClick={() => setDateFilter('ontem')}
+            onClick={() =>
+              handleCreateActionFromAlert(
+                'Realizar follow-up imediato de 8 cotações estagnadas',
+                'João Pedro',
+              )
+            }
+            className="h-6 text-[10px] text-rose-300 hover:text-white p-0 justify-start"
           >
-            Ontem
+            + Cobrar follow-up
           </Button>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-950 to-slate-900 border border-blue-500/30 text-white p-3.5 rounded-2xl flex flex-col justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2 text-blue-400 font-bold text-xs uppercase tracking-wider">
+            <ShieldAlert className="w-4 h-4" /> Janela de Recompra
+          </div>
+          <p className="text-xs text-slate-200 font-medium">
+            <strong>3 clientes prioritários</strong> (Metais Betim, Usinagem Vale e Santa Rita)
+            estão fora da frequência normal de recompra.
+          </p>
           <Button
+            variant="ghost"
             size="sm"
-            variant={dateFilter === '7dias' ? 'default' : 'ghost'}
-            className="rounded-full text-xs h-8 px-3"
-            onClick={() => setDateFilter('7dias')}
+            onClick={() => navigate('/inativos')}
+            className="h-6 text-[10px] text-blue-300 hover:text-white p-0 justify-start"
           >
-            Últimos 7 dias
+            Ver Gestão de Carteira →
           </Button>
         </div>
       </div>
 
-      {/* CALENDÁRIO COMERCIAL MICROSOFT 365 (SUPERVISÃO) */}
-      <Card className="rounded-2xl border-sky-200 bg-sky-50/50 p-4 shadow-xs">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-sky-600 text-white rounded-lg">
-              <Calendar className="w-4 h-4" />
+      {/* KPIS GERAIS DO TOPO (CARDS COMPLETOS) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {/* Card 1: Meta Mensal R$ */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Meta Mensal Equipe
+          </span>
+          <span className="font-serif text-xl font-bold text-primary mt-1">R$ 2.500.000</span>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Realizado: R$ 1.875k</span>
+              <strong className="text-emerald-600">75%</strong>
             </div>
-            <span className="font-serif font-bold text-sm text-sky-950">
-              Compromissos Comerciais da Equipe (Microsoft 365)
-            </span>
-            <Badge variant="outline" className="text-[10px] bg-white text-sky-700 border-sky-300">
-              Filtro de Relevância Comercial Ativo · Compromissos Privados Ocultados
+            <Progress value={75} className="h-1.5" />
+          </div>
+        </Card>
+
+        {/* Card 2: Gap R$ */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Gap Financeiro
+          </span>
+          <span className="font-serif text-xl font-bold text-amber-700 mt-1">R$ 625.000</span>
+          <span className="text-[10px] text-muted-foreground block mt-2">
+            Faltam <strong>8 dias úteis</strong> no mês
+          </span>
+        </Card>
+
+        {/* Card 3: Meta Toneladas */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Volume / Toneladas
+          </span>
+          <span className="font-serif text-xl font-bold text-slate-900 mt-1">637t / 850t</span>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Faltam 213t</span>
+              <strong className="text-primary">74.9%</strong>
+            </div>
+            <Progress value={74.9} className="h-1.5" />
+          </div>
+        </Card>
+
+        {/* Card 4: Meta Anual */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Meta Anual 2024
+          </span>
+          <span className="font-serif text-xl font-bold text-primary mt-1">R$ 30.000.000</span>
+          <span className="text-[10px] text-muted-foreground block mt-2">
+            Realizado YTD: <strong>R$ 9.375.000</strong>
+          </span>
+        </Card>
+
+        {/* Card 5: Pipeline & Ponderado */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Pipeline Ponderado
+          </span>
+          <span className="font-serif text-xl font-bold text-emerald-700 mt-1">R$ 720.000</span>
+          <span className="text-[10px] text-muted-foreground block mt-2">
+            Aberto total: <strong>R$ 1.200.000</strong>
+          </span>
+        </Card>
+
+        {/* Card 6: Cobertura da Meta */}
+        <Card className="p-3.5 rounded-2xl border bg-white/90 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Cobertura da Meta
+          </span>
+          <span className="font-serif text-xl font-bold text-primary mt-1">125%</span>
+          <span className="text-[10px] text-emerald-600 font-semibold block mt-2">
+            Forecast: <strong>R$ 2.250.000</strong>
+          </span>
+        </Card>
+      </div>
+
+      {/* SEÇÕES DE ANÁLISE: EXECUÇÃO, CARTEIRA E FUNIL */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* SEÇÃO 1: EXECUÇÃO */}
+        <Card className="p-4 rounded-2xl border border-border/60 bg-white/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b pb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              <h3 className="font-serif font-bold text-sm text-primary">Execução & Atividades</h3>
+            </div>
+            <Badge variant="outline" className="text-[10px] font-bold">
+              24 Ações Totais
             </Badge>
           </div>
-          <span className="text-xs text-sky-700 font-medium">
-            Modo Demonstração Microsoft Graph
-          </span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {commercialMeetings.map((m) => (
-            <div
-              key={m.id}
-              className="bg-white p-3 rounded-xl border border-sky-100 flex items-start justify-between text-xs"
-            >
-              <div>
-                <span className="font-bold text-sky-900 block">{m.title}</span>
-                <span className="text-muted-foreground mt-0.5 block">
-                  Vendedor: <strong>{m.seller}</strong> · Cliente: {m.customer}
-                </span>
-              </div>
-              <div className="text-right shrink-0 ml-2">
-                <Badge className="bg-sky-100 text-sky-800 border-none text-[10px]">{m.type}</Badge>
-                <span className="text-[11px] text-muted-foreground mt-1 block font-medium">
-                  {m.time}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
 
-      {/* RESUMO GERENCIAL DIÁRIO AUTOMÁTICO (IA SUPERVISOR) */}
-      <Card className="rounded-3xl border-primary/20 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 text-white p-6 shadow-xl relative overflow-hidden">
-        {' '}
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-white/10 rounded-2xl shrink-0">
-            <Sparkles className="w-6 h-6 text-amber-300" />
-          </div>
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                Resumo Gerencial Diário · Sales Supervisor Agent
-              </span>
-              <span className="text-xs text-slate-400">
-                Atualizado há 15 min · Confiança IA: 94% · Origem: Qlik + SAP
-              </span>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-border/40">
+              <span className="text-muted-foreground block text-[10px]">Ações Concluídas</span>
+              <strong className="text-emerald-700 text-base">{kpis.acoesConcluidas}</strong>
             </div>
-            <p className="text-sm sm:text-base font-serif text-white/95 leading-relaxed">
-              "Equipe com <strong>{totals.sellersCount} vendedores ativos</strong> e{' '}
-              <strong>{totals.planned} ações comerciais planejadas</strong> para hoje. Já foram
-              concluídas <strong>{totals.completed} ações</strong> (
-              {Math.round((totals.completed / totals.planned) * 100)}% de conversão), com{' '}
-              <strong>{formatBRL(totals.potentialRevenue)}</strong> e{' '}
-              <strong>{totals.potentialTons} ton</strong> de potencial trabalhado."
-            </p>
-            <div className="pt-2 flex flex-wrap gap-4 text-xs text-amber-200">
-              <span>
-                ⚠ <strong>{totals.overdue} ações críticas</strong> vencidas requerem atenção
-                imediata.
-              </span>
-              <span>
-                📈 <strong>{totals.opportunities} novas oportunidades</strong> geradas no dia.
-              </span>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-border/40">
+              <span className="text-muted-foreground block text-[10px]">Ações Pendentes</span>
+              <strong className="text-amber-700 text-base">{kpis.acoesPendentes}</strong>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-border/40">
+              <span className="text-muted-foreground block text-[10px]">Ações Vencidas</span>
+              <strong className="text-rose-700 text-base">{kpis.acoesVencidas}</strong>
+            </div>
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-border/40">
+              <span className="text-muted-foreground block text-[10px]">Visitas Realizadas</span>
+              <strong className="text-primary text-base">
+                {kpis.visitasRealizadas} / {kpis.visitasPlanejadas}
+              </strong>
             </div>
           </div>
-        </div>
-      </Card>
 
-      {/* KPIS CONSOLIDADOS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase">
-            Planejado
-          </span>
-          <span className="font-serif text-2xl font-bold text-primary mt-1 block">
-            {totals.planned}
-          </span>
-          <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
-            100% da meta diária
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/visitas')}
+            className="w-full h-8 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1.5"
+          >
+            <MapPin className="w-3.5 h-3.5" /> Ver Módulo de Visitas Presenciais →
+          </Button>
         </Card>
 
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-emerald-700 uppercase">Concluído</span>
-          <span className="font-serif text-2xl font-bold text-emerald-600 mt-1 block">
-            {totals.completed}
-          </span>
-          <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">
-            {Math.round((totals.completed / totals.planned) * 100)}% de execução
-          </span>
+        {/* SEÇÃO 2: CARTEIRA */}
+        <Card className="p-4 rounded-2xl border border-border/60 bg-white/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b pb-2">
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-primary" />
+              <h3 className="font-serif font-bold text-sm text-primary">Saúde da Carteira</h3>
+            </div>
+            <Badge variant="outline" className="text-[10px] font-bold">
+              25 Clientes Gerenciados
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-emerald-50/60 p-2.5 rounded-xl border border-emerald-200/60">
+              <span className="text-emerald-800 block text-[10px] font-semibold">
+                Ativos Regulares
+              </span>
+              <strong className="text-emerald-800 text-base">{kpis.clientesAtivos}</strong>
+            </div>
+            <div className="bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60">
+              <span className="text-amber-800 block text-[10px] font-semibold">
+                Em Risco de Perda
+              </span>
+              <strong className="text-amber-800 text-base">{kpis.clientesEmRisco}</strong>
+            </div>
+            <div className="bg-blue-50/60 p-2.5 rounded-xl border border-blue-200/60">
+              <span className="text-blue-800 block text-[10px] font-semibold">Janela Recompra</span>
+              <strong className="text-blue-800 text-base">{kpis.clientesRecompra}</strong>
+            </div>
+            <div className="bg-purple-50/60 p-2.5 rounded-xl border border-purple-200/60">
+              <span className="text-purple-800 block text-[10px] font-semibold">
+                Reativados no Mês
+              </span>
+              <strong className="text-purple-800 text-base">+{kpis.clientesReativadosMes}</strong>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/inativos')}
+            className="w-full h-8 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1.5"
+          >
+            <Users className="w-3.5 h-3.5" /> Abrir Gestão de Carteira 360º →
+          </Button>
         </Card>
 
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-amber-700 uppercase">Pendente</span>
-          <span className="font-serif text-2xl font-bold text-amber-600 mt-1 block">
-            {totals.pending}
-          </span>
-          <span className="text-[10px] text-muted-foreground mt-0.5 block">Em andamento</span>
-        </Card>
+        {/* SEÇÃO 3: FUNIL DE VENDAS */}
+        <Card className="p-4 rounded-2xl border border-border/60 bg-white/80 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <h3 className="font-serif font-bold text-sm text-primary">Estágios do Funil</h3>
+            </div>
+            <Badge variant="outline" className="text-[10px] font-bold">
+              20 Oportunidades
+            </Badge>
+          </div>
 
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-rose-700 uppercase">Vencido</span>
-          <span className="font-serif text-2xl font-bold text-rose-600 mt-1 block">
-            {totals.overdue}
-          </span>
-          <span className="text-[10px] text-rose-600 font-semibold mt-0.5 block">
-            Atenção requerida
-          </span>
-        </Card>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="bg-slate-50 p-2 rounded-xl border border-border/40 text-center">
+              <span className="text-muted-foreground block text-[9px] uppercase font-bold">
+                Cotações
+              </span>
+              <strong className="text-primary text-sm block">8</strong>
+              <span className="text-[10px] text-muted-foreground">R$ 420k</span>
+            </div>
+            <div className="bg-slate-50 p-2 rounded-xl border border-border/40 text-center">
+              <span className="text-muted-foreground block text-[9px] uppercase font-bold">
+                Negociações
+              </span>
+              <strong className="text-amber-700 text-sm block">5</strong>
+              <span className="text-[10px] text-muted-foreground">R$ 310k</span>
+            </div>
+            <div className="bg-slate-50 p-2 rounded-xl border border-border/40 text-center">
+              <span className="text-muted-foreground block text-[9px] uppercase font-bold">
+                Pedidos
+              </span>
+              <strong className="text-emerald-700 text-sm block">3</strong>
+              <span className="text-[10px] text-muted-foreground">R$ 185k</span>
+            </div>
+          </div>
 
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-primary uppercase">Potencial R$</span>
-          <span className="font-serif text-xl font-bold text-primary mt-1 block">
-            R$ {(totals.potentialRevenue / 1000).toFixed(0)}k
-          </span>
-          <span className="text-[10px] text-muted-foreground mt-0.5 block">
-            {totals.potentialTons} ton
-          </span>
-        </Card>
-
-        <Card className="rounded-2xl border-border/60 bg-white/70 p-4 shadow-sm">
-          <span className="text-[11px] font-semibold text-blue-700 uppercase">Oportunidades</span>
-          <span className="font-serif text-2xl font-bold text-blue-600 mt-1 block">
-            {totals.opportunities}
-          </span>
-          <span className="text-[10px] text-blue-600 font-semibold mt-0.5 block">Geradas hoje</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/crm')}
+            className="w-full h-8 text-xs text-primary border-primary/30 hover:bg-primary/10 gap-1.5"
+          >
+            <Layers className="w-3.5 h-3.5" /> Acessar Funil Kanban Completo →
+          </Button>
         </Card>
       </div>
 
-      {/* TABELA POR VENDEDOR */}
-      <Card className="rounded-3xl border-border/60 bg-white/80 shadow-sm overflow-hidden">
-        <CardHeader className="p-6 pb-4 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* SEÇÃO DE ANÁLISES DE PERFORMANCE: RITMO, CADÊNCIA E LATÊNCIA */}
+      <Card className="p-5 rounded-2xl border border-border/60 bg-white/90 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
           <div>
-            <CardTitle className="font-serif text-xl font-bold text-primary">
-              Desempenho da Equipe Comercial
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Clique em um vendedor para abrir o "Meu Dia" em modo gerencial ou atribuir ações.
+            <h3 className="font-serif text-lg font-bold text-primary">
+              Análises de Performance & Eficiência Comercial
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Diagnóstico de ritmo financeiro/toneladas, distribuição por canal de contato e SLAs de
+              tempo entre etapas.
             </p>
           </div>
-          <div className="w-full sm:w-64">
-            <Input
-              placeholder="Buscar vendedor..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs rounded-xl"
-            />
+        </div>
+
+        {/* RITMO FINANCEIRO E TONELADAS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50/80 p-4 rounded-2xl border border-border/40">
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              RITMO ATUAL (R$/DIA)
+            </span>
+            <span className="font-serif text-lg font-bold text-emerald-700 block mt-0.5">
+              R$ 133.928 / dia
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              Base: R$ 1.875.000 / 14 dias úteis
+            </span>
           </div>
-        </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50/80 border-b border-border/40 text-[11px] uppercase font-bold text-muted-foreground tracking-wider">
-                <th className="p-4">Vendedor</th>
-                <th className="p-4 text-center">Planejado</th>
-                <th className="p-4 text-center">Concluído</th>
-                <th className="p-4 text-center">Pendente</th>
-                <th className="p-4 text-center">Vencido</th>
-                <th className="p-4 text-center">Reagendado</th>
-                <th className="p-4 text-center">Oportunidades</th>
-                <th className="p-4 text-right">Potencial R$</th>
-                <th className="p-4 text-right">Potencial Ton</th>
-                <th className="p-4 text-center">Conversão</th>
-                <th className="p-4 text-center">Ações</th>
+
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              RITMO NECESSÁRIO (R$/DIA)
+            </span>
+            <span className="font-serif text-lg font-bold text-primary block mt-0.5">
+              R$ 78.125 / dia
+            </span>
+            <span className="text-[10px] text-emerald-600 font-semibold">
+              Gap R$ 625k / 8 dias restantes
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              RITMO ATUAL (TONELADAS/DIA)
+            </span>
+            <span className="font-serif text-lg font-bold text-slate-800 block mt-0.5">
+              45.5 t / dia
+            </span>
+            <span className="text-[10px] text-muted-foreground">Base: 637 toneladas / 14 dias</span>
+          </div>
+
+          <div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              RITMO NECESSÁRIO (TONELADAS/DIA)
+            </span>
+            <span className="font-serif text-lg font-bold text-primary block mt-0.5">
+              26.6 t / dia
+            </span>
+            <span className="text-[10px] text-emerald-600 font-semibold">
+              Gap 213t / 8 dias restantes
+            </span>
+          </div>
+        </div>
+
+        {/* CADÊNCIA COMERCIAL E LATÊNCIA */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+          {/* TABELA CADÊNCIA */}
+          <div className="space-y-2">
+            <h4 className="font-serif font-bold text-xs text-primary flex items-center gap-1.5">
+              <PhoneCall className="w-3.5 h-3.5" /> Cadência Comercial por Canal
+            </h4>
+            <div className="border border-border/40 rounded-xl overflow-hidden text-xs">
+              <table className="w-full">
+                <thead className="bg-slate-50 text-[10px] text-muted-foreground uppercase border-b">
+                  <tr>
+                    <th className="text-left p-2">Canal</th>
+                    <th className="text-center p-2">Qtd</th>
+                    <th className="text-left p-2">Resultados Gerados</th>
+                    <th className="text-right p-2">Conversão</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {mockCadenciaData.map((c, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50">
+                      <td className="p-2 font-semibold text-slate-800">{c.canal}</td>
+                      <td className="p-2 text-center font-mono">{c.quantidade}</td>
+                      <td className="p-2 text-[11px] text-muted-foreground truncate max-w-[180px]">
+                        {c.resultadosGerados}
+                      </td>
+                      <td className="p-2 text-right font-bold text-emerald-700">
+                        {c.taxaConversao}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* TABELA LATÊNCIA */}
+          <div className="space-y-2">
+            <h4 className="font-serif font-bold text-xs text-primary flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> Latência Médio entre Etapas (SLAs)
+            </h4>
+            <div className="border border-border/40 rounded-xl overflow-hidden text-xs">
+              <table className="w-full">
+                <thead className="bg-slate-50 text-[10px] text-muted-foreground uppercase border-b">
+                  <tr>
+                    <th className="text-left p-2">Etapa do Funil</th>
+                    <th className="text-center p-2">Tempo Médio</th>
+                    <th className="text-center p-2">SLA Esperado</th>
+                    <th className="text-right p-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                  {mockLatenciaData.map((l, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50">
+                      <td className="p-2 font-semibold text-slate-800">{l.etapa}</td>
+                      <td className="p-2 text-center font-mono font-bold text-slate-700">
+                        {l.tempoMedio}
+                      </td>
+                      <td className="p-2 text-center text-[11px] text-muted-foreground">
+                        {l.slaEsperado}
+                      </td>
+                      <td className="p-2 text-right">
+                        <Badge
+                          className={cn(
+                            'text-[9px] font-bold border-none',
+                            l.status === 'normal'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800',
+                          )}
+                        >
+                          {l.status === 'normal' ? 'No Prazo' : 'Atenção'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* VISÃO INDIVIDUAL DA EQUIPE (TABELA DE VENDEDORES COM DRILL-DOWN) */}
+      <Card className="p-5 rounded-2xl border border-border/60 bg-white shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+          <div>
+            <h3 className="font-serif text-lg font-bold text-primary">
+              Visão Individual & Desempenho dos Vendedores
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Clique sobre um membro da equipe para abrir o drill-down com Meu Dia, Gestão de
+              Carteira, Funil e Visitas do vendedor.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs text-primary border-primary/30">
+            5 Consultores Ativos
+          </Badge>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-[10px] text-muted-foreground uppercase border-b">
+              <tr>
+                <th className="text-left p-2.5">Vendedor / Consultor</th>
+                <th className="text-right p-2.5">Meta</th>
+                <th className="text-right p-2.5">Realizado</th>
+                <th className="text-center p-2.5">% Ating.</th>
+                <th className="text-right p-2.5">Gap</th>
+                <th className="text-right p-2.5">Forecast</th>
+                <th className="text-right p-2.5">Ritmo Atual</th>
+                <th className="text-right p-2.5">Ritmo Nec.</th>
+                <th className="text-right p-2.5">Pipeline Pond.</th>
+                <th className="text-center p-2.5">Conversão</th>
+                <th className="text-center p-2.5">Tendência</th>
+                <th className="text-center p-2.5">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
-              {filteredSellers.map((s) => (
-                <tr
-                  key={s.id}
-                  className="hover:bg-primary/5 transition-colors group cursor-pointer"
-                  onClick={() => setSelectedSeller(s)}
-                >
-                  <td className="p-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-xs">
-                        {s.name.charAt(0)}
+              {mockEquipe.map((vendedor) => {
+                const isUnderperforming = vendedor.atingimentoPercent < 70
+
+                return (
+                  <tr
+                    key={vendedor.id}
+                    onClick={() => handleOpenDrilldown(vendedor)}
+                    className="hover:bg-primary/5 cursor-pointer transition-colors"
+                  >
+                    <td className="p-2.5 font-bold text-primary flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-serif font-bold flex items-center justify-center shrink-0">
+                        {vendedor.name[0]}
                       </div>
                       <div>
-                        <span className="font-bold text-primary block leading-tight group-hover:text-primary/80">
-                          {s.name}
+                        <span className="hover:underline">{vendedor.name}</span>
+                        <span className="text-[10px] text-muted-foreground block font-normal">
+                          {vendedor.cargo}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{s.role}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-center font-semibold text-primary">{s.plannedActions}</td>
-                  <td className="p-4 text-center font-bold text-emerald-600">
-                    {s.completedActions}
-                  </td>
-                  <td className="p-4 text-center text-amber-600 font-semibold">
-                    {s.pendingActions}
-                  </td>
-                  <td className="p-4 text-center">
-                    {s.overdueActions > 0 ? (
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono text-muted-foreground">
+                      R$ {(vendedor.metaMensal / 1000).toFixed(0)}k
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono font-bold text-slate-800">
+                      R$ {(vendedor.realizadoMensal / 1000).toFixed(0)}k
+                    </td>
+
+                    <td className="p-2.5 text-center">
                       <Badge
-                        variant="outline"
-                        className="bg-rose-50 text-rose-700 border-rose-300 text-[10px]"
+                        className={cn(
+                          'text-[10px] font-bold border-none',
+                          vendedor.atingimentoPercent >= 75
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : vendedor.atingimentoPercent >= 60
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800',
+                        )}
                       >
-                        {s.overdueActions}
+                        {vendedor.atingimentoPercent}%
                       </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">0</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-center text-muted-foreground">{s.rescheduledActions}</td>
-                  <td className="p-4 text-center font-bold text-blue-600">{s.opportunities}</td>
-                  <td className="p-4 text-right font-serif font-bold text-primary">
-                    {formatBRL(s.potentialRevenue)}
-                  </td>
-                  <td className="p-4 text-right font-medium text-slate-700">{s.potentialTons} t</td>
-                  <td className="p-4 text-center">
-                    <Badge
-                      className={cn(
-                        'text-[10px] font-bold border-none',
-                        s.conversionRate >= 75
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : s.conversionRate >= 60
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-rose-100 text-rose-800',
-                      )}
-                    >
-                      {s.conversionRate}%
-                    </Badge>
-                  </td>
-                  <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 text-xs text-primary hover:bg-primary/10"
-                      onClick={() => setSelectedSeller(s)}
-                    >
-                      <Eye className="w-3.5 h-3.5 mr-1" /> Ver Meu Dia
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono text-amber-700 font-semibold">
+                      R$ {(vendedor.gap / 1000).toFixed(0)}k
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono text-slate-700">
+                      R$ {(vendedor.forecast / 1000).toFixed(0)}k
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono text-emerald-700">
+                      R$ {((vendedor.ritmoAtual || 0) / 1000).toFixed(0)}k/d
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono text-primary font-semibold">
+                      R$ {((vendedor.ritmoNecessario || 0) / 1000).toFixed(0)}k/d
+                    </td>
+
+                    <td className="p-2.5 text-right font-mono font-semibold text-slate-800">
+                      R$ {((vendedor.pipelinePonderado || 0) / 1000).toFixed(0)}k
+                    </td>
+
+                    <td className="p-2.5 text-center font-bold text-slate-700">
+                      {vendedor.conversaoPercent}%
+                    </td>
+
+                    <td className="p-2.5 text-center">
+                      <Badge
+                        className={cn(
+                          'text-[9px] font-bold border-none',
+                          vendedor.tendenciaStatus === 'ACIMA DA META'
+                            ? 'bg-emerald-600 text-white'
+                            : vendedor.tendenciaStatus === 'NA TRAJETÓRIA'
+                              ? 'bg-blue-100 text-blue-800'
+                              : vendedor.tendenciaStatus === 'EM RISCO'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-600 text-white',
+                        )}
+                      >
+                        {vendedor.tendenciaStatus || 'NA TRAJETÓRIA'}
+                      </Badge>
+                    </td>
+
+                    <td className="p-2.5 text-center">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenDrilldown(vendedor)
+                        }}
+                        className="h-7 px-2 text-[11px] text-primary hover:bg-primary/10 gap-1 font-semibold"
+                      >
+                        Drill-down <ChevronRight className="w-3 h-3" />
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
-        </CardContent>
+        </div>
       </Card>
 
-      {/* MODAL PARA CRIAR AÇÃO GERENCIAL AUDITADA */}
-      <Dialog open={managerActionOpen} onOpenChange={setManagerActionOpen}>
+      {/* MODAL DE DRILL-DOWN DO VENDEDOR */}
+      <Dialog open={drilldownModalOpen} onOpenChange={setDrilldownModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary font-serif font-bold text-lg flex items-center justify-center">
+                  {selectedSeller?.name[0]}
+                </div>
+                <div>
+                  <DialogTitle className="font-serif text-lg text-primary">
+                    {selectedSeller?.name}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedSeller?.cargo} · Carteira: {selectedSeller?.carteiraQtd} clientes ·{' '}
+                    {selectedSeller?.email}
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <Badge
+                className={cn(
+                  'text-xs font-bold border-none px-3 py-1',
+                  selectedSeller?.tendenciaStatus === 'ACIMA DA META'
+                    ? 'bg-emerald-600 text-white'
+                    : selectedSeller?.tendenciaStatus === 'NA TRAJETÓRIA'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-amber-600 text-white',
+                )}
+              >
+                {selectedSeller?.tendenciaStatus || 'NA TRAJETÓRIA'}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          {selectedSeller && (
+            <div className="space-y-4 py-2">
+              {/* KPIS RÁPIDOS DO VENDEDOR */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="bg-slate-50 p-3 rounded-xl border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Meta vs Realizado
+                  </span>
+                  <span className="text-sm font-bold text-slate-800 block mt-0.5">
+                    R$ {(selectedSeller.realizadoMensal / 1000).toFixed(0)}k /{' '}
+                    {(selectedSeller.metaMensal / 1000).toFixed(0)}k
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-bold">
+                    {selectedSeller.atingimentoPercent}% da meta
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Gap a Cobrir
+                  </span>
+                  <span className="text-sm font-bold text-amber-700 block mt-0.5">
+                    R$ {(selectedSeller.gap / 1000).toFixed(0)}k
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Ritmo nec.: R$ {((selectedSeller.ritmoNecessario || 0) / 1000).toFixed(0)}k/dia
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Pipeline Ponderado
+                  </span>
+                  <span className="text-sm font-bold text-primary block mt-0.5">
+                    R$ {((selectedSeller.pipelinePonderado || 0) / 1000).toFixed(0)}k
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Total aberto: R$ {(selectedSeller.pipeline / 1000).toFixed(0)}k
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                    Visitas & Ações
+                  </span>
+                  <span className="text-sm font-bold text-slate-800 block mt-0.5">
+                    {selectedSeller.visitasMes} visitas / {selectedSeller.acoesPendentes} ações
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">
+                    Cadência: {selectedSeller.cadenciaScore || 'Alta'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ABAS INTERNAS DO DRILL-DOWN */}
+              <Tabs defaultValue="acoes" className="w-full">
+                <TabsList className="bg-slate-100 p-1 rounded-xl w-full justify-start gap-1">
+                  <TabsTrigger value="acoes" className="text-xs rounded-lg font-semibold">
+                    Meu Dia ({selectedSeller.acoesPendentes} Ações)
+                  </TabsTrigger>
+                  <TabsTrigger value="visitas" className="text-xs rounded-lg font-semibold">
+                    Visitas ({selectedSeller.visitasMes})
+                  </TabsTrigger>
+                  <TabsTrigger value="oportunidades" className="text-xs rounded-lg font-semibold">
+                    Funil & Oportunidades
+                  </TabsTrigger>
+                  <TabsTrigger value="clientes" className="text-xs rounded-lg font-semibold">
+                    Clientes em Risco
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* ABA: MEU DIA DO SUBORDINADO */}
+                <TabsContent value="acoes" className="space-y-2 mt-3 text-xs">
+                  {mockAcoesDoDia
+                    .filter((a) => a.status !== 'concluida')
+                    .slice(0, 4)
+                    .map((acao) => (
+                      <div
+                        key={acao.id}
+                        className="p-2.5 rounded-xl border border-border/60 bg-white flex items-center justify-between gap-2"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              className={cn(
+                                'text-[9px] font-bold border-none uppercase',
+                                acao.urgencia === 'urgente'
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-amber-100 text-amber-800',
+                              )}
+                            >
+                              {acao.urgencia}
+                            </Badge>
+                            <span className="font-bold text-slate-800">{acao.clienteNome}</span>
+                          </div>
+                          <p className="text-muted-foreground text-[11px]">{acao.recomendacao}</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setDrilldownModalOpen(false)
+                            navigate(`/crm/${acao.clienteId}`)
+                          }}
+                          className="h-7 text-[11px] text-primary"
+                        >
+                          Ver Cliente 360º
+                        </Button>
+                      </div>
+                    ))}
+                </TabsContent>
+
+                {/* ABA: VISITAS DO VENDEDOR */}
+                <TabsContent value="visitas" className="space-y-2 mt-3 text-xs">
+                  {mockVisitas
+                    .filter(
+                      (v) =>
+                        v.user_id === selectedSeller.userId || selectedSeller.role === 'SUPERVISOR',
+                    )
+                    .slice(0, 4)
+                    .map((visit) => (
+                      <div
+                        key={visit.id}
+                        className="p-2.5 rounded-xl border border-border/60 bg-white flex items-center justify-between gap-2"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <Badge
+                              className={cn(
+                                'text-[9px] font-bold border-none',
+                                visit.type === 'COMMERCIAL_VISIT'
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-amber-100 text-amber-800',
+                              )}
+                            >
+                              {visit.type === 'COMMERCIAL_VISIT' ? 'Comercial' : 'Técnica'}
+                            </Badge>
+                            <span className="font-bold text-slate-800">{visit.customer_name}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              ({visit.planned_date} às {visit.planned_time})
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-[11px] line-clamp-1">
+                            {visit.objective}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] font-bold shrink-0">
+                          {visit.status}
+                        </Badge>
+                      </div>
+                    ))}
+                </TabsContent>
+
+                {/* ABA: OPORTUNIDADES */}
+                <TabsContent value="oportunidades" className="space-y-2 mt-3 text-xs">
+                  {mockFunilOportunidades
+                    .filter(
+                      (o) =>
+                        o.vendedorNome === selectedSeller.name ||
+                        selectedSeller.role === 'SUPERVISOR',
+                    )
+                    .slice(0, 4)
+                    .map((op) => (
+                      <div
+                        key={op.id}
+                        className="p-2.5 rounded-xl border border-border/60 bg-white flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <span className="font-bold text-slate-800 block">{op.titulo}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {op.clienteNome} · R$ {op.valor.toLocaleString('pt-BR')} ({op.toneladas}
+                            t)
+                          </span>
+                        </div>
+                        <Badge className="bg-primary/10 text-primary border-none text-[10px] font-bold">
+                          {op.etapa}
+                        </Badge>
+                      </div>
+                    ))}
+                </TabsContent>
+
+                {/* ABA: CLIENTES EM RISCO */}
+                <TabsContent value="clientes" className="space-y-2 mt-3 text-xs">
+                  {mockClientes
+                    .filter((c) => c.statusComercial === 'Em Risco')
+                    .slice(0, 3)
+                    .map((cli) => (
+                      <div
+                        key={cli.id}
+                        className="p-2.5 rounded-xl border border-rose-200 bg-rose-50/40 flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <span className="font-bold text-rose-900 block">{cli.razaoSocial}</span>
+                          <span className="text-[10px] text-rose-700">
+                            {cli.diasSemContato} dias sem contato · Faturamento R${' '}
+                            {cli.faturamento12m.toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setDrilldownModalOpen(false)
+                            navigate(`/crm/${cli.id}`)
+                          }}
+                          className="h-7 text-[11px] bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+                        >
+                          Intervir Agora
+                        </Button>
+                      </div>
+                    ))}
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDrilldownModalOpen(false)}>
+              Fechar Drill-down
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL DE CRIAÇÃO DE AÇÃO DE INTERVENÇÃO */}
+      <Dialog open={actionModalOpen} onOpenChange={setActionModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-serif text-primary">Atribuir Ação Gerencial</DialogTitle>
-            <DialogDescription>
-              Criar orientação comercial para {selectedSeller?.name}. Origem: MANAGER_ASSIGNED
-              (auditado).
-            </DialogDescription>
+            <DialogTitle className="font-serif text-primary">Criar Ação de Intervenção</DialogTitle>
+            <DialogDescription>Ação recomendada pelo Sales Supervisor Agent.</DialogDescription>
           </DialogHeader>
-          <div className="py-3 flex flex-col gap-3">
+
+          <div className="space-y-3 py-2 text-xs">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                Nome do Cliente / Conta
+              <label className="font-semibold text-muted-foreground block mb-1">
+                Título da Ação
               </label>
-              <Input
-                placeholder="Ex: Metalúrgica Santa Rita Ltda"
-                value={actionFormData.customerName}
-                onChange={(e) =>
-                  setActionFormData({ ...actionFormData, customerName: e.target.value })
-                }
-                className="h-9 text-xs"
+              <input
+                type="text"
+                value={actionData.title}
+                onChange={(e) => setActionData({ ...actionData, title: e.target.value })}
+                className="w-full h-9 rounded-md border border-input px-3 py-1 text-xs"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                Recomendação Comercial
-              </label>
-              <Input
-                placeholder="Ex: Retomar negociação de Tubos 304 com condição especial"
-                value={actionFormData.recommendation}
-                onChange={(e) =>
-                  setActionFormData({ ...actionFormData, recommendation: e.target.value })
-                }
-                className="h-9 text-xs"
-              />
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="font-semibold text-muted-foreground block mb-1">
+                  Responsável
+                </label>
+                <input
+                  type="text"
+                  value={actionData.seller}
+                  onChange={(e) => setActionData({ ...actionData, seller: e.target.value })}
+                  className="w-full h-9 rounded-md border border-input px-3 py-1 text-xs font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-muted-foreground block mb-1">Prioridade</label>
+                <Select
+                  value={actionData.priority}
+                  onValueChange={(val) => setActionData({ ...actionData, priority: val })}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Urgente">Urgente</SelectItem>
+                    <SelectItem value="Alta">Alta</SelectItem>
+                    <SelectItem value="Média">Média</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                Nota do Supervisor (manager_note)
-              </label>
-              <Textarea
-                placeholder="Ex: Concedi autorização de 3% extra de margem para fechar até 17h..."
-                value={actionFormData.managerNote}
-                onChange={(e) =>
-                  setActionFormData({ ...actionFormData, managerNote: e.target.value })
-                }
-                rows={3}
-                className="text-xs"
-              />
+
+            <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900">
+              <strong>Nota de Auditoria:</strong> A ação será registrada com a origem{' '}
+              <code className="bg-amber-100 px-1 py-0.5 rounded font-mono font-bold">
+                AI_SUPERVISOR_RECOMMENDATION
+              </code>{' '}
+              e aparecerá no Meu Dia do consultor.
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setManagerActionOpen(false)}>
+            <Button variant="outline" onClick={() => setActionModalOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateManagerAction} className="bg-primary text-white">
-              Atribuir Ação
+            <Button onClick={handleConfirmAction} className="bg-primary text-white font-semibold">
+              Confirmar & Criar Ação
             </Button>
           </DialogFooter>
         </DialogContent>

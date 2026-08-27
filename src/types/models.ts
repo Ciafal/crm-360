@@ -387,3 +387,94 @@ export interface Task extends RecordModel {
   created: string
   updated: string
 }
+
+export type VisitType = 'COMMERCIAL_VISIT' | 'TECHNICAL_VISIT'
+export type VisitStatus =
+  | 'PLANEJADA'
+  | 'EM_DESLOCAMENTO'
+  | 'CHECK_IN'
+  | 'EM_ANDAMENTO'
+  | 'CONCLUIDA'
+  | 'CANCELADA'
+  | 'REAGENDADA'
+
+export interface CommercialVisitFormData {
+  objective?: string
+  participants?: string
+  customer_contact?: string
+  identified_need?: string
+  product?: string
+  product_family?: string
+  quantity?: string | number
+  discussed_price?: string | number
+  potential_volume?: string | number
+  deadline?: string
+  competitors?: string
+  objections?: string
+  commercial_conditions?: string
+  opportunity_title?: string
+  next_action?: string
+  next_action_date?: string
+  observations?: string
+}
+
+export interface TechnicalVisitFormData {
+  technical_objective?: string
+  application?: string
+  product?: string
+  material?: string
+  dimension?: string
+  specification?: string
+  problem_description?: string
+  symptom?: string
+  technical_need?: string
+  sample_collected?: string
+  tests_performed?: string
+  technical_recommendation?: string
+  pendency?: string
+  responsible_person?: string
+  deadline?: string
+  next_action?: string
+  next_action_date?: string
+  observations?: string
+}
+
+export interface Visit {
+  id: string
+  customer_id: string
+  customer_name: string
+  sap_code: string
+  city: string
+  uf: string
+  contact_name: string
+  type: VisitType
+  status: VisitStatus
+  planned_date: string
+  planned_time: string
+  objective: string
+  participants?: string
+  user_id: string // vendedor responsável
+  seller_name?: string
+  supervisor_id?: string
+  latitude?: number
+  longitude?: number
+  target_latitude?: number
+  target_longitude?: number
+  gps_accuracy?: number
+  is_within_geofence?: boolean
+  geofence_distance_meters?: number
+  checkout_latitude?: number
+  checkout_longitude?: number
+  started_at?: string
+  ended_at?: string
+  duration_minutes?: number
+  form_data?: CommercialVisitFormData | TechnicalVisitFormData | Record<string, any>
+  audio_url?: string
+  audio_transcription?: string
+  ai_summary?: string
+  ai_summary_status?: 'SUGGESTED' | 'ACCEPTED' | 'REJECTED' | 'EDITED'
+  next_action?: string
+  next_action_date?: string
+  created_at?: string
+  updated_at?: string
+}

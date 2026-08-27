@@ -359,7 +359,7 @@ export default function Cliente360() {
               value="timeline"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
             >
-              <Clock className="w-3.5 h-3.5" /> 1. Timeline ({timeline.length})
+              <Clock className="w-3.5 h-3.5" /> 1. Timeline & Visitas ({timeline.length})
             </TabsTrigger>
             <TabsTrigger
               value="produtos"

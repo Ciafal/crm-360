@@ -21,6 +21,7 @@ const NAV_GROUPS = [
       { name: 'Meu Dia', path: '/home' },
       { name: 'Conversas', path: '/conversas' },
       { name: 'CRM', path: '/crm' },
+      { name: 'Visitas', path: '/visitas' },
     ],
   },
   {

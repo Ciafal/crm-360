@@ -17,6 +17,7 @@ import Equipe from './pages/Equipe'
 import GestaoInativos from './pages/GestaoInativos'
 import Cliente360 from './pages/Cliente360'
 import GestaoDoDia from './pages/GestaoDoDia'
+import Visitas from './pages/Visitas'
 import Administracao from './pages/Administracao'
 import Setup from './pages/Setup'
 import NotFound from './pages/NotFound'
@@ -46,10 +47,13 @@ const App = () => (
                 <Route path="/home" element={<Home />} />
                 <Route path="/meu-dia" element={<Home />} />
                 <Route path="/cliente/:id" element={<Cliente360 />} />
+                <Route path="/crm/:id" element={<Cliente360 />} />
                 <Route path="/conversas" element={<Conversas />} />
                 <Route path="/crm" element={<CRM />} />
+                <Route path="/inativos" element={<GestaoInativos />} />
                 <Route path="/gestao-inativos" element={<GestaoInativos />} />
                 <Route path="/gestao-do-dia" element={<GestaoDoDia />} />
+                <Route path="/visitas" element={<Visitas />} />
                 <Route path="/agentes" element={<Agentes />} />
                 <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="/equipe" element={<Equipe />} />
