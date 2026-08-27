@@ -7,6 +7,7 @@ export type CiafalRole =
   | 'ti'
   | 'administrador'
   | 'auditor'
+  | 'representante_externo'
 
 export interface CiafalUser {
   id: string
@@ -177,7 +178,7 @@ export class LocalIdentityProvider implements IdentityProvider {
     }
     // Vendedor only sees own portfolio
     // Representante externo só acessa própria carteira e nunca carteiras de vendedores internos
-    if (userRole === ('representante_externo' as CiafalRole)) {
+    if (userRole === 'representante_externo') {
       return !customerSellerId || customerSellerId === userId
     }
 

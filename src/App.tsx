@@ -74,7 +74,15 @@ const App = () => (
                 <Route path="/relatorio-release" element={<RelatorioRelease />} />
                 <Route path="/central-integracoes" element={<CentralIntegracoes />} />
                 <Route path="/setup" element={<Setup />} />
-              </Route>{' '}
+                <Route path="/kpis" element={<IndicadoresComerciais />} />
+                <Route path="/indicadores" element={<IndicadoresComerciais />} />
+                <Route path="/metas" element={<ImportacaoPlanejamentoEstrategico />} />
+                <Route
+                  path="/planejamento-estrategico"
+                  element={<ImportacaoPlanejamentoEstrategico />}
+                />
+                <Route path="/compliance" element={<HCMCompliance />} />
+              </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

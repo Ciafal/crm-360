@@ -130,6 +130,7 @@ export default function Cliente360() {
     shareRevenuePercent,
     sharePotentialPercent,
     rankTons,
+    rankRevenue,
     totalSellerClients,
   } = useMemo(() => {
     const sellerClients = mockClientes.filter((c) => c.vendedorId === cliente.vendedorId)
@@ -139,7 +140,10 @@ export default function Cliente360() {
       sellerClients.reduce((acc, c) => acc + (c.potencialTons12m || c.toneladas12m * 1.2), 0) || 1
 
     const sortedByTons = [...sellerClients].sort((a, b) => b.toneladas12m - a.toneladas12m)
-    const rank = sortedByTons.findIndex((c) => c.id === cliente.id) + 1
+    const rankT = sortedByTons.findIndex((c) => c.id === cliente.id) + 1
+
+    const sortedByRevenue = [...sellerClients].sort((a, b) => b.faturamento12m - a.faturamento12m)
+    const rankR = sortedByRevenue.findIndex((c) => c.id === cliente.id) + 1
 
     const shareT = (cliente.toneladas12m / totalT) * 100
     const shareR = (cliente.faturamento12m / totalR) * 100
@@ -153,7 +157,8 @@ export default function Cliente360() {
       shareTonsPercent: shareT.toFixed(1),
       shareRevenuePercent: shareR.toFixed(1),
       sharePotentialPercent: shareP.toFixed(1),
-      rankTons: rank > 0 ? rank : 1,
+      rankTons: rankT > 0 ? rankT : 1,
+      rankRevenue: rankR > 0 ? rankR : 1,
       totalSellerClients: sellerClients.length,
     }
   }, [cliente])
