@@ -39,14 +39,22 @@ import { useToast } from '@/hooks/use-toast'
 interface DailyActionCardProps {
   action: AcaoDoDia
   onExecute?: (action: AcaoDoDia) => void
+  onComplete?: (action: AcaoDoDia) => void
+  onJustify?: (action: AcaoDoDia, justification: string) => void
+  onReschedule?: (action: AcaoDoDia, newDate: string, justification?: string) => void
   onOpenCustomer360?: (customerId: string) => void
+  onNavigateConversas?: (phoneOrJid?: string) => void
   onActionUpdated?: (updatedAction: AcaoDoDia) => void
 }
 
 export function DailyActionCard({
   action,
   onExecute,
+  onComplete,
+  onJustify,
+  onReschedule,
   onOpenCustomer360,
+  onNavigateConversas,
   onActionUpdated,
 }: DailyActionCardProps) {
   const { toast } = useToast()

@@ -54,6 +54,7 @@ import {
   BarChart3,
   ExternalLink,
 } from 'lucide-react'
+import CotacoesList from '@/components/cotacoes/CotacoesList'
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
 import { ABCBadge } from '@/components/shared/ABCBadge'
@@ -1202,76 +1203,10 @@ export default function CRM() {
           </Card>
         </TabsContent>
 
-        {/* ABA 4: COTAÇÕES */}
+        {/* ABA 4: COTAÇÕES COMERCIAIS & ESTOQUE */}
         <TabsContent value="cotacoes" className="space-y-4 m-0">
-          <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-serif text-lg font-bold text-primary">
-                  Cotações SAP ECC Integradas
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Propostas geradas diretamente no SAP com status de aprovação e vigência de tabela.
-                </p>
-              </div>
-              <Badge
-                variant="outline"
-                className="bg-emerald-50 text-emerald-700 border-emerald-300 text-xs"
-              >
-                Sincronização Online
-              </Badge>
-            </div>
-
-            <div className="space-y-3">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-primary/10 text-primary rounded-xl font-bold font-mono">
-                    COT-98104
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-primary">Metalúrgica Santa Rita Ltda</h4>
-                    <span className="text-xs text-muted-foreground">
-                      16.5t Perfis W 200x26.6 · Emissão: Ontem · Vencimento: 26/10/2024
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="font-serif font-bold text-lg text-emerald-600 block">
-                    R$ 95.000,00
-                  </span>
-                  <Badge className="bg-amber-100 text-amber-800 text-[10px] font-bold border-none">
-                    Aguardando Aceite
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-primary/10 text-primary rounded-xl font-bold font-mono">
-                    COT-98088
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-primary">
-                      Aços & Caldeiraria Betim S.A.
-                    </h4>
-                    <span className="text-xs text-muted-foreground">
-                      22.0t Chapas Grossas ASTM A36 · Emissão: 12/10/2024 · Vencimento: 22/10/2024
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="font-serif font-bold text-lg text-emerald-600 block">
-                    R$ 120.000,00
-                  </span>
-                  <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold border-none">
-                    Em Negociação
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </Card>
+          <CotacoesList />
         </TabsContent>
-
         {/* ABA 5: PIPELINE */}
         <TabsContent value="pipeline" className="space-y-4 m-0">
           <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">

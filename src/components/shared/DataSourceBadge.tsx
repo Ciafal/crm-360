@@ -6,6 +6,7 @@ export type DataSourceType = 'qlik' | 'sap' | 'crm' | 'meta' | 'voip' | 'ai' | s
 
 interface DataSourceBadgeProps {
   source: DataSourceType
+  size?: 'sm' | 'md' | 'lg' | string
   className?: string
 }
 

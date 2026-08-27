@@ -564,12 +564,18 @@ export interface ActionExecutionEvidence {
 export interface ActionEvidenceRule {
   id: string
   action_type: string
-  min_relevance_score: number // default 80
-  valid_channels: string[]
-  auto_start_on_evidence: boolean
-  requires_response_for_conclusion: boolean // se true, follow-up vai pra AGUARDANDO_RETORNO
-  enabled: boolean
+  min_relevance_score?: number // default 80
+  min_confidence_score?: number
+  valid_channels?: string[]
+  allowed_channels?: string[]
+  completion_criteria?: string
+  waiting_return_criteria?: string
+  auto_start_on_evidence?: boolean
+  requires_response_for_conclusion?: boolean // se true, follow-up vai pra AGUARDANDO_RETORNO
+  enabled?: boolean
 }
+
+export type AcaoDoDia = DailyCommercialAction
 
 export interface DailyCommercialAction extends RecordModel {
   id: string

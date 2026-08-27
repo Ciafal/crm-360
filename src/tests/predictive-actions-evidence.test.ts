@@ -27,14 +27,17 @@ describe('CRM 360º — Fase Preditiva, Contatos, Evidências e Playbooks', () =
     }
 
     const weakEvidence: ActionExecutionEvidence = {
+      id: 'ev-001',
       action_id: 'act-test-01',
       interaction_id: 'int-001',
       channel: 'WhatsApp',
       customer_id: 'CLI-8041',
       contact_id: 'CONT-01',
       started_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       content_reference: 'Bom dia',
-      validation_status: 'PENDING',
+      ai_relevance_score: 10,
+      validation_status: 'PENDENTE',
     }
 
     const result = validateActionEvidence(action, weakEvidence)
@@ -54,14 +57,17 @@ describe('CRM 360º — Fase Preditiva, Contatos, Evidências e Playbooks', () =
     }
 
     const strongEvidence: ActionExecutionEvidence = {
+      id: 'ev-002',
       action_id: 'act-test-02',
       interaction_id: 'int-002',
       channel: 'WhatsApp',
       customer_id: 'CLI-8041',
       contact_id: 'CONT-01',
       started_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       content_reference: 'Conforme alinhado sobre a cotação 98104 dos perfis I, conseguimos manter a condição CIF para entrega na próxima terça-feira.',
-      validation_status: 'PENDING',
+      ai_relevance_score: 95,
+      validation_status: 'PENDENTE',
     }
 
     const result = validateActionEvidence(action, strongEvidence)
@@ -79,13 +85,16 @@ describe('CRM 360º — Fase Preditiva, Contatos, Evidências e Playbooks', () =
     }
 
     const pendingReplyEvidence: ActionExecutionEvidence = {
+      id: 'ev-003',
       action_id: 'act-test-03',
       interaction_id: 'int-003',
-      channel: 'Email',
+      channel: 'E-mail',
       customer_id: 'CLI-8041',
       started_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
       content_reference: 'Enviando proposta formal da cotação e aguardando retorno da diretoria de compras.',
-      validation_status: 'PENDING',
+      ai_relevance_score: 85,
+      validation_status: 'PENDENTE',
     }
 
     const result = validateActionEvidence(action, pendingReplyEvidence)

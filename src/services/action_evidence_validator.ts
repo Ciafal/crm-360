@@ -1,10 +1,10 @@
 import {
-  AcaoDoDia,
   DailyCommercialAction,
   ActionExecutionEvidence,
   ActionEvidenceRule,
   BusinessOutcome,
   CommercialContactInteraction,
+  AcaoDoDia,
 } from '@/types/models'
 import { mockCommercialContacts } from '@/data/mockCommercialContacts'
 
@@ -70,6 +70,37 @@ export interface ActionValidationResult {
  * 4. "O conteúdo do contato deve estar relacionado ao objetivo da ação." (Ex: 'Bom dia' NÃO conclui cotação).
  * 5. "Distingue execução da ação do resultado comercial obtido (ex: concluiu envio, mas cliente não comprou)."
  */
+export type { ActionEvidenceRule }
+
+export function validateActionEvidence(action: any, evidence: any): any {
+  const res = globalActionEvidenceValidator.evaluateActionInteraction(action, evidence)
+  return {
+    isValid: res.canConclude || res.confidenceScore >= 70,
+    confidenceScore: res.confidenceScore,
+    suggestedExecutionStatus: res.newStatus,
+    suggestedBusinessOutcome: res.businessOutcome,
+    ...res,
+  }
+}
+
+export function validateEvidenceByContent(
+  action: any,
+  content: string,
+  channel: any = 'WhatsApp',
+): any {
+  const res = globalActionEvidenceValidator.evaluateActionInteraction(action, {
+    channel,
+    content,
+    isOutbound: true,
+  })
+  return {
+    confidence: res.confidenceScore,
+    suggestedStatus: res.newStatus,
+    businessOutcome: res.businessOutcome,
+    ...res,
+  }
+}
+
 export class ActionEvidenceValidatorAgent {
   private rules: ActionEvidenceRule[] = defaultActionEvidenceRules
 

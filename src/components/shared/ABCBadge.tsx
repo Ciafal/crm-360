@@ -4,17 +4,22 @@ import type { ABCCategory } from '@/types/models'
 
 interface ABCBadgeProps {
   category?: ABCCategory
+  classification?: any
+  size?: 'sm' | 'md' | 'lg' | string
   type?: 'carteira' | 'potencial' | 'lead' | 'reativacao'
   showLabel?: boolean
   className?: string
 }
 
 export function ABCBadge({
-  category = 'B',
+  category: propCategory,
+  classification,
+  size = 'md',
   type = 'carteira',
   showLabel = false,
   className = '',
 }: ABCBadgeProps) {
+  const category = (propCategory || classification || 'B') as ABCCategory
   // Badges neutros e elegantes (Pantone 2945 C / Steel CRM)
   const getStyle = () => {
     switch (category) {

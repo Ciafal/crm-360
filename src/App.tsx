@@ -11,6 +11,8 @@ import Index from './pages/Index'
 import Home from './pages/Home'
 import Conversas from './pages/Conversas'
 import CRM from './pages/CRM'
+import NovaCotacao from './pages/NovaCotacao'
+import SapOrdersMonitor from './pages/SapOrdersMonitor'
 import Agentes from './pages/Agentes'
 import Tarefas from './pages/Tarefas'
 import Equipe from './pages/Equipe'
@@ -58,7 +60,14 @@ const App = () => (
                 <Route path="/crm/:id" element={<Cliente360 />} />
                 <Route path="/conversas" element={<Conversas />} />
                 <Route path="/crm" element={<CRM />} />
-                <Route path="/inativos" element={<GestaoInativos />} />
+                <Route path="/crm/cotacoes" element={<CRM />} />
+                <Route path="/crm/cotacoes/nova" element={<NovaCotacao />} />
+                <Route path="/crm/cotacoes/:id" element={<NovaCotacao />} />
+                <Route path="/crm/integracoes/sap/pedidos" element={<SapOrdersMonitor />} />
+                <Route path="/cotacoes" element={<CRM />} />
+                <Route path="/cotacoes/nova" element={<NovaCotacao />} />
+                <Route path="/cotacoes/:id" element={<NovaCotacao />} />
+                <Route path="/inativos" element={<GestaoInativos />} />{' '}
                 <Route path="/gestao-inativos" element={<GestaoInativos />} />
                 <Route path="/gestao-do-dia" element={<GestaoDoDia />} />
                 <Route path="/contatos" element={<ContatosPage />} />

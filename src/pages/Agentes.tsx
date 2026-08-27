@@ -10,6 +10,9 @@ import {
   Activity,
   Clock,
   ShieldCheck,
+  Mail,
+  MessageSquare,
+  Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'

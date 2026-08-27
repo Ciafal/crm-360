@@ -11,4 +11,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Add any other utility functions here
+export function formatCurrency(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+export function formatWeight(valueInTons: number): string {
+  return `${valueInTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} t`
+}
