@@ -41,12 +41,16 @@ import { useToast } from '@/hooks/use-toast'
 import { Customer360Sheet } from '@/components/inativos/Customer360Sheet'
 import type { BICustomerSummary, BIFilters } from '@/providers/BIProvider'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { ABCBadge } from '@/components/shared/ABCBadge'
+import { CommercialMetricToggle } from '@/components/shared/CommercialMetricToggle'
+import { useAppStore } from '@/stores/useAppStore'
 import { cn } from '@/lib/utils'
 
 export default function GestaoInativos() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
+  const { commercialMetric } = useAppStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const { loading, dailySummary, inactiveCustomers, isDemoData, health, loadData } = useBI(user?.id)
 
@@ -55,6 +59,7 @@ export default function GestaoInativos() {
   // Filtros
   const [search, setSearch] = useState('')
   const [inactivityFilter, setInactivityFilter] = useState<string>('todos')
+  const [abcReativacaoFilter, setAbcReativacaoFilter] = useState<string>('todos')
   const [segmentFilter, setSegmentFilter] = useState<string>('todos')
   const [selectedSeller, setSelectedSeller] = useState<string>('meus')
 
@@ -302,8 +307,9 @@ export default function GestaoInativos() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border/50 rounded-full shadow-xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <CommercialMetricToggle />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border/50 rounded-full shadow-xs text-xs text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span>Última atualização: {new Date().toLocaleDateString('pt-BR')} 08:30</span>
           </div>

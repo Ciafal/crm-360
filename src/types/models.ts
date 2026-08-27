@@ -79,6 +79,101 @@ export type CiafalUserRole =
   | 'administrador'
   | 'auditor'
 
+export type CommercialMetric = 'TONS' | 'REVENUE'
+
+export type ABCCategory = 'A' | 'B' | 'C'
+
+export type DecisionRole =
+  | 'Decisor'
+  | 'Influenciador'
+  | 'Comprador'
+  | 'Técnico'
+  | 'Financeiro'
+  | 'Logística'
+  | 'Outro'
+
+export type PreferredContactChannel = 'WhatsApp' | 'Ligação' | 'E-mail' | 'Visita'
+
+export type LeadStage =
+  | 'Novo'
+  | 'Qualificando'
+  | 'Contato'
+  | 'Necessidade'
+  | 'Convertido'
+  | 'Descartado'
+
+export type WhatsAppMode = 'MOCK' | 'CLOUD_API' | 'COEX'
+
+export interface CustomerPersonContact {
+  id: string
+  customerId: string
+  name: string
+  jobTitle: string
+  department: string
+  email: string
+  phone: string
+  whatsapp: string
+  decisionRole: DecisionRole
+  isPrimary: boolean
+  preferredChannel: PreferredContactChannel
+  lastContactDate?: string
+  status: 'Ativo' | 'Inativo'
+  notes?: string
+}
+
+export interface LeadItem {
+  id: string
+  leadName: string
+  companyName: string
+  cnpj?: string
+  segment: string
+  origin: string
+  city: string
+  uf: string
+  potentialTons: number
+  potentialValue: number
+  leadPriorityABC: ABCCategory // LeadPriorityABC (A: Alta prioridade, B: Média, C: Baixa)
+  stage: LeadStage
+  score: number
+  assignedSeller: string
+  assignedSellerId: string
+  lastContact?: string
+  nextAction?: string
+  productInterest: string
+  urgency: 'Alta' | 'Média' | 'Baixa'
+  createdAt: string
+}
+
+export interface AgentVersion {
+  version: number
+  createdAt: string
+  updatedBy: string
+  systemPrompt: string
+  objective: string
+  allowedUsers: string[]
+  allowedData: string[]
+  periodicity: string
+  alerts: string[]
+  allowedActions: string[]
+  naturalLanguagePrompt?: string
+}
+
+export interface AgentRunLog {
+  id: string
+  agentId: string
+  agentName: string
+  version: number
+  executedAt: string
+  sources: string[]
+  result: string
+  confidence: number
+  latencyMs: number
+  error?: string
+  tokenCount: number
+  costEstimatedBrl: number
+  triggeredBy: string
+}
+
 export interface User {
   id: string
   name: string
@@ -91,6 +186,7 @@ export interface User {
   seller_code?: string
   ramal?: string
   telefone_corporativo?: string
+  preferred_commercial_metric?: CommercialMetric
   active?: boolean
 }
 

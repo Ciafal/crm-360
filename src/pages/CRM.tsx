@@ -55,6 +55,11 @@ import {
 } from 'lucide-react'
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
+import { ABCBadge } from '@/components/shared/ABCBadge'
+import { CommercialMetricToggle } from '@/components/shared/CommercialMetricToggle'
+import { CarteiraMap } from '@/components/crm/CarteiraMap'
+import { LeadsView } from '@/components/crm/LeadsView'
+import { useAppStore } from '@/stores/useAppStore'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -73,6 +78,7 @@ export default function CRM() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  const { commercialMetric } = useAppStore()
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'carteira')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,6 +89,8 @@ export default function CRM() {
   const [segmentoFilter, setSegmentoFilter] = useState('todos')
   const [rfmFilter, setRfmFilter] = useState('todos')
   const [cidadeFilter, setCidadeFilter] = useState('todos')
+  const [abcHistoricoFilter, setAbcHistoricoFilter] = useState('todos')
+  const [abcPotencialFilter, setAbcPotencialFilter] = useState('todos')
   const [diasContatoMax, setDiasContatoMax] = useState<number | ''>('')
 
   // Ordenação da Tabela
@@ -148,15 +156,21 @@ export default function CRM() {
         c.vendedor.toLowerCase().includes(vendedorFilter.toLowerCase())
 
       const matchSegmento = segmentoFilter === 'todos' || c.segmento === segmentoFilter
-
       const matchRfm = rfmFilter === 'todos' || c.rfmSegmento === rfmFilter
-
       const matchCidade = cidadeFilter === 'todos' || c.cidade === cidadeFilter
-
+      const matchAbcHist = abcHistoricoFilter === 'todos' || c.abcHistorico === abcHistoricoFilter
+      const matchAbcPot = abcPotencialFilter === 'todos' || c.abcPotencial === abcPotencialFilter
       const matchDiasContato = diasContatoMax === '' || c.diasSemContato <= Number(diasContatoMax)
 
       return (
-        matchSearch && matchVendedor && matchSegmento && matchRfm && matchCidade && matchDiasContato
+        matchSearch &&
+        matchVendedor &&
+        matchSegmento &&
+        matchRfm &&
+        matchCidade &&
+        matchAbcHist &&
+        matchAbcPot &&
+        matchDiasContato
       )
     })
   }, [
@@ -166,6 +180,8 @@ export default function CRM() {
     segmentoFilter,
     rfmFilter,
     cidadeFilter,
+    abcHistoricoFilter,
+    abcPotencialFilter,
     diasContatoMax,
   ])
 
@@ -362,7 +378,8 @@ export default function CRM() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <CommercialMetricToggle />
           <Button
             variant="outline"
             size="sm"
@@ -378,7 +395,7 @@ export default function CRM() {
           <Button
             size="sm"
             onClick={() => toast.info('Abertura de nova cotação integrada ao SAP.')}
-            className="h-9 gap-1.5 text-xs bg-primary text-white"
+            className="h-9 gap-1.5 text-xs bg-[#003A70] text-white"
           >
             <Plus className="w-3.5 h-3.5" />
             Nova Oportunidade
@@ -395,6 +412,18 @@ export default function CRM() {
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
             >
               <Building2 className="w-4 h-4" /> Gestão de Carteira ({sortedClientes.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="mapa"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <MapPin className="w-4 h-4" /> Mapa da Carteira
+            </TabsTrigger>
+            <TabsTrigger
+              value="leads"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" /> Leads (LeadPriorityABC)
             </TabsTrigger>
             <TabsTrigger
               value="funil"
@@ -423,7 +452,17 @@ export default function CRM() {
           </TabsList>
         </div>
 
-        {/* ABA 1: GESTÃO DE CARTEIRA (GRID PRINCIPAL) */}
+        {/* ABA 1: MAPA DA CARTEIRA */}
+        <TabsContent value="mapa" className="space-y-4 m-0">
+          <CarteiraMap clientes={rawClientes} leads={mockLeads} />
+        </TabsContent>
+
+        {/* ABA 2: LEADS (LEADPRIORITYABC) */}
+        <TabsContent value="leads" className="space-y-4 m-0">
+          <LeadsView />
+        </TabsContent>
+
+        {/* ABA 3: GESTÃO DE CARTEIRA (GRID PRINCIPAL) */}
         <TabsContent value="carteira" className="space-y-4 m-0">
           {/* BARRA DE FILTROS */}
           <Card className="bg-white/80 backdrop-blur-md border-border/40 shadow-xs rounded-2xl p-4">
@@ -510,6 +549,36 @@ export default function CRM() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* ABC Histórico */}
+              <div>
+                <Select value={abcHistoricoFilter} onValueChange={setAbcHistoricoFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="ABC Histórico (t)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos ABC Histórico</SelectItem>
+                    <SelectItem value="A">ABC Histórico A (70% vol)</SelectItem>
+                    <SelectItem value="B">ABC Histórico B (até 90%)</SelectItem>
+                    <SelectItem value="C">ABC Histórico C (restante)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* ABC Potencial */}
+              <div>
+                <Select value={abcPotencialFilter} onValueChange={setAbcPotencialFilter}>
+                  <SelectTrigger className="h-10 text-xs rounded-xl">
+                    <SelectValue placeholder="ABC Potencial" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos ABC Potencial</SelectItem>
+                    <SelectItem value="A">ABC Potencial A</SelectItem>
+                    <SelectItem value="B">ABC Potencial B</SelectItem>
+                    <SelectItem value="C">ABC Potencial C</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </Card>
 
@@ -548,7 +617,7 @@ export default function CRM() {
                     <tr>
                       <th className="py-3 px-3 font-bold text-center">SAP</th>
                       <th
-                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors min-w-[220px]"
+                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors min-w-[200px]"
                         onClick={() => toggleSort('razaoSocial')}
                       >
                         <div className="flex items-center gap-1">
@@ -556,41 +625,28 @@ export default function CRM() {
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground" />
                         </div>
                       </th>
+                      <th className="py-3 px-2 font-bold text-center">ABC Hist.</th>
+                      <th className="py-3 px-2 font-bold text-center">ABC Pot.</th>
                       <th className="py-3 px-2 font-bold">Cidade/UF</th>
                       <th className="py-3 px-2 font-bold">Segmento</th>
-                      <th className="py-3 px-2 font-bold">Vendedor</th>
-                      <th
-                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => toggleSort('ticketMedio')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Ticket Médio
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </th>
-                      <th
-                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => toggleSort('faturamento12m')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Fat. 12m
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </th>
-                      <th className="py-3 px-2 font-bold text-center">Ton 12m</th>
-                      <th className="py-3 px-2 font-bold text-center">Recorrência</th>
-                      <th
-                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => toggleSort('ultimaCompraData')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Última Compra
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">Ton 12m</th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">Ton YTD</th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">Média t/m</th>
+                      {commercialMetric === 'REVENUE' && (
+                        <th
+                          className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => toggleSort('faturamento12m')}
+                        >
+                          <div className="flex items-center justify-end gap-1">
+                            Fat. 12m
+                            <ArrowUpDown className="w-3 h-3" />
+                          </div>
+                        </th>
+                      )}
+                      <th className="py-3 px-2 font-bold text-center font-mono">Pipeline (t)</th>
+                      <th className="py-3 px-3 font-bold">Última Visita</th>
+                      <th className="py-3 px-2 font-bold text-center">Dias S/ Visita</th>
                       <th className="py-3 px-3 font-bold">Último Contato</th>
-                      <th className="py-3 px-2 font-bold text-center">Dias S/ Contato</th>
-                      <th className="py-3 px-3 font-bold">Próx. Compra</th>
                       <th
                         className="py-3 px-2 font-bold text-center cursor-pointer hover:text-primary transition-colors"
                         onClick={() => toggleSort('pVivo')}
@@ -601,43 +657,28 @@ export default function CRM() {
                         </div>
                       </th>
                       <th className="py-3 px-2 font-bold text-center">RFM</th>
-                      <th
-                        className="py-3 px-2 font-bold text-center cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => toggleSort('scoreComercial')}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          Score
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
+                      <th className="py-3 px-3 font-bold text-center min-w-[210px]">
+                        Ações Rápidas
                       </th>
-                      <th className="py-3 px-3 font-bold text-right">Crédito Disp.</th>
-                      <th
-                        className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => toggleSort('pipelineValor')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Pipeline R$
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </th>
-                      <th className="py-3 px-3 font-bold min-w-[180px]">Próxima Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {sortedClientes.map((c) => {
                       return (
-                        <tr
-                          key={c.id}
-                          onClick={() => navigate(`/crm/${c.id}`)}
-                          className="hover:bg-primary/5 cursor-pointer transition-colors group"
-                        >
+                        <tr key={c.id} className="hover:bg-primary/5 transition-colors group">
                           {/* SAP */}
-                          <td className="py-3 px-3 text-center font-mono font-bold text-primary">
+                          <td
+                            className="py-3 px-3 text-center font-mono font-bold text-primary cursor-pointer hover:underline"
+                            onClick={() => navigate(`/crm/${c.id}`)}
+                          >
                             {c.sapCode}
                           </td>
 
                           {/* Razão / Fantasia */}
-                          <td className="py-3 px-3">
+                          <td
+                            className="py-3 px-3 cursor-pointer"
+                            onClick={() => navigate(`/crm/${c.id}`)}
+                          >
                             <div>
                               <span className="font-bold text-slate-900 group-hover:text-primary transition-colors block text-xs">
                                 {c.razaoSocial}
@@ -646,6 +687,16 @@ export default function CRM() {
                                 {c.nomeFantasia} · {c.cnpj}
                               </span>
                             </div>
+                          </td>
+
+                          {/* ABC Histórico */}
+                          <td className="py-3 px-2 text-center">
+                            <ABCBadge category={c.abcHistorico} type="carteira" />
+                          </td>
+
+                          {/* ABC Potencial */}
+                          <td className="py-3 px-2 text-center">
+                            <ABCBadge category={c.abcPotencial} type="potencial" />
                           </td>
 
                           {/* Cidade/UF */}
@@ -658,49 +709,54 @@ export default function CRM() {
                             <span className="text-[11px] font-medium text-slate-800 block">
                               {c.segmento}
                             </span>
-                            <span className="text-[10px] text-muted-foreground block">
-                              {c.subsegmento}
-                            </span>
-                          </td>
-
-                          {/* Vendedor */}
-                          <td className="py-3 px-2 whitespace-nowrap text-slate-600 text-[11px]">
-                            {c.vendedor}
-                          </td>
-
-                          {/* Ticket Médio */}
-                          <td className="py-3 px-3 text-right font-medium text-slate-700">
-                            {formatBRL(c.ticketMedio)}
-                          </td>
-
-                          {/* Faturamento 12m */}
-                          <td className="py-3 px-3 text-right font-serif font-bold text-slate-900">
-                            {formatBRL(c.faturamento12m)}
                           </td>
 
                           {/* Toneladas 12m */}
-                          <td className="py-3 px-2 text-center font-mono text-slate-700">
+                          <td className="py-3 px-2 text-center font-mono font-bold text-primary">
                             {c.toneladas12m} t
                           </td>
 
-                          {/* Recorrência */}
-                          <td className="py-3 px-2 text-center">
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] bg-slate-50 text-slate-700 border-slate-300"
-                            >
-                              {c.recorrencia}
-                            </Badge>
+                          {/* Toneladas YTD */}
+                          <td className="py-3 px-2 text-center font-mono text-slate-700">
+                            {c.toneladasYtd || (c.toneladas12m * 0.75).toFixed(1)} t
                           </td>
 
-                          {/* Última Compra */}
-                          <td className="py-3 px-3">
-                            <span className="font-medium text-slate-800 block text-[11px]">
-                              {c.ultimaCompraData}
-                            </span>
-                            <span className="text-[10px] text-emerald-600 font-semibold block">
-                              {formatBRL(c.ultimaCompraValor)}
-                            </span>
+                          {/* Média Mensal Tons */}
+                          <td className="py-3 px-2 text-center font-mono text-slate-600">
+                            {c.mediaMensalTons || (c.toneladas12m / 12).toFixed(1)} t
+                          </td>
+
+                          {/* Faturamento 12m (quando métrica for REVENUE) */}
+                          {commercialMetric === 'REVENUE' && (
+                            <td className="py-3 px-3 text-right font-serif font-bold text-slate-900">
+                              {formatBRL(c.faturamento12m)}
+                            </td>
+                          )}
+
+                          {/* Pipeline Toneladas */}
+                          <td className="py-3 px-2 text-center font-mono font-semibold text-emerald-600">
+                            {c.pipelineTons || (c.pipelineValor / 6000).toFixed(1)} t
+                          </td>
+
+                          {/* Última Visita */}
+                          <td className="py-3 px-3 text-[11px] text-slate-700">
+                            {c.ultimaVisitaData || 'Pendente'}
+                          </td>
+
+                          {/* Dias Sem Visita */}
+                          <td className="py-3 px-2 text-center">
+                            <Badge
+                              className={cn(
+                                'text-[10px] font-bold border-none',
+                                (c.diasSemVisita || 20) <= 15
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : (c.diasSemVisita || 20) <= 35
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-rose-100 text-rose-800',
+                              )}
+                            >
+                              {c.diasSemVisita || 20}d
+                            </Badge>
                           </td>
 
                           {/* Último Contato */}
@@ -708,32 +764,6 @@ export default function CRM() {
                             <span className="text-[11px] font-medium text-slate-800 flex items-center">
                               {getCanalIcon(c.ultimoContatoCanal)}
                               {c.ultimoContatoData}
-                            </span>
-                          </td>
-
-                          {/* Dias Sem Contato */}
-                          <td className="py-3 px-2 text-center">
-                            <Badge
-                              className={cn(
-                                'text-[10px] font-bold border-none',
-                                c.diasSemContato <= 7
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : c.diasSemContato <= 20
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : 'bg-rose-100 text-rose-800',
-                              )}
-                            >
-                              {c.diasSemContato}d
-                            </Badge>
-                          </td>
-
-                          {/* Próx. Compra Estimada */}
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <span className="text-[11px] text-slate-700 font-medium block">
-                              {c.proximaCompraEstimada}
-                            </span>
-                            <span className="text-[10px] text-primary font-semibold block">
-                              em {c.diasProximaCompra} dias
                             </span>
                           </td>
 
@@ -758,31 +788,67 @@ export default function CRM() {
                             <RFMSegmentBadge segment={c.rfmSegmento} />
                           </td>
 
-                          {/* Score Comercial */}
-                          <td className="py-3 px-2 text-center font-bold text-primary">
-                            {c.scoreComercial}
-                          </td>
+                          {/* AÇÕES RÁPIDAS */}
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px] font-semibold text-primary hover:bg-primary/5"
+                                onClick={() => navigate(`/crm/${c.id}`)}
+                                title="Abrir Visão 360º"
+                              >
+                                360º
+                              </Button>
 
-                          {/* Crédito Disponível */}
-                          <td className="py-3 px-3 text-right">
-                            <span className="font-semibold text-slate-800 block text-[11px]">
-                              {formatBRL(c.creditoDisponivel)}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground block">
-                              de {formatBRL(c.limiteCredito)}
-                            </span>
-                          </td>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-50 border-emerald-200"
+                                onClick={() =>
+                                  navigate(
+                                    `/conversas?whatsapp=true&cliente=${encodeURIComponent(c.nomeFantasia)}&id=${c.id}`,
+                                  )
+                                }
+                                title="Enviar WhatsApp"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                              </Button>
 
-                          {/* Pipeline Valor */}
-                          <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
-                            {formatBRL(c.pipelineValor)}
-                          </td>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 text-blue-600 hover:bg-blue-50 border-blue-200"
+                                onClick={() => toast.success(`Ligando para ${c.nomeFantasia}...`)}
+                                title="Fazer Ligação VoIP"
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                              </Button>
 
-                          {/* Próxima Ação */}
-                          <td className="py-3 px-3">
-                            <span className="text-[11px] text-slate-700 font-medium line-clamp-1 group-hover:text-primary transition-colors">
-                              {c.proximaAcao}
-                            </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 text-amber-600 hover:bg-amber-50 border-amber-200"
+                                onClick={() =>
+                                  toast.success(`Visita agendada para ${c.nomeFantasia}!`)
+                                }
+                                title="Agendar Visita Presencial"
+                              >
+                                <Calendar className="h-3.5 w-3.5" />
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 w-7 p-0 text-indigo-600 hover:bg-indigo-50 border-indigo-200"
+                                onClick={() =>
+                                  toast.info(`Criar nova oportunidade para ${c.nomeFantasia}`)
+                                }
+                                title="Criar Oportunidade"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       )

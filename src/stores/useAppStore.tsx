@@ -1,9 +1,14 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { Chat, initialChats } from '@/lib/mock-data'
+import type { CommercialMetric, WhatsAppMode } from '@/types/models'
 
 type AppState = {
   user: { name: string; email: string; avatar: string } | null
   chats: Chat[]
+  commercialMetric: CommercialMetric
+  whatsappMode: WhatsAppMode
+  setCommercialMetric: (metric: CommercialMetric) => void
+  setWhatsappMode: (mode: WhatsAppMode) => void
   login: (name: string, email: string) => void
   logout: () => void
   markAsRead: (chatId: string) => void
@@ -19,6 +24,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     avatar: 'https://img.usecurling.com/ppl/thumbnail?gender=male&seed=10',
   })
   const [chats, setChats] = useState<Chat[]>(initialChats)
+  const [commercialMetric, setCommercialMetric] = useState<CommercialMetric>('TONS')
+  const [whatsappMode, setWhatsappMode] = useState<WhatsAppMode>('COEX')
 
   const login = (name: string, email: string) => {
     setUser({
@@ -63,7 +70,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AppContext.Provider value={{ user, chats, login, logout, markAsRead, sendMessage }}>
+    <AppContext.Provider
+      value={{
+        user,
+        chats,
+        commercialMetric,
+        whatsappMode,
+        setCommercialMetric,
+        setWhatsappMode,
+        login,
+        logout,
+        markAsRead,
+        sendMessage,
+      }}
+    >
       {children}
     </AppContext.Provider>
   )
