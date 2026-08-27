@@ -1,4 +1,10 @@
-import type { ABCCategory, CustomerPersonContact, LeadItem, WhatsAppMode } from '@/types/models'
+import type {
+  ABCCategory,
+  CustomerPersonContact,
+  LeadItem,
+  Visit,
+  WhatsAppMode,
+} from '@/types/models'
 
 export interface ClienteCarteira {
   id: string
@@ -993,7 +999,7 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Ofertar lote especial com prazo 45 DDL',
     potencial12m: 450000,
     frequenciaDias: 60,
-    latitude: -22.2300,
+    latitude: -22.23,
     longitude: -45.9364,
   },
   {
@@ -1086,8 +1092,8 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Campanha de reativação com desconto no frete',
     potencial12m: 180000,
     frequenciaDias: 180,
-    latitude: -21.7850,
-    longitude: -46.5650,
+    latitude: -21.785,
+    longitude: -46.565,
   },
   // REPRESENTANTE EXTERNO (João Pedro)
   {
@@ -1226,7 +1232,7 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Enviar catálogo digital com tabela promocional',
     potencial12m: 120000,
     frequenciaDias: 120,
-    latitude: -16.7350,
+    latitude: -16.735,
     longitude: -43.8617,
   },
   {
@@ -1274,7 +1280,7 @@ export const mockClientes: ClienteCarteira[] = [
     frequenciaDias: 60,
     latitude: -18.8511,
     longitude: -41.9494,
-  },  // SUPERVISOR / ADMIN CARTEIRA GERAL
+  }, // SUPERVISOR / ADMIN CARTEIRA GERAL
   {
     id: 'cli-100019',
     sapCode: '100019',
@@ -1364,7 +1370,7 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Apresentar memória de cálculo e certificado de usina',
     potencial12m: 1500000,
     frequenciaDias: 60,
-    latitude: -22.2300,
+    latitude: -22.23,
     longitude: -45.9364,
   },
   {
@@ -1410,7 +1416,7 @@ export const mockClientes: ClienteCarteira[] = [
     proximaAcao: 'Oferecer condição especial de frete agrupado',
     potencial12m: 280000,
     frequenciaDias: 60,
-    latitude: -21.1200,
+    latitude: -21.12,
     longitude: -42.9431,
   },
   {
@@ -2193,61 +2199,6 @@ export const mockCustomerContacts: Record<string, CustomerPersonContact[]> = {
     },
   ],
 }
-  {
-    id: 'op-118',
-    clienteId: 'cli-100004',
-    clienteNome: 'Agronorte Equipamentos & Silos S.A.',
-    clienteSap: '100004',
-    titulo: 'Chapas Galvanizadas Z275 Silo 2000t',
-    etapa: 'adiado',
-    valor: 140000,
-    toneladas: 24.0,
-    probabilidade: 40,
-    agingDias: 25,
-    proximaAcao: 'Retomar contato em dezembro na pré-safra',
-    vendedorId: 'qas-vendedor_teste',
-    vendedorNome: 'Carlos Mendonça',
-    previsaoFechamento: '15/12/2024',
-    dataCriacao: '18/09/2024',
-    motivoPerda: 'Obra postergada pelo investidor para Q1/2025',
-  },
-  {
-    id: 'op-119',
-    clienteId: 'cli-100014',
-    clienteNome: 'Comércio de Ferragens Poços de Caldas',
-    clienteSap: '100014',
-    titulo: 'Tubos Industriais 50x50 Chapa 14',
-    etapa: 'perdido',
-    valor: 25000,
-    toneladas: 3.8,
-    probabilidade: 0,
-    agingDias: 30,
-    proximaAcao: 'Mapear condição comercial da concorrência',
-    vendedorId: 'qas-vendedor2_teste',
-    vendedorNome: 'Mariana Azevedo',
-    previsaoFechamento: '10/09/2024',
-    dataCriacao: '01/09/2024',
-    motivoPerda: 'Concorrente regional ofertou preço 4% menor com frete grátis',
-  },
-  {
-    id: 'op-120',
-    clienteId: 'cli-100023',
-    clienteNome: 'Serralheria & Esquadrias Centro-Oeste',
-    clienteSap: '100023',
-    titulo: 'Perfis Leves & Cantoneiras 1x1/8',
-    etapa: 'cancelado',
-    valor: 18000,
-    toneladas: 2.8,
-    probabilidade: 0,
-    agingDias: 40,
-    proximaAcao: 'Auditoria de crédito encerrada',
-    vendedorId: 'qas-representante_teste',
-    vendedorNome: 'João Pedro Representações',
-    previsaoFechamento: '05/09/2024',
-    dataCriacao: '20/08/2024',
-    motivoPerda: 'Restrição cadastral no Serasa / Crédito negado',
-  },
-]
 
 // 4. MOCK TIMELINE (feed unificado com 10-15 entradas por cliente)
 export const mockTimelineData: Record<string, TimelineEntry[]> = {
@@ -2555,8 +2506,6 @@ export const mockNFsCliente: Record<string, NFCliente[]> = {
 }
 
 // 8. MOCK VISITAS (10 visitas mock: 3 hoje, 3 próximas, 2 concluídas, 2 pendentes/atrasadas)
-import type { Visit } from '@/types/models'
-
 export const mockVisitas: Visit[] = [
   // 3 PARA HOJE (2 comerciais, 1 técnica)
   {

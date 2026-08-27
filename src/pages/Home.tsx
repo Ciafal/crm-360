@@ -14,6 +14,19 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Cell,
+} from 'recharts'
+import {
   TrendingUp,
   Target,
   Sparkles,
@@ -33,6 +46,8 @@ import {
   ChevronRight,
   RefreshCw,
   ExternalLink,
+  BarChart3,
+  Scale,
 } from 'lucide-react'
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
@@ -353,6 +368,117 @@ export default function Home() {
             >
               Ver Funil <ChevronRight className="w-3.5 h-3.5" />
             </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* SEÇÃO ANALÍTICA: GRÁFICOS MEU DIA (Meta x Realizado em Toneladas e Ritmo Atual vs Necessário) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* GRÁFICO 1: META X REALIZADO (t) */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <Scale className="w-4 h-4 text-primary" />
+              <div>
+                <h4 className="font-serif font-bold text-sm text-primary">
+                  Meta x Realizado em Toneladas (t)
+                </h4>
+                <span className="text-[10px] text-muted-foreground">
+                  Acompanhamento de volume físico de aço entregue vs meta
+                </span>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-xs bg-slate-50 font-bold text-primary">
+              {currentMember.toneladasRealizado}t de {currentMember.toneladasMeta}t
+            </Badge>
+          </div>
+
+          <div className="h-44 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { name: 'Meta Mês', toneladas: currentMember.toneladasMeta, fill: '#cbd5e1' },
+                  {
+                    name: 'Realizado',
+                    toneladas: currentMember.toneladasRealizado,
+                    fill: '#004A8F',
+                  },
+                  {
+                    name: 'Gap',
+                    toneladas: Math.max(
+                      0,
+                      currentMember.toneladasMeta - currentMember.toneladasRealizado,
+                    ),
+                    fill: '#f59e0b',
+                  },
+                ]}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 10 }} unit="t" />
+                <Tooltip
+                  formatter={(val: number) => [`${val.toFixed(1)} toneladas`, 'Volume']}
+                  contentStyle={{
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                />
+                <Bar dataKey="toneladas" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* GRÁFICO 2: RITMO ATUAL VS NECESSÁRIO (DIÁRIO) */}
+        <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-emerald-600" />
+              <div>
+                <h4 className="font-serif font-bold text-sm text-primary">
+                  Ritmo Diário de Vendas (R$/dia)
+                </h4>
+                <span className="text-[10px] text-muted-foreground">
+                  Comparativo de velocidade comercial para cobrir o Gap nos {diasRestantes} dias
+                  restantes
+                </span>
+              </div>
+            </div>
+            <Badge className="text-[10px] bg-emerald-100 text-emerald-800 border-none font-bold">
+              {formatBRL(ritmoNecessarioPorDia)}/dia nec.
+            </Badge>
+          </div>
+
+          <div className="h-44 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                layout="vertical"
+                data={[
+                  { name: 'Ritmo Atual', valor: ritmoAtualPorDia, fill: '#3b82f6' },
+                  { name: 'Ritmo Necessário', valor: ritmoNecessarioPorDia, fill: '#10b981' },
+                ]}
+                margin={{ top: 10, right: 20, left: 35, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
+                />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} />
+                <Tooltip
+                  formatter={(val: number) => [formatBRL(val), 'Valor diário']}
+                  contentStyle={{
+                    borderRadius: '12px',
+                    fontSize: '11px',
+                    border: '1px solid #e2e8f0',
+                  }}
+                />
+                <Bar dataKey="valor" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
       </div>

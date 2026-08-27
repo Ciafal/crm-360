@@ -13,6 +13,10 @@ import {
   Users,
   Server,
   Terminal,
+  MessageSquare,
+  Smartphone,
+  Radio,
+  ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -198,6 +202,105 @@ export default function Administracao() {
           </div>
         </Card>
       </div>
+
+      {/* INTEGRAÇÃO WHATSAPP COEX */}
+      <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
+        <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-600 text-white rounded-xl">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle className="font-serif text-xl font-bold text-primary">
+                Integrações & WhatsApp COEX / Cloud API
+              </CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                Monitoramento de modo operacional, instâncias ativas e sincronização de mensageria
+                omnicanal.
+              </CardDescription>
+            </div>
+          </div>
+          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-300 border text-xs px-2.5 py-1">
+            <Radio className="w-3 h-3 mr-1 animate-pulse text-emerald-600" /> WhatsApp COEX Ativo
+          </Badge>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Modo WhatsApp
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge className="bg-primary text-white font-bold text-xs">
+                  COEX (Oficial + Web)
+                </Badge>
+                <span className="text-xs text-muted-foreground">ou Cloud API / MOCK</span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Número Conectado
+              </span>
+              <div className="flex items-center gap-2 mt-1 font-mono font-bold text-slate-800 text-sm">
+                <Smartphone className="w-4 h-4 text-emerald-600" />
+                +55 (31) 98888-0000
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Status Operacional
+              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="font-bold text-emerald-700 text-xs">
+                  Conectado & Sincronizando
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Última Sincronização
+              </span>
+              <span className="font-bold text-slate-800 text-xs mt-1 block">
+                {new Date().toLocaleTimeString('pt-BR')} (tempo real via webhook)
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="font-bold">Mapeamento de Contexto Comercial no WhatsApp:</p>
+              <p className="text-[11px] text-blue-800">
+                Campos registrados: <code className="font-mono font-bold">phone_number_id</code>,{' '}
+                <code className="font-mono font-bold">wa_id</code>,{' '}
+                <code className="font-mono font-bold">contact_id</code>,{' '}
+                <code className="font-mono font-bold">customer_id</code>,{' '}
+                <code className="font-mono font-bold">seller_id</code>,{' '}
+                <code className="font-mono font-bold">conversation_id</code>,{' '}
+                <code className="font-mono font-bold">channel_mode: COEX</code>.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs bg-white text-primary border-blue-300 shrink-0"
+              onClick={() => {
+                toast({
+                  title: 'WhatsApp COEX Sincronizado',
+                  description:
+                    'Status verificado com sucesso. Webhooks e instâncias operando normalmente.',
+                })
+              }}
+            >
+              Testar Conexão COEX
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* CAIXA DE E-MAIL MOCK (MFA) */}
       <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
