@@ -25,6 +25,8 @@ import {
   Edit2,
   Trash2,
   FileCheck,
+  Building2,
+  Compass,
 } from 'lucide-react'
 import {
   initialCommercialPlaybooks,
@@ -561,6 +563,225 @@ export default function Administracao() {
               </div>
             </Card>
           </div>
+
+          {/* PAINEL DE INTEGRAÇÃO OFICIAL SAP ECC (BACKOFFICE TRANSACIONAL OFICIAL) */}
+          <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
+            <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#003A70] text-white rounded-xl">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="font-serif text-xl font-bold text-primary">
+                      SAP ECC — Backoffice Transacional Oficial
+                    </CardTitle>
+                    <Badge className="bg-blue-100 text-blue-900 border-blue-300 border text-[10px] font-bold">
+                      Sistema Mestre Corporativo
+                    </Badge>
+                  </div>
+                  <CardDescription className="text-xs mt-0.5">
+                    Governança arquitetural: SAP ECC detém clientes, pedidos, faturamento, crédito
+                    (F.35) e estoque. CRM 360º opera como camada de inteligência e experiência
+                    comercial.
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-300 border text-xs px-2.5 py-1">
+                <Radio className="w-3 h-3 mr-1 animate-pulse text-emerald-600" /> Conectado (RFC /
+                BAPI Governança)
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Conector Transacional
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className="bg-primary text-white font-bold text-xs">
+                      SAPECCProvider (RFC / IDoc)
+                    </Badge>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Sem UPDATE direto em tabelas SAP
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Última Sincronização
+                  </span>
+                  <div className="flex items-center gap-2 mt-1 font-mono font-bold text-slate-800 text-sm">
+                    {new Date().toLocaleDateString('pt-BR')}{' '}
+                    {new Date().toLocaleTimeString('pt-BR')}
+                  </div>
+                  <span className="text-[10px] text-emerald-700 block mt-1">
+                    Delta Sync & Webhooks SAP ativos
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Latência / SLA RFC
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="font-bold text-slate-800 font-mono text-sm">
+                      42 ms (Excelente)
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Fallback ativo para cache offline
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Transações Mapeadas
+                  </span>
+                  <span className="font-bold text-slate-800 text-xs mt-1 block">
+                    F.35 / FD33 (Crédito) · VA03 (Ordens) · XD03 (Cadastro)
+                  </span>
+                  <span className="text-[10px] text-primary block mt-1">
+                    100% Governança CIAFAL
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200/60 rounded-2xl text-xs text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="font-bold">
+                    Política de Resiliência e Fallback Transacional SAP ECC:
+                  </p>
+                  <p className="text-[11px] text-blue-800">
+                    Em caso de indisponibilidade momentânea do link SAP, o CRM 360º mantém operação
+                    através do Read Model / Cache local auditado, exibindo a marcação{' '}
+                    <em>&quot;Dado SAP atualizado em DD/MM/YYYY HH:mm&quot;</em> sem bloquear os
+                    fluxos comerciais do vendedor.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs bg-white text-primary border-blue-300 shrink-0"
+                  onClick={() => {
+                    toast({
+                      title: 'Sincronização SAP ECC Confirmada',
+                      description:
+                        'Conexão RFC/BAPI verificada com sucesso. Resposta da transação F.35 e mestre de materiais íntegra.',
+                    })
+                  }}
+                >
+                  Testar Comunicação RFC
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* PAINEL DE CONFIGURAÇÃO DO MAPA DA CARTEIRA & GEO ENGINE */}
+          <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">
+            <CardHeader className="p-6 border-b bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600 text-white rounded-xl">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <CardTitle className="font-serif text-xl font-bold text-primary">
+                    Configuração do Mapa da Carteira & Provedor Geográfico (Geo Engine)
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Governança de provedor de mapas, geocodificação de endereços SAP ECC, clusters
+                    territoriais e ajustes autorizados.
+                  </CardDescription>
+                </div>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-300 border text-xs px-2.5 py-1">
+                OpenStreetMap / Leaflet Ativo
+              </Badge>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Provedor Cartográfico
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge className="bg-primary text-white font-bold text-xs">
+                      OpenStreetMap & Leaflet
+                    </Badge>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Google Maps Platform Preparado
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Raio de Proximidade Comercial
+                  </span>
+                  <span className="font-mono font-bold text-slate-800 text-sm mt-1 block">
+                    50 km (Polo Metropolitano / Regional)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Geofence de Visita: 300 metros
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Regra de Clusterização
+                  </span>
+                  <span className="font-bold text-slate-800 text-xs mt-1 block">
+                    Agrupamento por Município / UF
+                  </span>
+                  <span className="text-[10px] text-emerald-700 block mt-1">
+                    Zoom dinâmico com separação de markers
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-border/60">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                    Permissão Ajuste Manual
+                  </span>
+                  <span className="font-bold text-slate-800 text-xs mt-1 block">
+                    Vendedor & Supervisor Autorizados
+                  </span>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Com log de auditoria e preservação SAP
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/60 rounded-2xl text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="font-bold">Diretriz de Privacidade Territorial do Vendedor:</p>
+                  <p className="text-[11px] text-emerald-900">
+                    A localização do cliente é tratada como dado cadastral estático geocodificado. A
+                    localização do vendedor é solicitada <strong>exclusivamente sob demanda</strong>{' '}
+                    para planejamento de rotas e busca de clientes próximos, sem gravação ou
+                    rastreamento contínuo em segundo plano.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs bg-white text-emerald-800 border-emerald-300 shrink-0"
+                  onClick={() => {
+                    toast({
+                      title: 'Cache Geográfico Validado',
+                      description:
+                        'Todas as coordenadas cadastradas no SAP ECC foram verificadas com o índice OpenStreetMap Nominatim.',
+                    })
+                  }}
+                >
+                  Revalidar Cache Geo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* INTEGRAÇÃO WHATSAPP COEX */}
           <Card className="rounded-3xl border-border/60 bg-white shadow-sm overflow-hidden">

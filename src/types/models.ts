@@ -824,6 +824,48 @@ export interface TechnicalVisitFormData {
   observations?: string
 }
 
+export type GeoAccuracyLevel = 'ROOFTOP' | 'STREET' | 'APPROXIMATE' | 'CITY' | 'MANUAL'
+export type GeoLocationStatus =
+  | 'GEOCODED'
+  | 'APPROXIMATE'
+  | 'NOT_FOUND'
+  | 'MANUAL_OVERRIDE'
+  | 'PENDING'
+
+export interface CustomerGeoLocation extends RecordModel {
+  id: string
+  account_id?: string
+  customer_id: string
+  sap_customer_code: string
+  latitude: number
+  longitude: number
+  geocoding_source: string
+  accuracy_level: GeoAccuracyLevel
+  formatted_address: string
+  geocoded_at: string
+  last_validated_at: string
+  status: GeoLocationStatus
+  is_manual_override?: boolean
+  manual_override_reason?: string
+  manual_override_by?: string
+  manual_override_at?: string
+  created: string
+  updated: string
+}
+
+export interface GeoLocationOverrideLog {
+  id: string
+  customer_id: string
+  previous_lat: number
+  previous_lng: number
+  new_lat: number
+  new_lng: number
+  reason: string
+  user_id: string
+  user_name: string
+  created_at: string
+}
+
 export interface Visit {
   id: string
   customer_id: string

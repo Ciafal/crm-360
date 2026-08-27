@@ -68,6 +68,16 @@ export interface ClienteCarteira {
   arquetipoComercial?: 'INDÚSTRIA' | 'REVENDA' | 'SERRALHERIA' | 'CONSUMIDOR_FINAL'
   cnae?: string
   purchaseMomentScore?: number // 0-100
+  enderecoCadastral?: string
+  filiais?: {
+    id: string
+    nome: string
+    endereco: string
+    cidade: string
+    uf: string
+    latitude: number
+    longitude: number
+  }[]
 }
 
 export interface MembroEquipe {
@@ -2257,8 +2267,7 @@ export const mockTimelineData: Record<string, TimelineEntry[]> = {
       clienteId: 'cli-100001',
       tipo: 'cotacao',
       titulo: 'Cotação SAP COT-SAP-98104 Emitida',
-      descricao:
-        'Cotação de 16.5t Perfis W 200x26.6 gerada no SAP S/4HANA com validade de 15 dias.',
+      descricao: 'Cotação de 16.5t Perfis W 200x26.6 gerada no SAP ECC com validade de 15 dias.',
       data: 'Ontem às 16:20',
       autor: 'Sistema SAP',
       canal: 'SAP ECC',
@@ -2692,7 +2701,7 @@ export const mockVisitas: Visit[] = [
     supervisor_id: 'qas-supervisor_teste',
     target_latitude: -18.5789,
     target_longitude: -46.5181,
-    next_action: 'Emitir pedido de 13.5t no SAP S/4HANA',
+    next_action: 'Emitir pedido de 13.5t no SAP ECC',
     next_action_date: '18/10/2024',
   },
 

@@ -1,4 +1,5 @@
 export * from './types'
+export * from './GeoProvider'
 export * from './IdentityProvider'
 export * from './ERPProvider'
 export * from './WhatsAppProvider'

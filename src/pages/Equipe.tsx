@@ -570,7 +570,7 @@ export default function Equipe() {
                 Observabilidade & Integrações · CIAFAL Commercial Engine
               </h3>
               <p className="text-xs text-muted-foreground">
-                Conectores corporativos com SAP S/4HANA, Qlik Sense e Microsoft 365 integrados.
+                Conectores corporativos com SAP ECC, Qlik Sense e Microsoft 365 integrados.
               </p>
             </div>
           </div>
@@ -593,7 +593,7 @@ export default function Equipe() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
           <div className="p-3 bg-muted/30 rounded-xl space-y-1">
             <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px] block">
-              Conector SAP ECC / S4
+              Conector SAP ECC Backoffice
             </span>
             <span className="font-bold text-emerald-600 block">Sincronizado (Mock QAS)</span>
             <span className="text-[11px] text-muted-foreground">25 contas carregadas</span>

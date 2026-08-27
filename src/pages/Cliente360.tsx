@@ -61,6 +61,7 @@ import {
   Check,
   AlertCircle,
   FileCheck,
+  Compass,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -462,14 +463,77 @@ export default function Cliente360() {
                 </span>
                 <span>CNPJ: {cliente.cnpj}</span>
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                  {cliente.cidade} - {cliente.uf}
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
+                  <strong>
+                    {cliente.enderecoCadastral || `${cliente.cidade} - ${cliente.uf}`}
+                  </strong>
                 </span>
                 {cliente.cnae && (
                   <span className="text-[11px] text-slate-600">
                     CNAE: <strong>{cliente.cnae}</strong>
                   </span>
                 )}
+              </div>
+
+              {/* BARRA DE INTEGRAÇÃO GEOGRÁFICA / MINI-MAPA */}
+              <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-border/40">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] bg-slate-50 border-slate-300 gap-1 text-slate-700"
+                >
+                  <MapPin className="h-3 w-3 text-emerald-600" />
+                  Coordenadas: {cliente.latitude || -19.9328}, {cliente.longitude || -44.0539}{' '}
+                  (Fonte: SAP ECC)
+                </Badge>
+                {cliente.filiais && cliente.filiais.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] bg-blue-50 border-blue-200 text-blue-800"
+                  >
+                    {cliente.filiais.length} Filiais / Pontos Ship-To Cadastrados
+                  </Badge>
+                )}
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1 rounded-lg border-primary/30 text-primary hover:bg-primary/5"
+                    onClick={() => navigate('/crm?tab=mapa')}
+                  >
+                    <Compass className="h-3.5 w-3.5" />
+                    Ver no Mapa da Carteira
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1 rounded-lg border-emerald-500/40 text-emerald-700 hover:bg-emerald-50"
+                    onClick={() => {
+                      navigate(
+                        `/visitas?cliente=${encodeURIComponent(cliente.nomeFantasia)}&sap=${cliente.sapCode}`,
+                      )
+                      toast.success(`Planejando visita para ${cliente.nomeFantasia}!`)
+                    }}
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    Planejar Visita
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs gap-1 rounded-lg text-slate-600 hover:text-slate-900"
+                    onClick={() => {
+                      const lat = cliente.latitude || -19.9328
+                      const lng = cliente.longitude || -44.0539
+                      window.open(
+                        `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+                        '_blank',
+                      )
+                    }}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Abrir Rota no GPS
+                  </Button>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-4 text-xs text-slate-600 mt-1">
@@ -1600,7 +1664,7 @@ export default function Cliente360() {
             )}
 
             <div className="text-[10px] text-muted-foreground text-right">
-              * Sistema mestre: SAP ECC (Transação F.35 / FD33). Migração futura para S/4HANA
+              * Sistema mestre: SAP ECC (Transação F.35 / FD33). Backoffice transacional oficial.
               preparada.
             </div>
           </Card>

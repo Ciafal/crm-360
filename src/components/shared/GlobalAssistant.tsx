@@ -38,13 +38,14 @@ export function GlobalAssistant() {
     {
       id: 'init-1',
       sender: 'assistant',
-      text: 'Olá! Sou o Assistente CRM 360º CIAFAL. Posso consultar posição de crédito SAP ECC, entregas no TMS, reclamações de qualidade, representatividade na carteira e sugerir a melhor abordagem comercial por arquétipo (Indústria, Revenda, Serralheria, Consumidor Final). O que você deseja consultar agora?',
+      text: 'Olá! Sou o Assistente CRM 360º CIAFAL. Posso consultar posição de crédito SAP ECC, entregas no TMS, reclamações de qualidade, localização e dispersão no Mapa da Carteira e sugerir a melhor abordagem comercial por arquétipo (Indústria, Revenda, Serralheria, Consumidor Final). O que você deseja consultar agora?',
       quickPrompts: [
+        'Mostre clientes A próximos de Belo Horizonte',
+        'Quais clientes em Divinópolis estão em janela de recompra?',
+        'Tenho uma visita em Contagem amanhã. Quem mais deveria visitar?',
+        'Mostre inativos A da região Centro-Oeste',
         'Esse cliente tem reclamação aberta?',
-        'Tem alguma carga em trânsito?',
-        'Qual o limite de crédito disponível?',
-        'Qual a melhor abordagem para indústria?',
-        'Mostre meus clientes A',
+        'Qual o limite de crédito disponível no SAP?',
       ],
     },
   ])
@@ -92,6 +93,44 @@ export function GlobalAssistant() {
         reply =
           'Você possui 4 clientes classificados como ABC Histórico A (70% do volume da carteira). O maior cliente representa 32.4% das suas toneladas faturadas.'
         link = { label: 'Ver Gestão de Carteira', url: '/crm' }
+      } else if (
+        lower.includes('belo horizonte') ||
+        (lower.includes('próximos') && lower.includes('bh'))
+      ) {
+        reply =
+          'No polo de Belo Horizonte e Região Metropolitana, encontramos 4 clientes Classe A: Metalúrgica Santa Rita (185t), Estruturas Metálicas Triângulo (92t), Construtora Aliança (120t) e Indústria Mecânica União (65t). Volume somado: 462 toneladas.'
+        link = { label: 'Abrir no Mapa da Carteira', url: '/crm?tab=mapa' }
+      } else if (lower.includes('divinópolis') || lower.includes('divinopolis')) {
+        reply =
+          'Em Divinópolis / Região Centro-Oeste, identificamos Caldeiraria & Montagens Oeste (SAP 100008, ABC B, 48t) em janela imediata de recompra (previsão para os próximos 4 dias).'
+        link = { label: 'Ver Cliente em Divinópolis no Mapa', url: '/crm?tab=mapa' }
+      } else if (
+        lower.includes('contagem') &&
+        (lower.includes('amanhã') || lower.includes('visitar') || lower.includes('visita'))
+      ) {
+        reply =
+          'Para sua visita em Contagem, a IA do Roteiro Comercial sugere aproveitar a proximidade geográfica para visitar também: 1) Metalúrgica Santa Rita (SAP 100001 - Janela de Recompra ativa) e 2) Aços & Caldeiraria Betim (a 12 min de distância, com cotação pendente de 22t).'
+        link = { label: 'Planejar Roteiro de Visitas no Mapa', url: '/crm?tab=mapa' }
+      } else if (
+        lower.includes('centro-oeste') ||
+        (lower.includes('inativos') && lower.includes('região'))
+      ) {
+        reply =
+          'Na região Centro-Oeste / polo Divinópolis, identificamos 2 contas inativas com histórico A/B (potencial estimado em 75 toneladas/ano). Oportunidade para reatribuição territorial ou ação de reativação.'
+        link = { label: 'Filtrar Inativos no Mapa', url: '/crm?tab=mapa' }
+      } else if (
+        lower.includes('mapa') ||
+        lower.includes('região') ||
+        lower.includes('roteiro') ||
+        lower.includes('visita')
+      ) {
+        reply =
+          'Território CIAFAL: No polo de Belo Horizonte e Contagem você possui 8 clientes (475.5t). Em Divinópolis há 1 cliente em janela imediata de recompra. Sugiro roteiro agrupando visitas em Contagem e Betim com prioridade para perfis e vigas.'
+        link = { label: 'Abrir Mapa da Carteira', url: '/crm?tab=mapa' }
+      } else if (lower.includes('inativo') || lower.includes('reativação')) {
+        reply =
+          'Camada de Inativos: 6 contas prioritárias identificadas em Minas Gerais com potencial de 240 toneladas. Disponível reatribuição territorial para representantes externos.'
+        link = { label: 'Ver Inativos no Mapa', url: '/crm?tab=mapa' }
       } else {
         reply = `Entendido. Analisei os dados de ERP SAP ECC, TMS e Gestão de Performance para responder sua solicitação: "${q}". Deseja aprofundar na visão 360º?`
         link = { label: 'Abrir Cliente 360º', url: '/crm/cli-100001' }

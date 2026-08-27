@@ -133,7 +133,7 @@ export class LocalSalesSupervisorAgent implements SalesSupervisorAgent {
         'Revisar liberação de limite com setor financeiro para a conta Protemax.',
       ],
       confidence: 0.94,
-      sources: ['Qlik Cloud BI', 'SAP S/4HANA ECC', 'WhatsApp Baileys'],
+      sources: ['Qlik Cloud BI', 'SAP ECC', 'WhatsApp Baileys'],
     }
   }
 
@@ -345,7 +345,7 @@ export class LocalAIAdapter implements AIProvider {
       combined.includes('aprov')
     ) {
       intent = 'fechamento'
-      nextAction = 'Emitir ordem de venda no SAP S/4HANA'
+      nextAction = 'Emitir ordem de venda no SAP ECC'
     }
 
     return {
@@ -421,7 +421,7 @@ export class LocalAIAdapter implements AIProvider {
         'Crédito aprovado no valor de R$ 120.000',
       ],
       confidence: 0.94,
-      sources: ['Qlik BI', 'SAP S/4HANA', 'Histórico WhatsApp'],
+      sources: ['Qlik BI', 'SAP ECC', 'Histórico WhatsApp'],
       timestamp: new Date().toISOString(),
       version: '2.1.0',
     }

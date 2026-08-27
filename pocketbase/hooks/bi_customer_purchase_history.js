@@ -36,7 +36,7 @@ routerAdd('GET', '/bi/customers/{id}/purchase-history', (e) => {
     total_invoices: purchases.length,
     items: purchases,
     is_demo_data: true,
-    data_source: 'SAP S/4HANA & Qlik Cloud (Mock)',
+    data_source: 'SAP ECC & Qlik Cloud (Mock)',
     source_updated_at: sourceUpdatedAt,
     synced_at: syncedAt,
   })

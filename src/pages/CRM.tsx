@@ -388,7 +388,7 @@ export default function CRM() {
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground font-sans mt-0.5">
-                Gestão da carteira de clientes, pipeline integrado ao SAP S/4HANA e funil de vendas
+                Gestão da carteira de clientes, pipeline integrado ao SAP ECC e funil de vendas
                 preditivo.
               </p>
             </div>
@@ -428,13 +428,14 @@ export default function CRM() {
               value="carteira"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
             >
-              <Building2 className="w-4 h-4" /> Gestão de Carteira ({sortedClientes.length})
+              <Building2 className="w-4 h-4" /> [ Lista ] Gestão de Carteira (
+              {sortedClientes.length})
             </TabsTrigger>
             <TabsTrigger
               value="mapa"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
             >
-              <MapPin className="w-4 h-4" /> Mapa da Carteira
+              <MapPin className="w-4 h-4" /> [ Mapa ] Mapa da Carteira
             </TabsTrigger>
             <TabsTrigger
               value="leads"
@@ -1198,7 +1199,7 @@ export default function CRM() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  Cotações SAP S/4HANA Integradas
+                  Cotações SAP ECC Integradas
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Propostas geradas diretamente no SAP com status de aprovação e vigência de tabela.

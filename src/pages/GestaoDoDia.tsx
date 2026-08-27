@@ -225,7 +225,7 @@ export default function GestaoDoDia() {
               setLoading(true)
               setTimeout(() => {
                 setLoading(false)
-                toast.success('Métricas atualizadas com o SAP S/4HANA!')
+                toast.success('Métricas atualizadas com o SAP ECC!')
               }, 300)
             }}
             className="h-9 gap-1.5 text-xs bg-primary text-white font-semibold"

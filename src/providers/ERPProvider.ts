@@ -128,7 +128,7 @@ export interface ERPProvider {
 }
 
 export class SAPECCProvider implements ERPProvider {
-  readonly name = 'SAP ECC 6.0 / S/4HANA (CIAFAL Connector - Mock Fallback)'
+  readonly name = 'SAP ECC 6.0 (CIAFAL Connector - Backoffice Oficial Mock Fallback)'
   private lastSync = new Date().toISOString()
 
   isDemoData(): boolean {

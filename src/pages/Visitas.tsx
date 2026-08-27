@@ -762,6 +762,15 @@ export default function Visitas() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => navigate('/crm?tab=mapa')}
+            className="h-9 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5 font-semibold"
+          >
+            <MapPin className="w-3.5 h-3.5 text-emerald-600" /> Abrir no Mapa da Carteira
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               setLoading(true)
               setTimeout(() => setLoading(false), 200)
