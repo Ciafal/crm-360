@@ -295,15 +295,17 @@ export interface Conversation extends RecordModel {
 export interface CrmContact extends RecordModel {
   id: string
   account_id?: string
-  user_id: string
-  instance_name: string
+  user_id?: string
+  instance_name?: string
   jid: string
   phone?: string
+  name?: string
+  custom_name?: string
   push_name?: string
   contact_name?: string
   avatar_url?: string
   notes?: string
-  stage: 'lead' | 'em_atendimento' | 'cliente' | 'perdido'
+  stage: string
   last_synced_at?: string
   // Empresa (migration 0024)
   company_id?: string

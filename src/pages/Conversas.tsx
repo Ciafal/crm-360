@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useInstanciaAtiva, useConversas, useMensagens } from '@/hooks/use-whatsapp'
 import {
-  useInstanciaAtiva,
-  useConversas,
-  useMensagens,
   enviarTexto,
   enviarMidia,
   desconectarInstancia,
   diagnosticarWebhook,
   reimportarHistorico,
-} from '@/hooks/use-whatsapp'
+} from '@/services/whatsapp_service'
 import { useAuth } from '@/hooks/use-auth'
 import { useCategories } from '@/hooks/use-categories'
 import { ChatList } from '@/components/chat/ChatList'
@@ -38,7 +36,7 @@ export default function Conversas() {
   const isMobile = useIsMobile()
   const { user } = useAuth()
   const { account, accountId, role } = useCurrentAccount()
-  const { instance, loading: loadingInstance, error: instanceError } = useInstanciaAtiva()
+  const { instance, loading: loadingInstance } = useInstanciaAtiva()
   const isImportingHistory = instance?.is_importing_history === true
   const [showArchived, setShowArchived] = useState(false)
 
@@ -50,7 +48,6 @@ export default function Conversas() {
     hasMore: hasMoreChats,
     loadMore: loadMoreChats,
     reload: reloadConversas,
-    setConversations,
   } = useConversas(effectiveInstanceName, isImportingHistory, showArchived)
 
   const { categories } = useCategories(accountId || account?.id || undefined)

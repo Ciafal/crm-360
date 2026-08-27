@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/use-auth'
 const MOCK_FALLBACK_CONTACTS: CrmContact[] = [
   {
     id: 'crm_mock_1',
+    collectionId: 'crm_contacts',
+    collectionName: 'crm_contacts',
     account_id: 'acc_ciafal_default',
     instance_name: 'ciafal_default_inst',
     jid: '5511988887771@s.whatsapp.net',
@@ -20,6 +22,8 @@ const MOCK_FALLBACK_CONTACTS: CrmContact[] = [
   },
   {
     id: 'crm_mock_2',
+    collectionId: 'crm_contacts',
+    collectionName: 'crm_contacts',
     account_id: 'acc_ciafal_default',
     instance_name: 'ciafal_default_inst',
     jid: '5511988887772@s.whatsapp.net',
@@ -34,6 +38,8 @@ const MOCK_FALLBACK_CONTACTS: CrmContact[] = [
   },
   {
     id: 'crm_mock_3',
+    collectionId: 'crm_contacts',
+    collectionName: 'crm_contacts',
     account_id: 'acc_ciafal_default',
     instance_name: 'ciafal_default_inst',
     jid: '5511988887773@s.whatsapp.net',
@@ -48,6 +54,8 @@ const MOCK_FALLBACK_CONTACTS: CrmContact[] = [
   },
   {
     id: 'crm_mock_4',
+    collectionId: 'crm_contacts',
+    collectionName: 'crm_contacts',
     account_id: 'acc_ciafal_default',
     instance_name: 'ciafal_default_inst',
     jid: '5511988887774@s.whatsapp.net',
@@ -62,6 +70,8 @@ const MOCK_FALLBACK_CONTACTS: CrmContact[] = [
   },
   {
     id: 'crm_mock_5',
+    collectionId: 'crm_contacts',
+    collectionName: 'crm_contacts',
     account_id: 'acc_ciafal_default',
     instance_name: 'ciafal_default_inst',
     jid: '5511988887775@s.whatsapp.net',
