@@ -27,7 +27,13 @@ import {
   FileCheck,
   Building2,
   Compass,
+  FileSignature,
 } from 'lucide-react'
+import { complianceService } from '@/services/compliance_service'
+import type {
+  DigitalSignatureIntegrationConfig,
+  DigitalSignatureProviderType,
+} from '@/types/models'
 import {
   initialCommercialPlaybooks,
   initialRelationshipEvents,
@@ -65,8 +71,13 @@ export default function Administracao() {
   const { toast } = useToast()
 
   const [adminTab, setAdminTab] = useState<
-    'geral' | 'playbooks' | 'relacionamento' | 'workflows' | 'formularios'
+    'geral' | 'assinaturas' | 'playbooks' | 'relacionamento' | 'workflows' | 'formularios'
   >('geral')
+
+  // Configuração de Assinatura Digital
+  const [sigConfig, setSigConfig] = useState<DigitalSignatureIntegrationConfig>(
+    complianceService.getDigitalSignatureConfig(),
+  )
   const [emails, setEmails] = useState<MockEmailItem[]>([])
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -208,6 +219,17 @@ export default function Administracao() {
         </Button>
         <Button
           size="sm"
+          variant={adminTab === 'assinaturas' ? 'default' : 'ghost'}
+          onClick={() => setAdminTab('assinaturas')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-semibold',
+            adminTab === 'assinaturas' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
+          )}
+        >
+          <FileSignature className="w-4 h-4 mr-1.5" /> 2. Assinatura Digital (D4Sign / DocuSign)
+        </Button>
+        <Button
+          size="sm"
           variant={adminTab === 'playbooks' ? 'default' : 'ghost'}
           onClick={() => setAdminTab('playbooks')}
           className={cn(
@@ -215,7 +237,7 @@ export default function Administracao() {
             adminTab === 'playbooks' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
           )}
         >
-          <BookOpen className="w-4 h-4 mr-1.5" /> 2. Playbooks Comerciais ({playbooks.length})
+          <BookOpen className="w-4 h-4 mr-1.5" /> 3. Playbooks Comerciais ({playbooks.length})
         </Button>
         <Button
           size="sm"
@@ -226,7 +248,7 @@ export default function Administracao() {
             adminTab === 'relacionamento' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
           )}
         >
-          <Sparkles className="w-4 h-4 mr-1.5" /> 3. Réguas de Relacionamento ({relEvents.length})
+          <Sparkles className="w-4 h-4 mr-1.5" /> 4. Réguas de Relacionamento ({relEvents.length})
         </Button>
         <Button
           size="sm"
@@ -237,7 +259,7 @@ export default function Administracao() {
             adminTab === 'workflows' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
           )}
         >
-          <Workflow className="w-4 h-4 mr-1.5" /> 4. Workflow Engine & Automação ({rules.length})
+          <Workflow className="w-4 h-4 mr-1.5" /> 5. Workflow Engine & Automação ({rules.length})
         </Button>
         <Button
           size="sm"
@@ -248,9 +270,241 @@ export default function Administracao() {
             adminTab === 'formularios' ? 'bg-primary text-white shadow-xs' : 'text-slate-600',
           )}
         >
-          <Layers className="w-4 h-4 mr-1.5" /> 5. Formulários Dinâmicos ({formFields.length})
+          <Layers className="w-4 h-4 mr-1.5" /> 6. Formulários Dinâmicos ({formFields.length})
         </Button>
       </div>
+
+      {/* ABA DE CONFIGURAÇÃO DE ASSINATURA DIGITAL */}
+      {adminTab === 'assinaturas' && (
+        <Card className="rounded-3xl border-border/60 bg-white shadow-sm p-6 space-y-6 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-xl font-bold text-primary">
+                  Provedores de Assinatura Digital & Validade Jurídica
+                </h3>
+                <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-bold text-[10px]">
+                  MOCK — Ambiente de Homologação (QAS)
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Configuração desacoplada de provedores (D4Sign / DocuSign) para termos corporativos,
+                NDAs e cautelas de equipamentos do HCM com certificação ICP-Brasil.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                complianceService.saveDigitalSignatureConfig(sigConfig)
+                toast({
+                  title: 'Configurações de Assinatura Digital Salvas',
+                  description: `Provedor ativo: ${sigConfig.active_provider} em modo ${sigConfig.mode.toUpperCase()}.`,
+                })
+              }}
+              className="h-8 gap-1.5 text-xs bg-primary text-white font-semibold"
+            >
+              <Check className="w-3.5 h-3.5" /> Salvar Configurações
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1.5 p-4 rounded-2xl border bg-slate-50">
+              <label className="text-xs font-bold text-slate-800">Provedor Ativo Padrão</label>
+              <select
+                value={sigConfig.active_provider}
+                onChange={(e) =>
+                  setSigConfig({
+                    ...sigConfig,
+                    active_provider: e.target.value as DigitalSignatureProviderType,
+                  })
+                }
+                className="w-full h-9 text-xs rounded-xl border border-input bg-white px-3 font-semibold text-primary"
+              >
+                <option value="D4SIGN">D4Sign (Padrão ICP-Brasil MP 2.200-2)</option>
+                <option value="DOCUSIGN">DocuSign (eSignature REST API v2.1)</option>
+                <option value="NONE">Nenhum (Apenas Aceite Interno)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Provedor orquestrador para termos com exigência de validade jurídica.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 p-4 rounded-2xl border bg-slate-50">
+              <label className="text-xs font-bold text-slate-800">Modo de Operação</label>
+              <select
+                value={sigConfig.mode}
+                onChange={(e) =>
+                  setSigConfig({
+                    ...sigConfig,
+                    mode: e.target.value as 'mock' | 'live',
+                  })
+                }
+                className="w-full h-9 text-xs rounded-xl border border-input bg-white px-3 font-semibold"
+              >
+                <option value="mock">MOCK (QAS / Homologação — Simulação Segura)</option>
+                <option value="live">LIVE (PRD — Chamadas Reais de API)</option>
+              </select>
+              <p className="text-[11px] text-muted-foreground">
+                Em MOCK os envelopes simulam assinaturas sem debitar créditos.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 p-4 rounded-2xl border bg-slate-50">
+              <label className="text-xs font-bold text-slate-800">Papel Padrão (Signer Role)</label>
+              <Input
+                value={sigConfig.default_role || 'Signer'}
+                onChange={(e) => setSigConfig({ ...sigConfig, default_role: e.target.value })}
+                className="h-9 text-xs bg-white rounded-xl"
+                placeholder="Ex: Colaborador / Signer"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Tag de signatário aplicada automaticamente no envelope.
+              </p>
+            </div>
+          </div>
+
+          {/* CREDENCIAIS D4SIGN */}
+          <div className="p-5 rounded-3xl border border-emerald-200/80 bg-emerald-50/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-emerald-700 text-white font-bold text-[10px]">
+                  D4SIGN API
+                </Badge>
+                <h4 className="font-bold text-sm text-emerald-950">
+                  Credenciais & Cofre D4Sign Safe
+                </h4>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-white text-emerald-800">
+                Secrets Criptografados
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">API Key (Token)</span>
+                <Input
+                  type="password"
+                  value={sigConfig.d4sign_config.api_key || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      d4sign_config: { ...sigConfig.d4sign_config, api_key: e.target.value },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="live_token_d4s_..."
+                />
+              </div>
+
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">Crypt Key (Cofre)</span>
+                <Input
+                  type="password"
+                  value={sigConfig.d4sign_config.crypt_key || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      d4sign_config: { ...sigConfig.d4sign_config, crypt_key: e.target.value },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="crypt_safe_..."
+                />
+              </div>
+
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">
+                  Nome do Safe / Pasta
+                </span>
+                <Input
+                  value={sigConfig.d4sign_config.safe_name || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      d4sign_config: { ...sigConfig.d4sign_config, safe_name: e.target.value },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="Ex: Ciafal - RH e Governança"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CREDENCIAIS DOCUSIGN */}
+          <div className="p-5 rounded-3xl border border-blue-200/80 bg-blue-50/40 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-blue-700 text-white font-bold text-[10px]">
+                  DOCUSIGN eSIGNATURE
+                </Badge>
+                <h4 className="font-bold text-sm text-blue-950">
+                  Credenciais DocuSign & OAuth 2.0 Connect
+                </h4>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-white text-blue-800">
+                OAuth 2.0 RSA / JWT
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">Account ID</span>
+                <Input
+                  value={sigConfig.docusign_config.account_id || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      docusign_config: { ...sigConfig.docusign_config, account_id: e.target.value },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="ds-acc-..."
+                />
+              </div>
+
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">
+                  Integration Key (Client ID)
+                </span>
+                <Input
+                  type="password"
+                  value={sigConfig.docusign_config.integration_key || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      docusign_config: {
+                        ...sigConfig.docusign_config,
+                        integration_key: e.target.value,
+                      },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="ds-ikey-..."
+                />
+              </div>
+
+              <div>
+                <span className="font-semibold text-slate-700 block mb-1">
+                  Secret Key / Private Key
+                </span>
+                <Input
+                  type="password"
+                  value={sigConfig.docusign_config.secret_key || ''}
+                  onChange={(e) =>
+                    setSigConfig({
+                      ...sigConfig,
+                      docusign_config: { ...sigConfig.docusign_config, secret_key: e.target.value },
+                    })
+                  }
+                  className="h-8 text-xs bg-white"
+                  placeholder="ds-sec-..."
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ABA 2: PLAYBOOKS COMERCIAIS */}
       {adminTab === 'playbooks' && (

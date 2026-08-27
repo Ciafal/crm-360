@@ -1130,6 +1130,9 @@ export interface RequestReembolsoData {
 // 2. GOVERNANÇA & COMPLIANCE DO COLABORADOR
 // ==========================================
 
+export type SignatureLevel = 'ELECTRONIC' | 'DIGITAL'
+export type DigitalSignatureProviderType = 'D4SIGN' | 'DOCUSIGN' | 'NONE'
+
 export interface CompliancePolicyType {
   id: string
   name: string
@@ -1153,6 +1156,10 @@ export interface CompliancePolicyType {
   target_company?: string
   requires_reacceptance_on_new_version: boolean
   status: 'ATIVO' | 'RASCUNHO' | 'INATIVO'
+  // Campos de Assinatura Digital / Validade Jurídica
+  signature_level?: SignatureLevel
+  digital_signature_provider?: DigitalSignatureProviderType
+  signature_deadline_days?: number
   created_at: string
   updated_at: string
 }
@@ -1172,6 +1179,15 @@ export interface PolicyDocumentVersion {
   approved_at: string
 }
 
+export type AcceptanceStatus =
+  | 'EM_CONFORMIDADE'
+  | 'PENDENTE_REACEITE'
+  | 'REVOGADO'
+  | 'PENDING_SIGNATURE'
+  | 'SIGNED'
+  | 'SIGNATURE_EXPIRED'
+  | 'SIGNATURE_DECLINED'
+
 export interface EmployeePolicyAcceptance {
   id: string
   employee_id: string
@@ -1187,10 +1203,80 @@ export interface EmployeePolicyAcceptance {
   ip_address: string
   user_agent: string
   device_context: string
-  authentication_method: 'SESSAO_AUTENTICADA_QAS' | 'MFA_TOTP' | 'INTEGRACAO_CERTIFICADORA'
+  authentication_method:
+    | 'SESSAO_AUTENTICADA_QAS'
+    | 'MFA_TOTP'
+    | 'INTEGRACAO_CERTIFICADORA'
+    | 'D4SIGN_DIGITAL_SIGNATURE'
+    | 'DOCUSIGN_DIGITAL_SIGNATURE'
   document_hash: string
   acceptance_hash: string // Hash imutável gerado na confirmação
-  status: 'EM_CONFORMIDADE' | 'PENDENTE_REACEITE' | 'REVOGADO'
+  status: AcceptanceStatus
+  // Campos de Integração de Assinatura Digital
+  signature_level?: SignatureLevel
+  provider?: DigitalSignatureProviderType
+  envelope_id?: string
+  external_document_id?: string
+  signature_hash?: string
+  signed_at?: string
+  viewed_at?: string
+  expires_at?: string
+  signed_document_url?: string
+  signed_document_name?: string
+  decline_reason?: string
+}
+
+export interface DigitalSignatureIntegrationConfig {
+  active_provider: DigitalSignatureProviderType
+  mode: 'mock' | 'live'
+  default_template_id?: string
+  default_role?: string
+  d4sign_config: {
+    api_key?: string
+    crypt_key?: string
+    account_id?: string
+    base_url: string
+    safe_name?: string
+  }
+  docusign_config: {
+    account_id?: string
+    integration_key?: string
+    secret_key?: string
+    base_url: string
+    auth_server: string
+    default_template_name?: string
+  }
+  last_tested_at?: string
+  is_healthy?: boolean
+}
+
+export interface SignatureEnvelopeSummary {
+  envelope_id: string
+  acceptance_id: string
+  policy_id: string
+  policy_name: string
+  policy_version: string
+  employee_id: string
+  employee_name: string
+  employee_email: string
+  employee_matricula: string
+  employee_department: string
+  provider: DigitalSignatureProviderType
+  status: 'sent' | 'viewed' | 'signed' | 'declined' | 'expired' | 'canceled'
+  created_at: string
+  sent_at: string
+  viewed_at?: string
+  signed_at?: string
+  expires_at?: string
+  document_hash: string
+  signature_hash?: string
+  signed_document_url?: string
+  signers: Array<{
+    name: string
+    email: string
+    status: 'sent' | 'viewed' | 'signed' | 'declined'
+    signed_at?: string
+  }>
 }
 
 // ==========================================
