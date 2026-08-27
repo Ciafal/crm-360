@@ -3,12 +3,16 @@ import {
   isFixedTestOtpEnabled,
   getFixedTestOtpCode,
   requiresMfa,
+  verifyOtp,
   verifyMfaOtp,
   requestMfaOtp,
+  checkRateLimit,
+  recordFailedAttempt,
+  resetRateLimit,
 } from '../services/mfa_service'
 import { defaultIdentityProvider } from '../providers/IdentityProvider'
 
-describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
+describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)', () => {
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
@@ -19,14 +23,20 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
     import.meta.env.VITE_APP_ENV = 'qas'
     import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'true'
     import.meta.env.VITE_FIXED_TEST_OTP = '123456'
+    import.meta.env.MODE = 'test'
+    resetRateLimit('admin.teste@ciafal.local')
+    resetRateLimit('vendedor.teste@ciafal.local')
+    resetRateLimit('representante.teste@crm360.local')
+    resetRateLimit('usuario.corporativo@ciafal.com.br')
+    resetRateLimit('rate.limit@ciafal.local')
   })
 
   afterEach(() => {
     process.env = { ...originalEnv }
   })
 
-  // 1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso
-  it('1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso', async () => {
+  // 1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso com mfa_mode: "FIXED_QAS"
+  it('1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso com mfa_mode: "FIXED_QAS"', async () => {
     const email = 'admin.teste@ciafal.local'
     expect(requiresMfa(email)).toBe(true)
     expect(isFixedTestOtpEnabled()).toBe(true)
@@ -34,22 +44,29 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
 
     const req = await requestMfaOtp(email)
     expect(req.success).toBe(true)
+    expect(req.is_qas_fixed_active).toBe(true)
 
-    const result = await verifyMfaOtp(email, '123456')
+    // Usando verifyOtp diretamente
+    const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
     expect(result.mfa_mode).toBe('FIXED_QAS')
+
+    // Usando verifyMfaOtp alias
+    const resultAlias = await verifyMfaOtp(email, '123456')
+    expect(resultAlias.valid).toBe(true)
+    expect(resultAlias.mfa_mode).toBe('FIXED_QAS')
   })
 
   // 2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código inválido")
   it('2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código inválido")', async () => {
     const email = 'admin.teste@ciafal.local'
-    const result = await verifyMfaOtp(email, '654321')
+    const result = await verifyOtp(email, '654321')
     expect(result.valid).toBe(false)
     expect(result.error).toBe('Código inválido')
   })
 
   // 3. QAS: senha errada -> NÃO chegar à etapa MFA (fluxo de credencial obrigatório)
-  it('3. QAS: senha errada -> NÃO chegar à etapa MFA', () => {
+  it('3. QAS: senha errada -> NÃO chegar à etapa MFA (credenciais validadas antes)', () => {
     const validateCredentials = (email: string, pass: string) => {
       const isTestUser = email.endsWith('@ciafal.local') || email.endsWith('@crm360.local')
       if (isTestUser) {
@@ -72,7 +89,7 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
     const email = 'vendedor.teste@ciafal.local'
     expect(requiresMfa(email)).toBe(true)
 
-    const result = await verifyMfaOtp(email, '123456')
+    const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
     expect(result.mfa_mode).toBe('FIXED_QAS')
   })
@@ -82,44 +99,59 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
     const email = 'representante.teste@crm360.local'
     expect(requiresMfa(email, 'representante_externo')).toBe(true)
 
-    const result = await verifyMfaOtp(email, '123456')
+    const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
     expect(result.mfa_mode).toBe('FIXED_QAS')
 
     // Validação de escopo externo: só acessa a própria carteira
     const repId = 'rep-externo-01'
     const internalSellerId = 'vendedor-teste-01'
-    const canAccessOwn = defaultIdentityProvider.canAccessCustomer(repId, 'representante_externo', repId)
+    const canAccessOwn = defaultIdentityProvider.canAccessCustomer(repId, 'representante_externo' as any, repId)
     const canAccessInternal = defaultIdentityProvider.canAccessCustomer(
       repId,
-      'representante_externo',
+      'representante_externo' as any,
       internalSellerId,
     )
     expect(canAccessOwn).toBe(true)
     expect(canAccessInternal).toBe(false)
   })
 
-  // 6. Produção: APP_ENV=production, ENABLE_FIXED_TEST_OTP=false -> 123456 NÃO deve funcionar como OTP, deve usar OTP real
-  it('6. Produção: APP_ENV=production, ENABLE_FIXED_TEST_OTP=false -> 123456 NÃO deve funcionar como OTP', async () => {
-    // Configura ambiente de produção
+  // 6. Produção: APP_ENV=production -> isFixedTestOtpEnabled() SEMPRE retorna false
+  it('6. Produção: APP_ENV=production -> isFixedTestOtpEnabled() SEMPRE retorna false, independente de ENABLE_FIXED_TEST_OTP', async () => {
+    process.env.APP_ENV = 'production'
+    process.env.ENABLE_FIXED_TEST_OTP = 'true'
     import.meta.env.VITE_APP_ENV = 'production'
-    import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'false'
-    import.meta.env.MODE = 'production'
+    import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'true'
 
     expect(isFixedTestOtpEnabled()).toBe(false)
     expect(getFixedTestOtpCode()).toBe('')
 
     // Em produção sem fixed OTP ativo, o código "123456" fixo é rejeitado
     const email = 'usuario.corporativo@ciafal.com.br'
-    const result = await verifyMfaOtp(email, '123456')
+    const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(false)
     expect(result.error).toBe('Código inválido')
   })
 
-  // 7. Validação de mensagem de ambiente: "Código QAS: 123456" NUNCA em produção
-  it('7. Mensagem com código QAS NUNCA deve ser exibida em produção', () => {
-    const getMfaDisclaimer = (isQasFixed: boolean) => {
-      if (isQasFixed) {
+  // 7. ENABLE_FIXED_TEST_OTP=false em QAS desabilita o OTP fixo
+  it('7. ENABLE_FIXED_TEST_OTP=false desabilita OTP fixo mesmo fora de produção', async () => {
+    process.env.APP_ENV = 'qas'
+    process.env.ENABLE_FIXED_TEST_OTP = 'false'
+    import.meta.env.VITE_APP_ENV = 'qas'
+    import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'false'
+
+    expect(isFixedTestOtpEnabled()).toBe(false)
+    expect(getFixedTestOtpCode()).toBe('')
+
+    const email = 'admin.teste@ciafal.local'
+    const result = await verifyOtp(email, '123456')
+    expect(result.valid).toBe(false)
+  })
+
+  // 8. Mensagem de ambiente na UI: "Código QAS: 123456" SOMENTE quando isFixedTestOtpEnabled() === true
+  it('8. Mensagem de ambiente na UI: "Código QAS: 123456" SOMENTE quando isFixedTestOtpEnabled() === true', () => {
+    const getMfaUiConfig = (fixedEnabled: boolean) => {
+      if (fixedEnabled) {
         return {
           notice: 'Ambiente de testes — utilize o código MFA definido para QAS.',
           codeDisplay: 'Código QAS: 123456',
@@ -131,55 +163,60 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
       }
     }
 
-    const qasDisclaimer = getMfaDisclaimer(true)
-    expect(qasDisclaimer.notice).toContain('Ambiente de testes')
-    expect(qasDisclaimer.codeDisplay).toBe('Código QAS: 123456')
+    const qasConfig = getMfaUiConfig(true)
+    expect(qasConfig.notice).toBe('Ambiente de testes — utilize o código MFA definido para QAS.')
+    expect(qasConfig.codeDisplay).toBe('Código QAS: 123456')
 
-    const prodDisclaimer = getMfaDisclaimer(false)
-    expect(prodDisclaimer.notice).not.toContain('Ambiente de testes')
-    expect(prodDisclaimer.codeDisplay).toBeNull()
+    const prodConfig = getMfaUiConfig(false)
+    expect(prodConfig.notice).toBe('Código de 6 dígitos enviado por e-mail corporativo.')
+    expect(prodConfig.codeDisplay).toBeNull()
   })
 
-  // 8. Auditoria: não registrar o OTP puro no log
-  it('8. Auditoria: registrar login com mfa_mode=FIXED_QAS e NÃO registrar o código OTP', () => {
-    const buildAuditPayload = (
-      email: string,
-      mfaMode: string,
-      success: boolean,
-      otpEntered: string,
-    ) => {
-      // Regra de segurança: OTP NUNCA é registrado em plaintext
+  // 9. Rate limiting: Bloqueio no frontend após 5 tentativas consecutivas de falha
+  it('9. Rate limiting: Máximo 5 tentativas consecutivas com bloqueio de 15 minutos', async () => {
+    const testEmail = 'rate.limit@ciafal.local'
+    resetRateLimit(testEmail)
+
+    // 4 tentativas com código errado -> ainda permitido tentar
+    for (let i = 0; i < 4; i++) {
+      const res = await verifyOtp(testEmail, '999999')
+      expect(res.valid).toBe(false)
+      expect(res.error).toBe('Código inválido')
+    }
+
+    // 5ª tentativa errada -> atinge limite
+    const res5 = await verifyOtp(testEmail, '999999')
+    expect(res5.valid).toBe(false)
+
+    // 6ª tentativa -> bloqueada por rate limit
+    const res6 = await verifyOtp(testEmail, '123456')
+    expect(res6.valid).toBe(false)
+    expect(res6.error).toContain('Limite de tentativas de MFA excedido')
+
+    // Reset limpa o bloqueio
+    resetRateLimit(testEmail)
+    const resAfterReset = await verifyOtp(testEmail, '123456')
+    expect(resAfterReset.valid).toBe(true)
+  })
+
+  // 10. Auditoria: log sem registrar o código OTP
+  it('10. Auditoria: não registra OTP puro em plaintext', () => {
+    const buildAuditLog = (email: string, mfaMode: string, success: boolean) => {
       return {
-        email,
-        mfa_mode: mfaMode,
-        success,
+        recipient: email,
         otp_code: '[REDACTED]',
-        timestamp: new Date().toISOString(),
+        status: success ? 'USED' : 'FAILED_ATTEMPT',
+        metadata_json: {
+          mfa_mode: mfaMode,
+          success,
+          timestamp: new Date().toISOString(),
+        },
       }
     }
 
-    const audit = buildAuditPayload('vendedor.teste@ciafal.local', 'FIXED_QAS', true, '123456')
-    expect(audit.mfa_mode).toBe('FIXED_QAS')
-    expect(audit.success).toBe(true)
-    expect(audit.otp_code).toBe('[REDACTED]')
-    expect(audit.otp_code).not.toBe('123456')
-  })
-
-  // 9. Rate limit: manter proteção de tentativas
-  it('9. Rate limit: bloqueio após múltiplas tentativas com falha', () => {
-    const simulateRateLimit = (failedAttemptsInWindow: number) => {
-      const MAX_FAILED_ATTEMPTS = 5
-      if (failedAttemptsInWindow >= MAX_FAILED_ATTEMPTS) {
-        return {
-          allowed: false,
-          error: 'Limite de tentativas de MFA excedido. Por segurança, tente novamente em 15 minutos.',
-        }
-      }
-      return { allowed: true }
-    }
-
-    expect(simulateRateLimit(3).allowed).toBe(true)
-    expect(simulateRateLimit(5).allowed).toBe(false)
-    expect(simulateRateLimit(5).error).toContain('Limite de tentativas de MFA excedido')
+    const log = buildAuditLog('admin.teste@ciafal.local', 'FIXED_QAS', true)
+    expect(log.otp_code).toBe('[REDACTED]')
+    expect(log.metadata_json.mfa_mode).toBe('FIXED_QAS')
+    expect(log.metadata_json.success).toBe(true)
   })
 })
