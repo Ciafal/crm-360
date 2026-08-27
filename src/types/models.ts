@@ -1,3 +1,5 @@
+import type { RecordModel } from 'pocketbase'
+
 export type CategoryColor =
   | 'slate'
   | 'red'
@@ -17,8 +19,6 @@ export type CategoryColor =
   | 'fuchsia'
   | 'pink'
   | 'rose'
-
-import type { RecordModel } from 'pocketbase'
 
 export interface Category extends RecordModel {
   id: string
@@ -78,6 +78,7 @@ export type CiafalUserRole =
   | 'ti'
   | 'administrador'
   | 'auditor'
+  | 'representante_externo'
 
 export type CommercialMetric = 'TONS' | 'REVENUE'
 
@@ -366,7 +367,7 @@ export interface CPQQuoteItem {
   discountPercent: number
   finalPriceKg: number
   totalValue: number
-  marginPercent?: number // Visível apenas com permissão
+  marginPercent?: number
   leadTimeDays: number
   freightType: 'CIF' | 'FOB'
 }
@@ -421,7 +422,7 @@ export interface LeadItem {
   uf: string
   potentialTons: number
   potentialValue: number
-  leadPriorityABC: ABCCategory // LeadPriorityABC (A: Alta prioridade, B: Média, C: Baixa)
+  leadPriorityABC: ABCCategory
   stage: LeadStage
   score: number
   assignedSeller: string
@@ -470,8 +471,14 @@ export interface User {
   avatar: string
   role?: CiafalUserRole
   employee_id?: string
+  matricula?: string
+  cargo?: string
+  department?: string
+  empresa?: string
   team_id?: string
   manager_id?: string
+  manager_name?: string
+  cost_center?: string
   seller_code?: string
   ramal?: string
   telefone_corporativo?: string
@@ -692,13 +699,11 @@ export interface CrmContact extends RecordModel {
   notes?: string
   stage: string
   last_synced_at?: string
-  // Empresa (migration 0024)
   company_id?: string
   role?: string
   email?: string
   assigned_to?: string
   category_ids?: string[]
-  // expand opcional do PB ao buscar com `?expand=company_id`
   expand?: {
     company_id?: CrmCompany
     assigned_to?: User
@@ -880,7 +885,7 @@ export interface Visit {
   planned_time: string
   objective: string
   participants?: string
-  user_id: string // vendedor responsável
+  user_id: string
   seller_name?: string
   supervisor_id?: string
   latitude?: number
@@ -904,4 +909,371 @@ export interface Visit {
   next_action_date?: string
   created_at?: string
   updated_at?: string
+}
+
+// ==========================================
+// 1. CENTRAL DE SOLICITAÇÕES CORPORATIVAS
+// ==========================================
+
+export type CorporateRequestType =
+  | 'VIAGEM'
+  | 'TREINAMENTO_INTERNO'
+  | 'TREINAMENTO_EXTERNO'
+  | 'VISITA_TECNICA_CLIENTE'
+  | 'VISITA_FORNECEDOR'
+  | 'VISITA_PARCEIRO'
+  | 'REEMBOLSO'
+
+export type CorporateRequestStatus =
+  | 'RASCUNHO'
+  | 'ENVIADO'
+  | 'EM_APROVACAO'
+  | 'APROVADO'
+  | 'REJEITADO'
+  | 'EM_EXECUCAO'
+  | 'CONCLUIDO'
+  | 'CANCELADO'
+
+export interface WorkflowAuditStep {
+  id: string
+  action: string
+  user_id: string
+  user_name: string
+  role?: string
+  timestamp: string
+  comments?: string
+  previous_status?: CorporateRequestStatus
+  new_status?: CorporateRequestStatus
+}
+
+export interface CorporateRequestComment {
+  id: string
+  user_id: string
+  user_name: string
+  user_avatar?: string
+  timestamp: string
+  content: string
+}
+
+export interface CorporateRequestAttachment {
+  id: string
+  name: string
+  size_bytes: number
+  uploaded_at: string
+  url: string
+  type?: string
+}
+
+export interface CorporateRequest {
+  id: string
+  code: string // Ex: SOL-2024-001
+  request_type: CorporateRequestType
+  title: string
+  requester_id: string
+  requester_name: string
+  requester_email: string
+  matricula?: string
+  department: string
+  cost_center: string
+  manager_id: string
+  manager_name: string
+  current_approver_id: string
+  current_approver_name: string
+  current_approver_role: string
+  status: CorporateRequestStatus
+  priority: 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE'
+  created_at: string
+  submitted_at?: string
+  approved_at?: string
+  rejected_at?: string
+  concluded_at?: string
+  estimated_cost?: number
+  currency: 'BRL' | 'USD' | 'EUR'
+  justification: string
+  // Payload específico por tipo
+  type_data:
+    | RequestViagemData
+    | RequestTreinamentoInternoData
+    | RequestTreinamentoExternoData
+    | RequestVisitaTecnicaData
+    | RequestVisitaFornecedorData
+    | RequestVisitaParceiroData
+    | RequestReembolsoData
+    | Record<string, any>
+  attachments: CorporateRequestAttachment[]
+  comments: CorporateRequestComment[]
+  audit_log: WorkflowAuditStep[]
+  workflow_stage_index: number
+  workflow_stages_total: number
+}
+
+// 1.1 Solicitação de Viagem
+export interface RequestViagemData {
+  destination: string
+  origin: string
+  departure_date: string
+  return_date: string
+  transport_type: 'AEREO' | 'CARRO_PROPRIO' | 'CARRO_LOCADO' | 'ONIBUS' | 'OUTRO'
+  need_hotel: boolean
+  hotel_nights?: number
+  need_flight: boolean
+  flight_preference?: string
+  need_advance_payment: boolean
+  advance_amount?: number
+  related_entity_type?: 'CLIENTE' | 'FORNECEDOR' | 'PARCEIRO' | 'OUTRO'
+  related_entity_id?: string
+  related_entity_name?: string
+  related_reimbursement_ids?: string[]
+}
+
+// 1.2 Treinamento Interno
+export interface RequestTreinamentoInternoData {
+  training_name: string
+  objective: string
+  instructor: string
+  participants_count: number
+  participants_list: string[]
+  scheduled_date: string
+  duration_hours: number
+  need_room: boolean
+  room_name?: string
+  need_equipment: boolean
+  equipment_details?: string
+  cost: number
+  competency_related: string
+  integrated_with_hcm?: boolean
+}
+
+// 1.3 Treinamento Externo
+export interface RequestTreinamentoExternoData {
+  institution: string
+  course_name: string
+  city_uf: string
+  modality: 'PRESENCIAL' | 'ONLINE_AO_VIVO' | 'EAD_GRAVADO' | 'HIBRIDO'
+  registration_cost: number
+  travel_cost?: number
+  lodging_cost?: number
+  expected_certificate: boolean
+  certificate_url?: string
+  certificate_uploaded_at?: string
+  integrated_with_hcm?: boolean
+}
+
+// 1.4 Visita Técnica a Cliente
+export interface RequestVisitaTecnicaData {
+  customer_id: string
+  sap_customer_code: string
+  customer_name: string
+  unit_address: string
+  contacts: string
+  objective: string
+  reason: string
+  seller_id: string
+  seller_name: string
+  representative_name?: string
+  technical_lead: string
+  participants: string
+  visit_date: string
+  visit_time: string
+  location: string
+  need_travel: boolean
+  expected_result: string
+  crm_integration_status?: 'SYNCED' | 'PENDING'
+}
+
+// 1.5 Visita a Fornecedor
+export interface RequestVisitaFornecedorData {
+  supplier_sap_code: string
+  supplier_name: string
+  unit_address: string
+  srm_category?: string
+  quality_focus?: boolean
+  procurement_focus?: boolean
+  audit_focus?: boolean
+  project_related?: string
+  objective: string
+  participants: string
+  visit_date: string
+  expected_result: string
+}
+
+// 1.6 Visita a Parceiro
+export interface RequestVisitaParceiroData {
+  partner_name: string
+  partner_category:
+    | 'TECNOLOGIA'
+    | 'ENGENHARIA'
+    | 'COMERCIAL'
+    | 'LOGISTICA'
+    | 'CONSULTORIA'
+    | 'OUTROS'
+  unit_address: string
+  objective: string
+  participants: string
+  visit_date: string
+  expected_result: string
+}
+
+// 1.7 Solicitação de Reembolso
+export interface RequestReembolsoData {
+  expense_type: 'ALIMENTACAO' | 'TRANSPORTE' | 'HOSPEDAGEM' | 'COMBUSTIVEL' | 'PEDAGIO' | 'OUTROS'
+  expense_date: string
+  amount: number
+  currency: 'BRL' | 'USD' | 'EUR'
+  related_trip_request_id?: string
+  related_trip_code?: string
+  receipts_count: number
+  erp_status?: 'NOT_INTEGRATED' | 'READY_FOR_ERP' | 'INTEGRATED' | 'PAID'
+}
+
+// ==========================================
+// 2. GOVERNANÇA & COMPLIANCE DO COLABORADOR
+// ==========================================
+
+export interface CompliancePolicyType {
+  id: string
+  name: string
+  category:
+    | 'SEGURANCA_INFORMACAO'
+    | 'CONDUTA_ETICA'
+    | 'PRIVACIDADE_LGPD'
+    | 'RECURSOS_TI'
+    | 'COMUNICACAO_CORPORATIVA'
+    | 'EQUIPAMENTOS'
+    | 'INTELIGENCIA_ARTIFICIAL'
+    | 'TREINAMENTO_OBRIGATORIO'
+    | 'OUTROS'
+  description: string
+  current_version: string
+  validity_months: number
+  is_mandatory: boolean
+  target_audience: 'TODOS' | 'SETOR_ESPECIFICO' | 'CARGO_ESPECIFICO' | 'EMPRESA_ESPECIFICA'
+  target_department?: string
+  target_role?: string
+  target_company?: string
+  requires_reacceptance_on_new_version: boolean
+  status: 'ATIVO' | 'RASCUNHO' | 'INATIVO'
+  created_at: string
+  updated_at: string
+}
+
+export interface PolicyDocumentVersion {
+  id: string
+  policy_id: string
+  policy_name: string
+  version: string
+  effective_date: string
+  status: 'PUBLICADO' | 'RASCUNHO' | 'ARQUIVADO'
+  content_markdown: string
+  file_url?: string
+  document_hash: string // SHA-256 do documento para integridade
+  created_by: string
+  approved_by: string
+  approved_at: string
+}
+
+export interface EmployeePolicyAcceptance {
+  id: string
+  employee_id: string
+  employee_matricula: string
+  employee_name: string
+  employee_email: string
+  employee_department: string
+  employee_role: string
+  policy_id: string
+  policy_name: string
+  policy_version: string
+  accepted_at: string
+  ip_address: string
+  user_agent: string
+  device_context: string
+  authentication_method: 'SESSAO_AUTENTICADA_QAS' | 'MFA_TOTP' | 'INTEGRACAO_CERTIFICADORA'
+  document_hash: string
+  acceptance_hash: string // Hash imutável gerado na confirmação
+  status: 'EM_CONFORMIDADE' | 'PENDENTE_REACEITE' | 'REVOGADO'
+}
+
+// ==========================================
+// 3. PLANEJAMENTO ESTRATÉGICO SCHEMA & EXCEL
+// ==========================================
+
+export interface StrategicCycleItem {
+  id: string
+  ano_inicio: number
+  ano_fim: number
+  titulo: string
+  missao: string
+  visao: string
+  valores: string
+  status: 'ATIVO' | 'RASCUNHO' | 'CONCLUIDO'
+}
+
+export interface StrategicObjectiveItem {
+  id: string
+  codigo: string
+  perspectiva:
+    | 'FINANCEIRA'
+    | 'CLIENTES_MERCADO'
+    | 'PROCESSOS_INTERNOS'
+    | 'PESSOAS_APRENDIZADO'
+    | 'ESG'
+  descricao: string
+  meta_macro: string
+  responsavel: string
+  peso: number
+}
+
+export interface StrategicIndicatorItem {
+  id: string
+  codigo_objetivo: string
+  codigo_kpi: string
+  nome_kpi: string
+  categoria: string
+  unidade: string
+  frequencia: 'MENSAL' | 'TRIMESTRAL' | 'ANUAL'
+  meta_ano: number
+  fonte_dados: string
+  responsavel: string
+}
+
+export interface StrategicStagingRecord {
+  sheetName: string
+  rowNumber: number
+  data: Record<string, any>
+  status: 'VALID' | 'WARNING' | 'ERROR'
+  messages: string[]
+}
+
+// ==========================================
+// 4. KPIS COMERCIAIS (VENDEDOR & GERÊNCIA)
+// ==========================================
+
+export type CommercialKpiLevel = 'VENDEDOR' | 'GERENCIAL_DIRECAO' | 'AMBOS'
+export type CommercialKpiCategory =
+  | 'FATURAMENTO'
+  | 'VOLUME'
+  | 'MARGEM'
+  | 'CLIENTES'
+  | 'EFICIENCIA'
+  | 'QUALIDADE'
+
+export interface CommercialKpiDefinition {
+  id: string
+  codigo: string
+  nome: string
+  categoria: CommercialKpiCategory
+  nivel: CommercialKpiLevel
+  fonte: 'SAP_ECC' | 'QLIK_SENSE' | 'CRM_360' | 'TMS' | 'CONFIGURAVEL'
+  unidade: 'R$' | 'TON' | '%' | 'UN' | 'DIAS' | 'SCORE'
+  requires_configuration?: boolean
+  formula_descricao: string
+  meta_padrao?: number
+  realizado_atual: number
+  meta_atual: number
+  periodo_anterior: number
+  gap: number
+  atingimento_pct: number
+  tendencia: 'ALTA' | 'ESTAVEL' | 'BAIXA'
+  forecast: number
+  detalhes?: Record<string, any>
 }

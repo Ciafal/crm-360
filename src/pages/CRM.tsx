@@ -196,9 +196,20 @@ export default function CRM() {
     return filteredClientes.reduce((acc, c) => acc + c.toneladas12m, 0) || 1
   }, [filteredClientes])
 
+  // Total de Faturamento R$ para cálculo de Representatividade %
+  const totalCarteiraValor = useMemo(() => {
+    return filteredClientes.reduce((acc, c) => acc + c.faturamento12m, 0) || 1
+  }, [filteredClientes])
+
   // Ranking ordenado de toneladas
   const rankedTonsMap = useMemo(() => {
     const list = [...filteredClientes].sort((a, b) => b.toneladas12m - a.toneladas12m)
+    return new Map(list.map((c, i) => [c.id, i + 1]))
+  }, [filteredClientes])
+
+  // Ranking ordenado de faturamento R$
+  const rankedValorMap = useMemo(() => {
+    const list = [...filteredClientes].sort((a, b) => b.faturamento12m - a.faturamento12m)
     return new Map(list.map((c, i) => [c.id, i + 1]))
   }, [filteredClientes])
 
@@ -663,21 +674,18 @@ export default function CRM() {
                       <th className="py-3 px-2 font-bold text-center">ABC Hist.</th>
                       <th className="py-3 px-2 font-bold text-center">ABC Pot.</th>
                       <th className="py-3 px-2 font-bold">Cidade/UF</th>
-                      <th className="py-3 px-2 font-bold text-center font-mono">Ton 12m</th>
-                      <th className="py-3 px-2 font-bold text-center font-mono">% Carteira (t)</th>
-                      <th className="py-3 px-2 font-bold text-center font-mono">Ranking (t)</th>
-                      {commercialMetric === 'REVENUE' && (
-                        <th
-                          className="py-3 px-3 font-bold text-right cursor-pointer hover:text-primary transition-colors"
-                          onClick={() => toggleSort('faturamento12m')}
-                        >
-                          <div className="flex items-center justify-end gap-1">
-                            Fat. 12m
-                            <ArrowUpDown className="w-3 h-3" />
-                          </div>
-                        </th>
-                      )}
-                      <th className="py-3 px-2 font-bold text-center font-mono">Pipeline (t)</th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">
+                        {commercialMetric === 'REVENUE' ? 'Fat. 12m (R$)' : 'Ton 12m (t)'}
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">
+                        {commercialMetric === 'REVENUE' ? '% Cart. (R$)' : '% Cart. (t)'}
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">
+                        {commercialMetric === 'REVENUE' ? 'Rank (R$)' : 'Rank (t)'}
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center font-mono">
+                        {commercialMetric === 'REVENUE' ? 'Pipeline (R$)' : 'Pipeline (t)'}
+                      </th>
                       <th className="py-3 px-3 font-bold">Última Visita</th>
                       <th className="py-3 px-2 font-bold text-center">Dias S/ Visita</th>
                       <th className="py-3 px-3 font-bold">Último Contato</th>
@@ -748,31 +756,32 @@ export default function CRM() {
                             {c.cidade}/{c.uf}
                           </td>
 
-                          {/* Toneladas 12m */}
+                          {/* Métrica 12m (Alterna dinamicamente entre R$ e Toneladas) */}
                           <td className="py-3 px-2 text-center font-mono font-bold text-primary">
-                            {c.toneladas12m} t
+                            {commercialMetric === 'REVENUE'
+                              ? formatBRL(c.faturamento12m)
+                              : `${c.toneladas12m} t`}
                           </td>
 
-                          {/* % Carteira Toneladas */}
+                          {/* % Carteira (Alterna dinamicamente) */}
                           <td className="py-3 px-2 text-center font-mono font-bold text-primary">
-                            {((c.toneladas12m / totalCarteiraTons) * 100).toFixed(1)}%
+                            {commercialMetric === 'REVENUE'
+                              ? `${((c.faturamento12m / totalCarteiraValor) * 100).toFixed(1)}%`
+                              : `${((c.toneladas12m / totalCarteiraTons) * 100).toFixed(1)}%`}
                           </td>
 
-                          {/* Ranking Toneladas */}
+                          {/* Ranking (Alterna dinamicamente) */}
                           <td className="py-3 px-2 text-center font-mono text-xs text-muted-foreground">
-                            {rankedTonsMap.get(c.id) || 1}º
+                            {commercialMetric === 'REVENUE'
+                              ? `${rankedValorMap.get(c.id) || 1}º`
+                              : `${rankedTonsMap.get(c.id) || 1}º`}
                           </td>
 
-                          {/* Faturamento 12m (quando métrica for REVENUE) */}
-                          {commercialMetric === 'REVENUE' && (
-                            <td className="py-3 px-3 text-right font-serif font-bold text-slate-900">
-                              {formatBRL(c.faturamento12m)}
-                            </td>
-                          )}
-
-                          {/* Pipeline Toneladas */}
+                          {/* Pipeline (Alterna dinamicamente) */}
                           <td className="py-3 px-2 text-center font-mono font-semibold text-emerald-600">
-                            {c.pipelineTons || (c.pipelineValor / 6000).toFixed(1)} t
+                            {commercialMetric === 'REVENUE'
+                              ? formatBRL(c.pipelineValor)
+                              : `${c.pipelineTons || (c.pipelineValor / 6000).toFixed(1)} t`}
                           </td>
 
                           {/* Última Visita */}

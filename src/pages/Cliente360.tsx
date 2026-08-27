@@ -506,16 +506,18 @@ export default function Cliente360() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 text-xs gap-1 rounded-lg border-emerald-500/40 text-emerald-700 hover:bg-emerald-50"
+                    className="h-7 text-xs gap-1 rounded-lg border-emerald-500/40 text-emerald-700 hover:bg-emerald-50 font-semibold"
                     onClick={() => {
                       navigate(
-                        `/visitas?cliente=${encodeURIComponent(cliente.nomeFantasia)}&sap=${cliente.sapCode}`,
+                        `/solicitacoes?tipo=VISITA_TECNICA_CLIENTE&cliente=${encodeURIComponent(cliente.id)}&sap=${cliente.sapCode}`,
                       )
-                      toast.success(`Planejando visita para ${cliente.nomeFantasia}!`)
+                      toast.success(
+                        `Abrindo Solicitação de Visita Técnica com dados de ${cliente.nomeFantasia}!`,
+                      )
                     }}
                   >
                     <Calendar className="h-3.5 w-3.5" />
-                    Planejar Visita
+                    Planejar Visita (Solicitação Técnica)
                   </Button>
                   <Button
                     size="sm"
@@ -547,18 +549,22 @@ export default function Cliente360() {
             </div>
           </div>
 
-          {/* Destaque de Representatividade na Carteira */}
+          {/* Destaque de Representatividade na Carteira (Alterna por commercialMetric) */}
           <div className="flex items-center gap-3 bg-slate-50 p-3.5 rounded-2xl border border-border/40 shrink-0">
             <div className="text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                Representatividade Carteira
+                {commercialMetric === 'REVENUE'
+                  ? 'Representatividade Faturamento'
+                  : 'Representatividade Toneladas'}
               </span>
               <span className="font-serif text-xl font-bold text-primary block mt-0.5">
-                {shareTonsPercent}% das Toneladas
+                {commercialMetric === 'REVENUE'
+                  ? `${shareRevenuePercent}% do Faturamento`
+                  : `${shareTonsPercent}% das Toneladas`}
               </span>
               <span className="text-[10px] text-muted-foreground block">
-                {rankTons}º maior cliente de {totalSellerClients} ({sharePotentialPercent}% do
-                potencial)
+                {commercialMetric === 'REVENUE' ? rankRevenue : rankTons}º maior cliente de{' '}
+                {totalSellerClients} ({sharePotentialPercent}% do potencial)
               </span>
             </div>
             <div className="h-9 w-px bg-border/60 mx-1" />

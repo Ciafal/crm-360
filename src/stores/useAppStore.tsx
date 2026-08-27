@@ -24,7 +24,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     avatar: 'https://img.usecurling.com/ppl/thumbnail?gender=male&seed=10',
   })
   const [chats, setChats] = useState<Chat[]>(initialChats)
-  const [commercialMetric, setCommercialMetric] = useState<CommercialMetric>('TONS')
+  const [commercialMetric, setCommercialMetric] = useState<CommercialMetric>(() => {
+    try {
+      const saved = localStorage.getItem('ciafal_commercial_metric')
+      if (saved === 'REVENUE' || saved === 'TONS') return saved
+    } catch {
+      /* intentionally ignored */
+    }
+    return 'TONS'
+  })
+
+  const setCommercialMetricWithPersistence = (metric: CommercialMetric) => {
+    setCommercialMetric(metric)
+    try {
+      localStorage.setItem('ciafal_commercial_metric', metric)
+    } catch {
+      /* intentionally ignored */
+    }
+  }
   const [whatsappMode, setWhatsappMode] = useState<WhatsAppMode>('COEX')
 
   const login = (name: string, email: string) => {
@@ -76,7 +93,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         chats,
         commercialMetric,
         whatsappMode,
-        setCommercialMetric,
+        setCommercialMetric: setCommercialMetricWithPersistence,
         setWhatsappMode,
         login,
         logout,

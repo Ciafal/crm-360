@@ -20,6 +20,13 @@ import GestaoDoDia from './pages/GestaoDoDia'
 import Visitas from './pages/Visitas'
 import Administracao from './pages/Administracao'
 import Setup from './pages/Setup'
+import SolicitacoesCorporativas from './pages/SolicitacoesCorporativas'
+import HCMCompliance from './pages/HCMCompliance'
+import ImportacaoPlanejamentoEstrategico from './pages/ImportacaoPE'
+import IndicadoresComerciais from './pages/IndicadoresComerciais'
+import Hypercare from './pages/Hypercare'
+import RelatorioRelease from './pages/RelatorioRelease'
+import CentralIntegracoes from './pages/CentralIntegracoes'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -58,7 +65,16 @@ const App = () => (
                 <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="/equipe" element={<Equipe />} />
                 <Route path="/administracao" element={<Administracao />} />
-              </Route>
+                <Route path="/solicitacoes" element={<SolicitacoesCorporativas />} />
+                <Route path="/hcm" element={<HCMCompliance />} />
+                <Route path="/hcm/compliance" element={<HCMCompliance />} />
+                <Route path="/importar-pe" element={<ImportacaoPlanejamentoEstrategico />} />
+                <Route path="/kpis-comerciais" element={<IndicadoresComerciais />} />
+                <Route path="/hypercare" element={<Hypercare />} />
+                <Route path="/relatorio-release" element={<RelatorioRelease />} />
+                <Route path="/central-integracoes" element={<CentralIntegracoes />} />
+                <Route path="/setup" element={<Setup />} />
+              </Route>{' '}
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
