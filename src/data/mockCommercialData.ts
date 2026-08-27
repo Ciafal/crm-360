@@ -6,6 +6,8 @@ import type {
   WhatsAppMode,
 } from '@/types/models'
 
+export type { LeadItem } from '@/types/models'
+
 export interface ClienteCarteira {
   id: string
   sapCode: string

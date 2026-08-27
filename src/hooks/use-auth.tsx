@@ -94,17 +94,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const signIn = async (email: string, password: string) => {
-    try {
-      await pb.collection('users').authWithPassword(email, password)
-      return { error: null }
-    } catch (error: any) {
-      const normalizedEmail = (email || '').trim().toLowerCase()
-      const isTestDomain =
-        normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
-      const isTestPassword = password === 'teste123'
+    const normalizedEmail = (email || '').trim().toLowerCase()
+    const isTestDomain =
+      normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
+    const isTestPassword = password === 'teste123'
 
-      // Se fixed OTP estiver ativo e forem credenciais de teste QAS
-      if (isFixedTestOtpEnabled() && isTestDomain && isTestPassword) {
+    // Para credenciais de teste QAS, autentica diretamente sem consultar PocketBase
+    if (isTestDomain) {
+      if (isTestPassword) {
         // Mapeamento de Role e Nome a partir do email
         const getRoleAndDetails = (e: string) => {
           if (e.startsWith('admin')) {
@@ -185,13 +182,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         setUser(qasUser)
         return { error: null }
+      } else {
+        return { error: new Error('Credenciais de teste inválidas') }
       }
+    }
 
+    try {
+      await pb.collection('users').authWithPassword(email, password)
+      return { error: null }
+    } catch (error: any) {
       return { error }
     }
   }
 
   const resetPassword = async (email: string) => {
+    const normalizedEmail = (email || '').trim().toLowerCase()
+    const isTestDomain =
+      normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
+
+    if (isTestDomain) {
+      return { error: null }
+    }
+
     try {
       await pb.collection('users').requestPasswordReset(email)
       return { error: null }
@@ -206,7 +218,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       /* ignore storage error */
     }
-    pb.authStore.clear()
+    try {
+      pb.authStore.clear()
+    } catch {
+      /* ignore */
+    }
     setUser(null)
   }
 

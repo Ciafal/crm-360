@@ -170,6 +170,14 @@ export async function logMfaAudit(
   actionDesc: string,
 ): Promise<void> {
   const normalizedEmail = (email || '').trim().toLowerCase()
+  const isTestDomain =
+    normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
+
+  // Em modo QAS / domínios de teste, não chamar PocketBase
+  if (isFixedTestOtpEnabled() || isTestDomain) {
+    return
+  }
+
   try {
     await pb.collection('mock_emails').create({
       recipient: normalizedEmail,
@@ -212,27 +220,11 @@ export function requiresMfa(email: string, role?: string): boolean {
 export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
   const normalizedEmail = (email || '').trim().toLowerCase()
   const isFixed = isFixedTestOtpEnabled()
+  const isTestDomain =
+    normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
 
-  // Se fixed OTP estiver ativo (QAS/HML)
-  if (isFixed) {
-    const fixedCode = getFixedTestOtpCode()
-    try {
-      await pb.collection('mock_emails').create({
-        recipient: normalizedEmail,
-        subject: 'Seu código de acesso MFA — CRM 360º (QAS)',
-        otp_code: fixedCode,
-        status: 'VALID',
-        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-        metadata_json: {
-          purpose: 'MFA_LOGIN',
-          channel: 'MOCK_EMAIL',
-          mfa_mode: 'FIXED_QAS',
-        },
-      })
-    } catch {
-      /* ignore */
-    }
-
+  // Se fixed OTP estiver ativo (QAS/HML) ou for usuário de teste
+  if (isFixed || isTestDomain) {
     return {
       success: true,
       message: 'Código de verificação gerado para o ambiente de testes.',

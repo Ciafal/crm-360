@@ -11,7 +11,8 @@ interface MetricToggleProps {
 }
 
 export function CommercialMetricToggle({ className = '', showBadge = true }: MetricToggleProps) {
-  const { currentRole } = useAuth()
+  const { user } = useAuth()
+  const currentRole = user?.role || ''
   const { commercialMetric, setCommercialMetric } = useAppStore()
 
   const isSeller = currentRole === 'vendedor' || currentRole === 'representante'

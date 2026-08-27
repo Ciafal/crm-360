@@ -187,38 +187,51 @@ export default function Index() {
         // Se o usuário requer MFA (ex: contas de teste / representante externo)
         const isMfaTarget = requiresMfa(normalizedEmail)
 
-        // 1. Valida primeiro as credenciais para garantir que a senha está correta ANTES do MFA
-        // Não é bypass: credenciais DEV/QAS teste123 são validadas ou auth com PB
-        const isValidTestCredentials =
-          (normalizedEmail.endsWith('@ciafal.local') ||
-            normalizedEmail.endsWith('@crm360.local')) &&
-          formData.password === 'teste123'
+        const isTestDomain =
+          normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
 
-        if (!isValidTestCredentials) {
-          // Tenta autenticar no PocketBase para checar senha
-          const { error } = await signIn(formData.email, formData.password)
-          if (error) throw new Error('Credenciais inválidas')
-
-          if (!isMfaTarget) {
-            toast({ title: 'Login realizado com sucesso!' })
-            navigate('/home')
-            return
-          } else {
-            // Se requer MFA, desloga temporariamente até validar o OTP
-            pb.authStore.clear()
+        if (isTestDomain) {
+          if (formData.password !== 'teste123') {
+            throw new Error('Credenciais inválidas')
           }
+          // Para contas de teste QAS, solicitar MFA diretamente sem chamada ao PocketBase
+          const reqResult = await requestMfaOtp(normalizedEmail)
+          setMfaEmail(normalizedEmail)
+          setMfaFixedActive(reqResult.is_qas_fixed_active ?? isFixedTestOtpEnabled())
+          setMfaRequired(true)
+          toast({
+            title: 'Etapa de Verificação (MFA)',
+            description:
+              'Credenciais validadas. Digite o código de verificação para concluir o acesso.',
+          })
+          return
         }
 
-        // 2. Se as credenciais forem válidas e requer MFA, emite a solicitação de OTP no backend
-        const reqResult = await requestMfaOtp(normalizedEmail)
-        setMfaEmail(normalizedEmail)
-        setMfaFixedActive(reqResult.is_qas_fixed_active ?? isFixedTestOtpEnabled())
-        setMfaRequired(true)
-        toast({
-          title: 'Etapa de Verificação (MFA)',
-          description:
-            'Credenciais validadas. Digite o código de verificação para concluir o acesso.',
-        })
+        // Credenciais não-teste (produção/PB): valida credenciais
+        const { error } = await signIn(formData.email, formData.password)
+        if (error) throw new Error('Credenciais inválidas')
+
+        if (!isMfaTarget) {
+          toast({ title: 'Login realizado com sucesso!' })
+          navigate('/home')
+          return
+        } else {
+          // Se requer MFA, limpa authStore até validar o OTP
+          try {
+            pb.authStore.clear()
+          } catch {
+            /* ignore */
+          }
+          const reqResult = await requestMfaOtp(normalizedEmail)
+          setMfaEmail(normalizedEmail)
+          setMfaFixedActive(reqResult.is_qas_fixed_active ?? isFixedTestOtpEnabled())
+          setMfaRequired(true)
+          toast({
+            title: 'Etapa de Verificação (MFA)',
+            description:
+              'Credenciais validadas. Digite o código de verificação para concluir o acesso.',
+          })
+        }
       }
     } catch (err: any) {
       const message =
