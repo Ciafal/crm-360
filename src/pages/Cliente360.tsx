@@ -610,7 +610,7 @@ export default function Cliente360() {
           </span>
           <div className="mt-1.5">
             <span className="font-serif text-sm font-bold text-primary block">
-              {cliente.toneladas12m} ton
+              {cliente.toneladas12m.toLocaleString('pt-BR')} t
             </span>
             <span className="text-[9px] text-muted-foreground">
               Média: {cliente.mediaMensalTons || (cliente.toneladas12m / 12).toFixed(1)} t/m
@@ -1999,7 +1999,9 @@ export default function Cliente360() {
                       </div>
                       <div className="text-center">
                         <span className="text-muted-foreground block text-[10px]">VOLUME</span>
-                        <span className="font-bold text-slate-800">{op.toneladas} ton</span>
+                        <span className="font-bold text-slate-800">
+                          {op.toneladas.toLocaleString('pt-BR')} t
+                        </span>
                       </div>
                       <div className="text-right">
                         <span className="text-muted-foreground block text-[10px]">

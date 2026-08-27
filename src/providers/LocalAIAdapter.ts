@@ -108,7 +108,169 @@ export class LocalReactivationAgent implements ReactivationAgent {
   }
 }
 
+import type { SellerIndividualAnalysis, SellerPerformanceAnalysisAgent } from './AIProvider'
+import {
+  mockEquipe,
+  mockClientes,
+  mockFunilOportunidades,
+  mockAcoesDoDia,
+} from '@/data/mockCommercialData'
+
+export class LocalSellerPerformanceAnalysisAgent implements SellerPerformanceAnalysisAgent {
+  async analyzeSellerPerformance(
+    sellerId: string,
+    filtersContext?: {
+      periodo?: string
+      produto?: string
+      familia?: string
+      segmento?: string
+    },
+  ): Promise<SellerIndividualAnalysis> {
+    const member =
+      mockEquipe.find(
+        (m) => m.id === sellerId || m.userId === sellerId || m.name.includes(sellerId),
+      ) || mockEquipe[2] // Fallback Carlos Mendonça
+
+    const sellerClientes = mockClientes.filter(
+      (c) => c.vendedorId === member.userId || c.vendedor === member.name,
+    )
+    const clientesA = sellerClientes.filter((c) => c.abcHistorico === 'A').length
+    const clientesB = sellerClientes.filter((c) => c.abcHistorico === 'B').length
+    const clientesC = sellerClientes.filter((c) => c.abcHistorico === 'C').length
+    const inativos = sellerClientes.filter(
+      (c) => c.statusComercial === 'Inativo' || c.diasSemContato > 45,
+    ).length
+
+    const atingimento = member.atingimentoPercent
+    const gapTons = member.toneladasGap || member.toneladasMeta - member.toneladasRealizado
+    const taxaAtiva = member.taxaCarteiraAtivaPercent
+
+    // Resumo Executivo Contextual
+    const filterNote = filtersContext?.familia
+      ? ` (Filtro aplicado: Família ${filtersContext.familia})`
+      : filtersContext?.produto
+        ? ` (Filtro aplicado: ${filtersContext.produto})`
+        : ''
+
+    const resumoExecutivo = `${member.name} está em ${atingimento.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}% da meta com projeção de fechamento em ${Math.min(100, Math.round(atingimento * 1.22))}%${filterNote}. Ponto positivo: ritmo atual de ${member.ritmoAtualTons ? member.ritmoAtualTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '5,3'} t/dia está superando a média histórica (${member.ritmoMediaHistoricaTons ? member.ritmoMediaHistoricaTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '4,5'} t/dia). Ponto de atenção: ${taxaAtiva.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}% da carteira realizou compra no mês (${member.clientesAtivosMes} de ${member.carteiraQtd} clientes). Causa provável: ${Math.max(2, clientesA - 1)} clientes A estão fora da frequência normal de recompra. Ação recomendada: priorizar clientes A com estoque disponível e compra esperada nos próximos 10 dias.`
+
+    return {
+      sellerId: member.id,
+      sellerName: member.name,
+      cargo: member.cargo,
+      resumoExecutivo,
+      pontosPositivos: [
+        {
+          titulo: 'Ritmo Diário Acima da Média Histórica',
+          evidenciaNumerica: `${member.ritmoAtualTons ? member.ritmoAtualTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '5,3'} t/dia atuais vs ${member.ritmoMediaHistoricaTons ? member.ritmoMediaHistoricaTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '4,5'} t/dia de média histórica (+17,7% de aceleração).`,
+          impacto: 'Garante tração para superar a barreira dos 90% da meta mensal.',
+        },
+        {
+          titulo: 'Conversão Comercial e Cadência Alta',
+          evidenciaNumerica: `Taxa de conversão de ${member.conversaoPercent}% com índice de cadência ${member.cadenciaScore || 'Alta (86/100)'}.`,
+          impacto: 'Eficiência acima da média da equipe em negociações técnicas e fechamentos.',
+        },
+      ],
+      pontosAtencao: [
+        {
+          titulo: 'Taxa de Ativação de Carteira Abaixo do Potencial',
+          evidenciaNumerica: `Apenas ${member.clientesAtivosMes} dos ${member.carteiraQtd} clientes (${taxaAtiva.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}%) compraram no período vigente.`,
+          causaProvavel: `${Math.max(2, clientesA - 1)} contas A com mais de 30 dias sem emissão de pedido de recompra.`,
+          riscoMeta: member.role === 'REPRESENTANTE_EXTERNO' ? 'ALTO' : 'MEDIO',
+        },
+        {
+          titulo: 'Latência em Cotações SAP ECC',
+          evidenciaNumerica: `Tempo médio de resposta de ${member.latenciaMediaHoras ? member.latenciaMediaHoras.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '16,0'}h (SLA recomendado: ≤ 8,0h).`,
+          causaProvavel: 'Demora no cálculo manual de frete CIF com a transportadora regional.',
+          riscoMeta: 'MEDIO',
+        },
+      ],
+      evidenciasContextuais: {
+        metaVolume: `${member.toneladasMeta.toLocaleString('pt-BR')} t`,
+        realizadoVolume: `${member.toneladasRealizado.toLocaleString('pt-BR')} t`,
+        atingimentoPercent: member.atingimentoPercent,
+        forecastVolume: `${(member.toneladasForecast || Math.round(member.toneladasRealizado * 1.25)).toLocaleString('pt-BR')} t`,
+        ritmoAtual: `${member.ritmoAtualTons ? member.ritmoAtualTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '5,3'} t/dia`,
+        mediaHistorica: `${member.ritmoMediaHistoricaTons ? member.ritmoMediaHistoricaTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 }) : '4,5'} t/dia`,
+        carteiraTotal: member.carteiraQtd,
+        clientesAtivosMes: member.clientesAtivosMes,
+        taxaCarteiraAtivaPercent: member.taxaCarteiraAtivaPercent,
+        clientesA: clientesA || 12,
+        clientesB: clientesB || 16,
+        clientesC: clientesC || 10,
+        inativosCarteira: inativos || 6,
+        leadsAtivos: 8,
+        visitasMes: member.visitasMes,
+        contatosTotal: 48,
+        cotacoesEmitidas: 14,
+        followupsPendentes: member.acoesPendentes,
+        estoqueDisponivel: '100% dos principais itens A36 e Tubos em Contagem',
+        limiteCreditoDisponivel: 'R$ 680.000 liberados no SAP ECC',
+        tmsEntregasNoPrazo: '94,2% de pontualidade no mês',
+      },
+      oportunidades: [
+        {
+          cliente: 'Metalúrgica Santa Rita Ltda',
+          potencial: '12,0 t (R$ 95.000)',
+          produto: 'Perfis Laminados W & Cantoneiras',
+          motivo: 'Janela de recompra calculada para os próximos 4 dias.',
+        },
+        {
+          cliente: 'Aços & Caldeiraria Betim S.A.',
+          potencial: '18,5 t (R$ 120.000)',
+          produto: 'Chapas Grossas A36',
+          motivo: 'Estoque disponível em lote imediato na filial Contagem.',
+        },
+      ],
+      acoesRecomendadas: [
+        {
+          id: `act-ai-${Date.now()}-1`,
+          titulo: 'Priorizar contato com Clientes A na janela de recompra',
+          descricao:
+            'Acionar Metalúrgica Santa Rita e Caldeiraria Betim com proposta pronta de Perfis W e Chapas A36 com entrega em 48h.',
+          prioridade: 'ALTA',
+          prazoSugerido: 'Hoje até 17:00',
+          tipo: 'CLIENTES_A',
+          clienteAlvo: 'Metalúrgica Santa Rita Ltda',
+        },
+        {
+          id: `act-ai-${Date.now()}-2`,
+          titulo: 'Agilizar Follow-up de Cotações Estagnadas no SAP ECC',
+          descricao:
+            'Disparar mensagens de follow-up via WhatsApp com tabela de condições CIF garantida para diminuir a latência média.',
+          prioridade: 'ALTA',
+          prazoSugerido: 'Amanhã 09:30',
+          tipo: 'FOLLOWUP',
+        },
+        {
+          id: `act-ai-${Date.now()}-3`,
+          titulo: 'Reativar 3 Clientes B com saldo de crédito aprovado',
+          descricao:
+            'Ofertar lotes de Barras Chatas e Cantoneiras com frete compartilhado e prazo de 28 DDL.',
+          prioridade: 'MEDIA',
+          prazoSugerido: 'Em até 3 dias',
+          tipo: 'CREDITO',
+        },
+      ],
+    }
+  }
+}
+
 export class LocalSalesSupervisorAgent implements SalesSupervisorAgent {
+  private sellerAnalysisAgent = new LocalSellerPerformanceAnalysisAgent()
+
+  async analyzeSellerPerformance(
+    sellerId: string,
+    filtersContext?: {
+      periodo?: string
+      produto?: string
+      familia?: string
+      segmento?: string
+    },
+  ): Promise<SellerIndividualAnalysis> {
+    return this.sellerAnalysisAgent.analyzeSellerPerformance(sellerId, filtersContext)
+  }
+
   async summarizeTeamDaily(teamId?: string): Promise<TeamDailySummary> {
     return {
       date: new Date().toISOString().split('T')[0],
@@ -247,6 +409,8 @@ export class LocalAIAdapter implements AIProvider {
   readonly copilot: SellerCopilotAgent = new LocalSellerCopilotAgent()
   readonly reactivation: ReactivationAgent = new LocalReactivationAgent()
   readonly supervisor: SalesSupervisorAgent = new LocalSalesSupervisorAgent()
+  readonly sellerAnalysis: SellerPerformanceAnalysisAgent =
+    new LocalSellerPerformanceAnalysisAgent()
 
   async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResult> {
     const now = new Date().toISOString()

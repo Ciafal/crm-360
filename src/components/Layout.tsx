@@ -1,19 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import {
-  Building2,
-  Search,
-  Menu,
-  X,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-  Sparkles,
-  Grid,
-  Layers,
-  ExternalLink,
-  ShieldAlert,
-} from 'lucide-react'
+import { Building2, Menu, X, LogOut, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { GlobalAssistant } from '@/components/shared/GlobalAssistant'
@@ -26,37 +13,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import pb from '@/lib/pocketbase/client'
-import {
-  HUB_CATEGORIES,
-  HUB_APPLICATION_REGISTRY,
-  getModulesByCategory,
-  HubModule,
-} from '@/services/application_registry'
-
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    GESTAO_ESTRATEGIA: true,
-    COMERCIAL_LOGISTICA: true,
-    OPERACOES_INDUSTRIAIS: false,
-    PESSOAS_GOVERNANCA: true,
-    DADOS_ATIVOS: true,
-  })
 
   const handleLogout = () => {
     signOut()
@@ -71,25 +35,6 @@ export default function Layout() {
     import.meta.env.VITE_ENABLE_TEST_USERS === 'true' ||
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
-
-  const toggleCategory = (catId: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [catId]: !prev[catId],
-    }))
-  }
-
-  const isLinkActive = (path: string, subItems?: HubModule['subItems']) => {
-    const cleanPath = path.split('?')[0]
-    if (location.pathname === cleanPath) return true
-    if (cleanPath !== '/' && cleanPath !== '/home' && location.pathname.startsWith(cleanPath)) {
-      return true
-    }
-    if (subItems?.some((sub) => location.pathname === sub.path.split('?')[0])) {
-      return true
-    }
-    return false
-  }
 
   // Atalhos rápidos no TopNav
   const QUICK_TOP_NAV = [
@@ -122,170 +67,6 @@ export default function Layout() {
         <nav className="glass-nav w-full max-w-6xl px-4 py-2 flex items-center justify-between transition-all duration-300">
           {/* Lado Esquerdo: Botão Menu Sidebar + Logo CIAFAL */}
           <div className="flex items-center gap-2">
-            {/* Botão de Abertura da Sidebar Completa do HUB CIAFAL */}
-            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 px-2.5 gap-2 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors"
-                  title="Abrir Menu Completo do HUB CIAFAL"
-                >
-                  <Grid className="w-4 h-4 text-primary" />
-                  <span className="hidden sm:inline text-xs">HUB CIAFAL</span>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="w-[340px] sm:w-[380px] p-0 flex flex-col bg-slate-900 text-slate-100 border-r border-slate-800"
-              >
-                {/* Cabeçalho da Sidebar */}
-                <div className="p-5 border-b border-slate-800 bg-slate-950/60">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary text-primary-foreground p-2 rounded-xl shadow-xs">
-                      <Building2 className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <SheetTitle className="text-white font-serif text-lg font-bold tracking-tight">
-                        HUB CIAFAL
-                      </SheetTitle>
-                      <SheetDescription className="text-slate-400 text-xs">
-                        Ecossistema Corporativo Integrado
-                      </SheetDescription>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lista com as 5 Categorias Oficiais */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {HUB_CATEGORIES.map((category) => {
-                    const modules = getModulesByCategory(category.id)
-                    const isExpanded = !!expandedCategories[category.id]
-
-                    return (
-                      <div
-                        key={category.id}
-                        className="rounded-2xl border border-slate-800/80 bg-slate-950/40 overflow-hidden"
-                      >
-                        {/* Header da Categoria com Toggle de Expansão */}
-                        <button
-                          type="button"
-                          onClick={() => toggleCategory(category.id)}
-                          className="w-full flex items-center justify-between p-3 text-left hover:bg-slate-800/40 transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="font-serif font-bold text-xs uppercase tracking-wider text-slate-200">
-                              {category.label}
-                            </span>
-                            <Badge className="bg-slate-800 text-slate-300 text-[9px] px-1.5 py-0 border-none font-mono">
-                              {modules.length}
-                            </Badge>
-                          </div>
-                          {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
-                          )}
-                        </button>
-
-                        {/* Módulos da Categoria */}
-                        {isExpanded && (
-                          <div className="p-2 pt-0 space-y-1">
-                            {modules.map((mod) => {
-                              const Icon = mod.icon
-                              const active = isLinkActive(mod.path, mod.subItems)
-
-                              return (
-                                <div key={mod.id} className="space-y-1">
-                                  <Link
-                                    to={mod.path}
-                                    onClick={() => setSidebarOpen(false)}
-                                    className={cn(
-                                      'flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all group',
-                                      active
-                                        ? 'bg-primary text-white font-semibold shadow-xs'
-                                        : 'text-slate-300 hover:bg-slate-800/60 hover:text-white',
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-2.5 truncate">
-                                      <Icon
-                                        className={cn(
-                                          'w-4 h-4 shrink-0',
-                                          active
-                                            ? 'text-white'
-                                            : 'text-slate-400 group-hover:text-primary',
-                                        )}
-                                      />
-                                      <span className="truncate">{mod.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      {mod.badge && (
-                                        <Badge
-                                          className={cn(
-                                            'text-[9px] px-1.5 py-0 border-none font-bold',
-                                            mod.isNew
-                                              ? 'bg-emerald-500 text-white'
-                                              : 'bg-slate-800 text-slate-300',
-                                          )}
-                                        >
-                                          {mod.badge}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </Link>
-
-                                  {/* Subitens (Ex: HCM, CRM, IMS) */}
-                                  {mod.subItems && (
-                                    <div className="pl-6 pr-2 py-0.5 space-y-0.5 border-l border-slate-800 ml-4">
-                                      {mod.subItems.map((sub) => {
-                                        const isSubActive =
-                                          location.pathname === sub.path.split('?')[0]
-                                        return (
-                                          <Link
-                                            key={sub.id}
-                                            to={sub.path}
-                                            onClick={() => setSidebarOpen(false)}
-                                            className={cn(
-                                              'block px-2.5 py-1 rounded-lg text-[11px] transition-colors truncate',
-                                              isSubActive
-                                                ? 'text-amber-300 font-semibold bg-white/5'
-                                                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5',
-                                            )}
-                                          >
-                                            • {sub.name}
-                                          </Link>
-                                        )
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Rodapé da Sidebar */}
-                <div className="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>QAS v2.1.0</span>
-                  </div>
-                  <Link
-                    to="/relatorio-release"
-                    onClick={() => setSidebarOpen(false)}
-                    className="text-[11px] text-primary-foreground/70 hover:text-white underline"
-                  >
-                    Changelog
-                  </Link>
-                </div>
-              </SheetContent>
-            </Sheet>
-
             {/* Logo CRM 360º */}
             <Link to="/home" className="flex items-center gap-2.5 px-2 shrink-0 group">
               <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm group-hover:bg-primary/90 transition-colors">
@@ -296,7 +77,7 @@ export default function Layout() {
                   CRM 360º
                 </span>
                 <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
-                  HUB CIAFAL
+                  CIAFAL FERRO & AÇO
                 </span>
               </div>
             </Link>
@@ -332,7 +113,7 @@ export default function Layout() {
             })}
           </div>
 
-          {/* Dropdown Geral do HUB no TopNav */}
+          {/* Dropdown Módulos do CRM no TopNav */}
           <div className="hidden md:flex items-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -347,13 +128,41 @@ export default function Layout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-80 p-3 rounded-2xl shadow-lg border border-border/60 bg-white"
+                className="w-72 p-3 rounded-2xl shadow-lg border border-border/60 bg-white"
               >
                 <DropdownMenuLabel className="font-serif text-xs font-bold text-primary uppercase tracking-wider">
-                  Módulos Rápidos do HUB
+                  Módulos CRM 360º
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <div className="grid grid-cols-2 gap-1.5 py-1">
+                  <Link
+                    to="/agentes"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Agentes de IA</strong>
+                    <span className="text-[10px] text-muted-foreground">Copilotos Comerciais</span>
+                  </Link>
+                  <Link
+                    to="/visitas"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Visitas & Rotas</strong>
+                    <span className="text-[10px] text-muted-foreground">Geolocalização</span>
+                  </Link>
+                  <Link
+                    to="/gestao-inativos"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Inativos</strong>
+                    <span className="text-[10px] text-muted-foreground">Reativação Comercial</span>
+                  </Link>
+                  <Link
+                    to="/cotacoes"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Cotações</strong>
+                    <span className="text-[10px] text-muted-foreground">Fila SAP ECC</span>
+                  </Link>
                   <Link
                     to="/kpis-comerciais"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
@@ -362,39 +171,11 @@ export default function Layout() {
                     <span className="text-[10px] text-muted-foreground">Catálogo & OIF</span>
                   </Link>
                   <Link
-                    to="/solicitacoes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Solicitações</strong>
-                    <span className="text-[10px] text-muted-foreground">Central de Workflow</span>
-                  </Link>
-                  <Link
-                    to="/hcm"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">HCM Compliance</strong>
-                    <span className="text-[10px] text-muted-foreground">Termos & Aceites</span>
-                  </Link>
-                  <Link
-                    to="/importar-pe"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Plano de Metas</strong>
-                    <span className="text-[10px] text-muted-foreground">Importação PE</span>
-                  </Link>
-                  <Link
-                    to="/hypercare"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Hypercare</strong>
-                    <span className="text-[10px] text-muted-foreground">Cockpit QAS</span>
-                  </Link>
-                  <Link
                     to="/central-integracoes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
                     <strong className="text-slate-900">Integrações</strong>
-                    <span className="text-[10px] text-muted-foreground">SAP, TOTVS, TMS</span>
+                    <span className="text-[10px] text-muted-foreground">SAP ECC, Qlik, M365</span>
                   </Link>
                 </div>
               </DropdownMenuContent>
@@ -403,16 +184,6 @@ export default function Layout() {
 
           {/* Lado Direito: Ações & Usuário */}
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-              className="text-muted-foreground hover:text-primary rounded-full hidden sm:flex"
-              title="Abrir Catálogo de Aplicações"
-            >
-              <Search className="w-4 h-4" />
-            </Button>
-
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -469,7 +240,7 @@ export default function Layout() {
                     className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer text-xs rounded-lg"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair do HUB</span>
+                    <span>Sair da conta</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -492,29 +263,23 @@ export default function Layout() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 bg-background/95 backdrop-blur-sm md:hidden pt-24 px-4 flex flex-col gap-3 animate-fade-in-down overflow-y-auto pb-12">
           <div className="p-3 bg-primary/10 rounded-2xl flex items-center justify-between">
-            <span className="font-serif font-bold text-sm text-primary">Navegação HUB CIAFAL</span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setMobileMenuOpen(false)
-                setSidebarOpen(true)
-              }}
-              className="h-7 text-xs bg-white text-primary"
-            >
-              Ver Todas as 5 Áreas
-            </Button>
+            <span className="font-serif font-bold text-sm text-primary">CRM 360º CIAFAL</span>
+            <Badge variant="outline" className="text-xs bg-white text-primary">
+              Módulos CRM
+            </Badge>
           </div>
 
           <div className="space-y-1">
-            {HUB_APPLICATION_REGISTRY.map((mod) => {
-              const Icon = mod.icon
-              const active = isLinkActive(mod.path, mod.subItems)
+            {QUICK_TOP_NAV.map((link) => {
+              const active =
+                link.path === '/home'
+                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path)
 
               return (
                 <Link
-                  key={mod.id}
-                  to={mod.path}
+                  key={link.path}
+                  to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-colors',
@@ -523,18 +288,56 @@ export default function Layout() {
                       : 'text-muted-foreground hover:bg-white/50',
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-4 h-4 text-primary" />
-                    <span>{mod.name}</span>
-                  </div>
-                  {mod.badge && (
+                  <span className="font-semibold">{link.name}</span>
+                  {link.badge && (
                     <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-none">
-                      {mod.badge}
+                      {link.badge}
                     </Badge>
                   )}
                 </Link>
               )
             })}
+
+            <div className="pt-2 border-t border-border/40 mt-2 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground px-3 block">
+                Outros Módulos
+              </span>
+              <Link
+                to="/agentes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Agentes de IA</span>
+              </Link>
+              <Link
+                to="/visitas"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Visitas & Rotas</span>
+              </Link>
+              <Link
+                to="/gestao-inativos"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Gestão de Inativos</span>
+              </Link>
+              <Link
+                to="/cotacoes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Cotações & Fila SAP</span>
+              </Link>
+              <Link
+                to="/central-integracoes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Central de Integrações</span>
+              </Link>
+            </div>
           </div>
 
           {user && (

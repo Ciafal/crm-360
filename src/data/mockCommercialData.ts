@@ -88,6 +88,8 @@ export interface MembroEquipe {
   role: 'ADMIN' | 'SUPERVISOR' | 'VENDEDOR' | 'REPRESENTANTE_EXTERNO'
   cargo: string
   carteiraQtd: number
+  clientesAtivosMes: number // Quantidade de clientes que faturaram/compraram no mês
+  taxaCarteiraAtivaPercent: number // % da carteira ativa
   metaMensal: number
   realizadoMensal: number
   gap: number
@@ -97,8 +99,14 @@ export interface MembroEquipe {
   forecast: number
   ritmoAtual?: number // R$/dia
   ritmoNecessario?: number // R$/dia
+  ritmoAtualTons?: number // t/dia
+  ritmoNecessarioTons?: number // t/dia
+  ritmoMediaHistoricaTons?: number // t/dia histórico
   toneladasMeta: number
   toneladasRealizado: number
+  toneladasGap?: number
+  toneladasPipeline?: number
+  toneladasForecast?: number
   acoesPendentes: number
   visitasMes: number
   conversaoPercent: number
@@ -235,6 +243,8 @@ export const mockEquipe: MembroEquipe[] = [
     role: 'ADMIN',
     cargo: 'Diretor Comercial / Admin',
     carteiraQtd: 120,
+    clientesAtivosMes: 74,
+    taxaCarteiraAtivaPercent: 61.7,
     metaMensal: 2500000,
     realizadoMensal: 1875000,
     gap: 625000,
@@ -244,8 +254,14 @@ export const mockEquipe: MembroEquipe[] = [
     forecast: 2250000,
     ritmoAtual: 133928, // ~133.9k/dia
     ritmoNecessario: 78125, // ~78.1k/dia
+    ritmoAtualTons: 45.5,
+    ritmoNecessarioTons: 26.6,
+    ritmoMediaHistoricaTons: 38.0,
     toneladasMeta: 850,
     toneladasRealizado: 637,
+    toneladasGap: 213,
+    toneladasPipeline: 408,
+    toneladasForecast: 765,
     acoesPendentes: 3,
     visitasMes: 18,
     conversaoPercent: 75,
@@ -263,6 +279,8 @@ export const mockEquipe: MembroEquipe[] = [
     role: 'SUPERVISOR',
     cargo: 'Supervisor Regional MG/SP',
     carteiraQtd: 85,
+    clientesAtivosMes: 52,
+    taxaCarteiraAtivaPercent: 61.2,
     metaMensal: 1500000,
     realizadoMensal: 1180000,
     gap: 320000,
@@ -272,8 +290,14 @@ export const mockEquipe: MembroEquipe[] = [
     forecast: 1450000,
     ritmoAtual: 84285,
     ritmoNecessario: 40000,
+    ritmoAtualTons: 13.7,
+    ritmoNecessarioTons: 6.0,
+    ritmoMediaHistoricaTons: 11.5,
     toneladasMeta: 240,
     toneladasRealizado: 192,
+    toneladasGap: 48,
+    toneladasPipeline: 136,
+    toneladasForecast: 232,
     acoesPendentes: 5,
     visitasMes: 14,
     conversaoPercent: 78,
@@ -291,6 +315,8 @@ export const mockEquipe: MembroEquipe[] = [
     role: 'VENDEDOR',
     cargo: 'Vendedor Sênior - Indústria & Obras',
     carteiraQtd: 38,
+    clientesAtivosMes: 21,
+    taxaCarteiraAtivaPercent: 55.3,
     metaMensal: 600000,
     realizadoMensal: 465000,
     gap: 135000,
@@ -300,8 +326,14 @@ export const mockEquipe: MembroEquipe[] = [
     forecast: 580000,
     ritmoAtual: 33214,
     ritmoNecessario: 16875,
+    ritmoAtualTons: 5.3,
+    ritmoNecessarioTons: 2.6,
+    ritmoMediaHistoricaTons: 4.5,
     toneladasMeta: 95,
     toneladasRealizado: 74,
+    toneladasGap: 21,
+    toneladasPipeline: 60,
+    toneladasForecast: 92,
     acoesPendentes: 6,
     visitasMes: 9,
     conversaoPercent: 78,
@@ -319,6 +351,8 @@ export const mockEquipe: MembroEquipe[] = [
     role: 'VENDEDOR',
     cargo: 'Vendedora Pleno - Construção Civil',
     carteiraQtd: 32,
+    clientesAtivosMes: 18,
+    taxaCarteiraAtivaPercent: 56.2,
     metaMensal: 500000,
     realizadoMensal: 380000,
     gap: 120000,
@@ -328,8 +362,14 @@ export const mockEquipe: MembroEquipe[] = [
     forecast: 490000,
     ritmoAtual: 27142,
     ritmoNecessario: 15000,
+    ritmoAtualTons: 4.4,
+    ritmoNecessarioTons: 2.4,
+    ritmoMediaHistoricaTons: 3.8,
     toneladasMeta: 80,
     toneladasRealizado: 61,
+    toneladasGap: 19,
+    toneladasPipeline: 46,
+    toneladasForecast: 78,
     acoesPendentes: 4,
     visitasMes: 7,
     conversaoPercent: 74,
@@ -347,6 +387,8 @@ export const mockEquipe: MembroEquipe[] = [
     role: 'REPRESENTANTE_EXTERNO',
     cargo: 'Representante Comercial Externo',
     carteiraQtd: 25,
+    clientesAtivosMes: 13,
+    taxaCarteiraAtivaPercent: 52.0,
     metaMensal: 400000,
     realizadoMensal: 230000,
     gap: 170000,
@@ -356,8 +398,14 @@ export const mockEquipe: MembroEquipe[] = [
     forecast: 310000,
     ritmoAtual: 16428,
     ritmoNecessario: 21250,
+    ritmoAtualTons: 2.7,
+    ritmoNecessarioTons: 3.4,
+    ritmoMediaHistoricaTons: 3.2,
     toneladasMeta: 65,
     toneladasRealizado: 38,
+    toneladasGap: 27,
+    toneladasPipeline: 30,
+    toneladasForecast: 49,
     acoesPendentes: 8,
     visitasMes: 12,
     conversaoPercent: 62,

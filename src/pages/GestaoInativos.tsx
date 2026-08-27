@@ -616,7 +616,11 @@ export default function GestaoInativos() {
             {formatBRL(dailySummary?.revenueRecovered || 312500)}
           </span>
           <span className="text-[11px] text-muted-foreground mt-0.5 block">
-            {dailySummary?.tonsRecovered || 41.8} ton recuperadas
+            {(dailySummary?.tonsRecovered || 41.8).toLocaleString('pt-BR', {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}{' '}
+            t recuperadas
           </span>
         </Card>
 
@@ -974,7 +978,8 @@ export default function GestaoInativos() {
                                 {formatBRL(cust.historicalRevenue)}
                               </span>
                               <span className="text-[10px] text-muted-foreground block">
-                                {cust.historicalTons} ton · {cust.frequency}d ciclo
+                                {cust.historicalTons.toLocaleString('pt-BR')} t · {cust.frequency}d
+                                ciclo
                               </span>
                             </td>
 
@@ -1285,7 +1290,9 @@ export default function GestaoInativos() {
                           <td className="py-3 px-4 text-center font-bold text-rose-600">
                             {p.clients}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-primary">{p.tons} ton</td>
+                          <td className="py-3 px-4 font-semibold text-primary">
+                            {p.tons.toLocaleString('pt-BR')} t
+                          </td>
                           <td className="py-3 px-4">
                             {p.inStock ? (
                               <Badge

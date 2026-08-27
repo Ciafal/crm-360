@@ -1064,7 +1064,7 @@ export default function CRM() {
                                 {formatBRL(op.valor)}
                               </span>
                               <span className="text-[10px] text-muted-foreground font-semibold">
-                                {op.toneladas} ton
+                                {op.toneladas.toLocaleString('pt-BR')} t
                               </span>
                             </div>
 

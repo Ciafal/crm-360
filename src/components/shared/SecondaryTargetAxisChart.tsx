@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sparkles, TrendingUp, Info } from 'lucide-react'
 import { TargetGapArea, ActualSeries, TargetSeries, ForecastSeries } from './TargetGapArea'
-import { cn } from '@/lib/utils'
+import { AverageReferenceLine, PaceReferenceLine } from './ChartReferenceLines'
+import { cn, formatNumberBR } from '@/lib/utils'
 
 export type TimePeriodFilter = 'MES' | 'YTD' | '12_MESES' | 'ANO' | 'PERIODO'
 
@@ -46,6 +47,12 @@ export interface SecondaryTargetAxisChartProps {
   showForecast?: boolean
   showGapArea?: boolean
   showPreviousYearYTD?: boolean
+  showAverageLine?: boolean
+  averageValue?: number
+  averageLabel?: string
+  showPaceLine?: boolean
+  paceValue?: number
+  paceLabel?: string
   height?: number
   aiAnalysis?: {
     summary: string
@@ -82,6 +89,12 @@ export function SecondaryTargetAxisChart({
   showForecast = true,
   showGapArea = true,
   showPreviousYearYTD = false,
+  showAverageLine = true,
+  averageValue,
+  averageLabel = 'Média Histórica',
+  showPaceLine = true,
+  paceValue,
+  paceLabel = 'Ritmo Atual Projetado',
   height = 300,
   aiAnalysis,
 }: SecondaryTargetAxisChartProps) {
@@ -100,10 +113,28 @@ export function SecondaryTargetAxisChart({
   // Formatação de valor
   const formatValue = (val: number) => {
     if (isCurrency || metricType === 'REAIS') {
-      return val >= 1000000 ? `R$ ${(val / 1000000).toFixed(2)}M` : `R$ ${(val / 1000).toFixed(0)}k`
+      return val >= 1_000_000
+        ? `R$ ${(val / 1_000_000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} mi`
+        : `R$ ${(val / 1_000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil`
     }
-    return `${val.toLocaleString('pt-BR')} ${unit}`
+    return `${formatNumberBR(val, val % 1 === 0 ? 0 : 1)} ${unit}`
   }
+
+  // Calcula média dos dados realizados se não informada
+  const calculatedAverage = React.useMemo(() => {
+    if (averageValue !== undefined) return averageValue
+    const validPoints = data.filter((d) => d.realizado > 0)
+    if (!validPoints.length) return 0
+    const sum = validPoints.reduce((acc, d) => acc + d.realizado, 0)
+    return Math.round((sum / validPoints.length) * 10) / 10
+  }, [data, averageValue])
+
+  // Ritmo projetado padrão caso não informado
+  const calculatedPace = React.useMemo(() => {
+    if (paceValue !== undefined) return paceValue
+    const lastActive = [...data].reverse().find((d) => d.forecast && d.forecast > 0)
+    return lastActive?.forecast || 0
+  }, [data, paceValue])
 
   // Prepara dados com áreas de gap calculadas
   const processedData = React.useMemo(() => {
@@ -195,8 +226,10 @@ export function SecondaryTargetAxisChart({
               tick={{ fontSize: 11, fill: '#64748b' }}
               tickFormatter={(val) =>
                 metricType === 'REAIS' || isCurrency
-                  ? `${(val / 1000).toFixed(0)}k`
-                  : `${val} ${unit}`
+                  ? val >= 1_000_000
+                    ? `${(val / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`
+                    : `${(val / 1_000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil`
+                  : `${val.toLocaleString('pt-BR')} ${unit}`
               }
             />
 
@@ -209,11 +242,12 @@ export function SecondaryTargetAxisChart({
               tick={{ fontSize: 11, fill: '#94a3b8' }}
               tickFormatter={(val) =>
                 metricType === 'REAIS' || isCurrency
-                  ? `${(val / 1000).toFixed(0)}k`
-                  : `${val} ${unit}`
+                  ? val >= 1_000_000
+                    ? `${(val / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`
+                    : `${(val / 1_000).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} mil`
+                  : `${val.toLocaleString('pt-BR')} ${unit}`
               }
             />
-
             <Tooltip
               content={({ active, payload, label }) => {
                 if (!active || !payload || !payload.length) return null
@@ -290,6 +324,29 @@ export function SecondaryTargetAxisChart({
 
             {/* FORECAST / PROJEÇÃO: Linha Tracejada Diferenciada */}
             {showForecast && <ForecastSeries yAxisId="secundario" stroke="#6366f1" />}
+
+            {/* LINHA DE MÉDIA AUXILIAR (AverageReferenceLine) */}
+            {showAverageLine && calculatedAverage > 0 && (
+              <AverageReferenceLine
+                value={calculatedAverage}
+                label={averageLabel}
+                yAxisId="principal"
+                unit={unit}
+                isCurrency={isCurrency || metricType === 'REAIS'}
+              />
+            )}
+
+            {/* LINHA DE RITMO CALCULADO (PaceReferenceLine) */}
+            {showPaceLine && calculatedPace > 0 && (
+              <PaceReferenceLine
+                value={calculatedPace}
+                label={paceLabel}
+                yAxisId="secundario"
+                unit={unit}
+                isCurrency={isCurrency || metricType === 'REAIS'}
+              />
+            )}
+
             {/* YTD COMPARATIVO ANO ANTERIOR */}
             {showPreviousYearYTD && (
               <Line
@@ -354,7 +411,7 @@ export function SecondaryTargetAxisChart({
                     </p>
                     {f.impactTons !== undefined && (
                       <span className="text-[10px] text-amber-400 font-semibold block">
-                        Impacto estimado: {f.impactTons} toneladas
+                        Impacto estimado: {f.impactTons.toLocaleString('pt-BR')} t
                       </span>
                     )}
                   </div>

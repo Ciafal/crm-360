@@ -304,7 +304,7 @@ export function Customer360Sheet({
                       Toneladas Históricas
                     </span>
                     <span className="font-bold text-sm text-primary mt-0.5 block">
-                      {customer.historicalTons} ton
+                      {customer.historicalTons.toLocaleString('pt-BR')} t
                     </span>
                   </div>
                   <div className="bg-slate-50 p-3 rounded-xl">
@@ -343,7 +343,7 @@ export function Customer360Sheet({
                           </p>
                           <span className="text-[11px] text-muted-foreground mt-0.5 block">
                             Última compra: {prod.lastPurchaseDate} · Histórico:{' '}
-                            {prod.historicalTons} ton
+                            {prod.historicalTons.toLocaleString('pt-BR')} t
                           </span>
                         </div>
                         <div className="text-right shrink-0">

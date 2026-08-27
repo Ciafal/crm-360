@@ -7,8 +7,9 @@ import { cn } from '@/lib/utils'
 
 export interface CommercialPaceThermometerProps {
   title?: string
-  ritmoAtual: number // Valor atual (ex: 13.2 t/dia ou R$ 133.9k/dia)
-  ritmoNecessario: number // Valor necessário para atingir a meta (ex: 9.8 t/dia ou R$ 78.1k/dia)
+  ritmoAtual: number // Valor atual (ex: 21,8 t/dia ou R$ 133.928/dia)
+  ritmoNecessario: number // Valor necessário para atingir a meta (ex: 11,9 t/dia ou R$ 78.125/dia)
+  mediaHistorica?: number // Média histórica de ritmo (ex: 18,4 t/dia)
   unidade?: 't/dia' | 'R$/dia'
   diasUteisPassados?: number
   diasUteisRestantes?: number
@@ -34,6 +35,7 @@ export function CommercialPaceThermometer({
   title = 'Ritmo Comercial (Termômetro de Velocidade)',
   ritmoAtual,
   ritmoNecessario,
+  mediaHistorica = 18.4,
   unidade = 't/dia',
   diasUteisPassados = 14,
   diasUteisRestantes = 8,
@@ -64,10 +66,10 @@ export function CommercialPaceThermometer({
   const formatUnitValue = (val: number) => {
     if (unidade === 'R$/dia') {
       return val >= 1000
-        ? `R$ ${(val / 1000).toFixed(1)}k/dia`
+        ? `R$ ${(val / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mil/dia`
         : `R$ ${val.toLocaleString('pt-BR')}/dia`
     }
-    return `${val.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} t/dia`
+    return `${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t/dia`
   }
 
   // Progresso visual relativo (100% de base = ritmo necessário)
@@ -96,7 +98,9 @@ export function CommercialPaceThermometer({
           <div>
             <h3 className="font-serif font-bold text-base text-primary">{title}</h3>
             <p className="text-xs text-muted-foreground">
-              Velocidade de faturamento diário necessária vs realizada
+              {unidade === 't/dia'
+                ? 'Velocidade comercial diária em toneladas (necessária vs realizada)'
+                : 'Velocidade comercial diária em R$ faturamento (necessária vs realizada)'}
             </p>
           </div>
         </div>
@@ -196,8 +200,31 @@ export function CommercialPaceThermometer({
           </div>
         </div>
 
+        {/* Referências de Média Histórica e Comparativos */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/80 text-xs">
+          <div className="flex items-center gap-1.5 text-slate-600">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">
+              Média Histórica:
+            </span>
+            <strong className="text-sky-700 font-mono">
+              {formatUnitValue(unidade === 'R$/dia' ? mediaHistorica * 6147 : mediaHistorica)}
+            </strong>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {ritmoAtual >= mediaHistorica ? (
+              <span className="text-emerald-700 font-semibold">
+                ▲ Ritmo atual superando a média histórica
+              </span>
+            ) : (
+              <span className="text-amber-700 font-semibold">
+                ▼ Ritmo atual abaixo da média histórica
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Mensagem de Interpretação */}
-        <p className="text-xs text-slate-700 font-medium pt-1">
+        <p className="text-xs text-slate-700 font-medium pt-0.5">
           <strong>Diagnóstico:</strong> {statusDescription}
         </p>
       </div>

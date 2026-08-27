@@ -554,8 +554,8 @@ export default function Home() {
                       {formatBRL(acao.potencialValor)}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {acao.potencialTon} ton · {getCanalIcon(acao.canalSugerido)}{' '}
-                      {acao.horarioSugerido}
+                      {acao.potencialTon.toLocaleString('pt-BR')} t ·{' '}
+                      {getCanalIcon(acao.canalSugerido)} {acao.horarioSugerido}
                     </span>
                   </div>
 

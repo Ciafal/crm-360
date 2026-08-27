@@ -26,7 +26,7 @@ export function StrategicSummarySection({ onFilterCategory }: StrategicSummarySe
       title: 'Grupo 1 — Atacar agora (Pronta-entrega)',
       count: 6,
       potential: 'R$ 290.000',
-      tons: '38.4 ton',
+      tons: '38,4 t',
       description: 'Alta oportunidade de fechamento imediato + alta cobertura de estoque CIAFAL.',
       badgeText: 'Prioridade Máxima',
       badgeClass: 'bg-emerald-500/15 text-emerald-700 border-emerald-300',
@@ -40,7 +40,7 @@ export function StrategicSummarySection({ onFilterCategory }: StrategicSummarySe
       title: 'Grupo 2 — Atacar após resolver impedimento',
       count: 3,
       potential: 'R$ 145.000',
-      tons: '19.2 ton',
+      tons: '19,2 t',
       description:
         'Boa oportunidade histórica, porém travada por crédito, divergência cadastral ou limite.',
       badgeText: 'Ação Financeira/Crédito',
@@ -55,7 +55,7 @@ export function StrategicSummarySection({ onFilterCategory }: StrategicSummarySe
       title: 'Grupo 3 — Preparar contato / Monitorar',
       count: 5,
       potential: 'R$ 180.000',
-      tons: '24.0 ton',
+      tons: '24,0 t',
       description:
         'Potencial relevante confirmado, mas momento atual ainda fora da melhor janela de recompra.',
       badgeText: 'Planejamento Q4',
@@ -70,7 +70,7 @@ export function StrategicSummarySection({ onFilterCategory }: StrategicSummarySe
       title: 'Grupo 4 — Não priorizar agora',
       count: 4,
       potential: 'R$ 85.000',
-      tons: '11.0 ton',
+      tons: '11,0 t',
       description:
         'Baixa probabilidade de retorno no curto prazo, fora do perfil de margem ou risco operacional.',
       badgeText: 'Monitoramento Passivo',

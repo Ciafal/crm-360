@@ -105,6 +105,74 @@ export interface TeamDailySummary {
   sources: string[]
 }
 
+export interface SellerIndividualAnalysis {
+  sellerId: string
+  sellerName: string
+  cargo: string
+  resumoExecutivo: string
+  pontosPositivos: Array<{
+    titulo: string
+    evidenciaNumerica: string
+    impacto: string
+  }>
+  pontosAtencao: Array<{
+    titulo: string
+    evidenciaNumerica: string
+    causaProvavel: string
+    riscoMeta: 'BAIXO' | 'MEDIO' | 'ALTO' | 'CRITICO'
+  }>
+  evidenciasContextuais: {
+    metaVolume: string
+    realizadoVolume: string
+    atingimentoPercent: number
+    forecastVolume: string
+    ritmoAtual: string
+    mediaHistorica: string
+    carteiraTotal: number
+    clientesAtivosMes: number
+    taxaCarteiraAtivaPercent: number
+    clientesA: number
+    clientesB: number
+    clientesC: number
+    inativosCarteira: number
+    leadsAtivos: number
+    visitasMes: number
+    contatosTotal: number
+    cotacoesEmitidas: number
+    followupsPendentes: number
+    estoqueDisponivel: string
+    limiteCreditoDisponivel: string
+    tmsEntregasNoPrazo: string
+  }
+  oportunidades: Array<{
+    cliente: string
+    potencial: string
+    produto: string
+    motivo: string
+  }>
+  acoesRecomendadas: Array<{
+    id: string
+    titulo: string
+    descricao: string
+    prioridade: 'ALTA' | 'MEDIA' | 'BAIXA'
+    prazoSugerido: string
+    tipo: 'CLIENTES_A' | 'FOLLOWUP' | 'ESTOQUE' | 'CREDITO' | 'VISITA' | 'PROSPECCAO'
+    clienteAlvo?: string
+  }>
+}
+
+export interface SellerPerformanceAnalysisAgent {
+  analyzeSellerPerformance(
+    sellerId: string,
+    filtersContext?: {
+      periodo?: string
+      produto?: string
+      familia?: string
+      segmento?: string
+    },
+  ): Promise<SellerIndividualAnalysis>
+}
+
 export interface SalesSupervisorAgent {
   summarizeTeamDaily(teamId?: string): Promise<TeamDailySummary>
   comparePlannedVsExecuted(sellerId: string): Promise<{
@@ -115,6 +183,15 @@ export interface SalesSupervisorAgent {
     coachingRecommendation: string
   }>
   identifyBottlenecks(teamId?: string): Promise<string[]>
+  analyzeSellerPerformance?(
+    sellerId: string,
+    filtersContext?: {
+      periodo?: string
+      produto?: string
+      familia?: string
+      segmento?: string
+    },
+  ): Promise<SellerIndividualAnalysis>
   runFullSupervisorDiagnostic?(): Promise<{
     diagnosticoGeral: string
     pontosAtencao: Array<{
@@ -176,4 +253,5 @@ export interface AIProvider {
   readonly copilot?: SellerCopilotAgent
   readonly reactivation?: ReactivationAgent
   readonly supervisor?: SalesSupervisorAgent
+  readonly sellerAnalysis?: SellerPerformanceAnalysisAgent
 }
