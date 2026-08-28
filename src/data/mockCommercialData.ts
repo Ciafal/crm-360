@@ -162,6 +162,7 @@ export interface OportunidadeFunil {
   previsaoFechamento: string
   dataCriacao: string
   motivoPerda?: string
+  quotation_status?: string
 }
 
 export interface TimelineEntry {

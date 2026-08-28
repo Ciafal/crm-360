@@ -1,4 +1,5 @@
 import pb from '@/lib/pocketbase/client'
+import { createTask } from '@/services/tasks'
 import type {
   Quotation,
   QuotationItem,
@@ -883,7 +884,7 @@ const INITIAL_SAP_MESSAGES: SapOrderMessage[] = [
 ]
 
 export class QuotationService {
-  private getStoredQuotes(): Quotation[] {
+  getStoredQuotations(): Quotation[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_QUOTES)
       if (stored) return JSON.parse(stored)
@@ -892,6 +893,14 @@ export class QuotationService {
     }
     localStorage.setItem(STORAGE_KEY_QUOTES, JSON.stringify(INITIAL_QUOTATIONS))
     return INITIAL_QUOTATIONS
+  }
+
+  listStoredQuotations(): Quotation[] {
+    return this.getStoredQuotations()
+  }
+
+  private getStoredQuotes(): Quotation[] {
+    return this.getStoredQuotations()
   }
 
   private saveStoredQuotes(quotes: Quotation[]) {
@@ -1736,6 +1745,25 @@ export class QuotationService {
         type: 'INFO',
       })
       await this.saveQuotation(quote)
+
+      // Follow-up automático criando tarefa real no backend PocketBase
+      try {
+        const currentUserId = pb.authStore.model?.id || quote.seller_id || 'system'
+        await createTask({
+          user_id: currentUserId,
+          title: `Follow-up de Cotação ${quote.code}`,
+          source_type: 'QUOTE',
+          status: 'pendente',
+          priority: 'alta',
+          customer_id: quote.customer_id,
+          customer_name: quote.customer_name,
+          impact_meta_tons: quote.total_tons,
+          due_date: quote.next_action_due,
+          description: `Follow-up de envio da cotação ${quote.code} via ${comm.channel} para ${comm.recipient_name || comm.recipient} (${comm.recipient}). SLA de ${FOLLOW_UP_SLA_HOURS}h.`,
+        })
+      } catch (taskErr) {
+        console.error('Falha ao criar tarefa de follow-up da cotação:', taskErr)
+      }
     }
 
     return newComm

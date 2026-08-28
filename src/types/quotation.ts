@@ -207,6 +207,8 @@ export interface Quotation {
   customer_uf?: string
   customer_archetype?: string
   customer_abc?: 'A' | 'B' | 'C'
+  opportunity_id?: string
+  opportunity_title?: string
   contact_name: string
   contact_role?: string
   contact_email?: string

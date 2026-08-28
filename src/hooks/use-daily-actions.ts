@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { dailyActionsService, type CreateDailyActionParams } from '@/services/daily_actions_service'
+import { quotationService } from '@/services/quotation_service'
 import type { DailyCommercialAction, CommercialActionStatus } from '@/types/models'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -18,6 +19,52 @@ export function useDailyActions(targetDate?: string) {
         user?.id,
         targetDate || new Date().toISOString().split('T')[0],
       )
+
+      const todayStr = targetDate || new Date().toISOString().split('T')[0]
+      const nowTime = new Date().getTime()
+
+      // Buscar cotações reais armazenadas
+      const storedQuotes = quotationService.getStoredQuotations()
+      const quoteActionsToCreate: CreateDailyActionParams[] = []
+
+      for (const quote of storedQuotes) {
+        const isTargetStatus =
+          quote.status === 'ENVIADA_AO_CLIENTE' || quote.status === 'AGUARDANDO_RETORNO'
+
+        if (isTargetStatus) {
+          // Checar se last_contact_at ou next_action_due vencido ou ausente
+          const hasNoDue = !quote.next_action_due
+          const isDuePast = quote.next_action_due
+            ? new Date(quote.next_action_due).getTime() <= nowTime + 24 * 60 * 60 * 1000
+            : false
+          const hasNoContact = !quote.last_contact_at
+
+          if (hasNoDue || isDuePast || hasNoContact) {
+            const sellerId = user?.id || quote.seller_id || 'qas-vendedor_teste'
+            quoteActionsToCreate.push({
+              seller_id: sellerId,
+              customer_id: quote.customer_id,
+              customer_name: quote.customer_name,
+              opportunity_id: quote.opportunity_id || quote.id,
+              action_type: 'follow_up',
+              priority: 92,
+              recommendation: `Follow-up da Cotação ${quote.code} (${quote.total_tons || 0}t) enviada ao cliente`,
+              rationale: `Cotação ${quote.code} no valor de R$ ${(quote.total_value || 0).toLocaleString('pt-BR')} aguarda retorno comercial. Follow-up SLA ativo.`,
+              source: 'cotacao',
+              confidence: 0.95,
+              potential_revenue: quote.total_value,
+              potential_tons: quote.total_tons,
+              due_at: quote.next_action_due || new Date().toISOString(),
+              date: todayStr,
+            })
+          }
+        }
+      }
+
+      // Se houver cotações reais para follow-up, criar no backend caso não existam
+      if (quoteActionsToCreate.length > 0 && user?.id) {
+        await dailyActionsService.bulkCreateIfNotExists(quoteActionsToCreate)
+      }
 
       // Se o banco estiver vazio pela primeira vez, inicializa ações mock sugeridas pela IA
       if (data.length === 0 && user?.id) {
@@ -99,7 +146,20 @@ export function useDailyActions(targetDate?: string) {
           },
         ]
         const created = await dailyActionsService.bulkCreateIfNotExists(initialSeeds)
-        setActions(created)
+
+        // Recarregar a lista completa de ações para incluir as criadas
+        const refreshedData = await dailyActionsService.listActions(
+          user?.id,
+          targetDate || new Date().toISOString().split('T')[0],
+        )
+        setActions(refreshedData.length > 0 ? refreshedData : created)
+      } else if (quoteActionsToCreate.length > 0 && user?.id) {
+        // Se já existiam dados mas novas ações de cotação foram criadas, recarregar
+        const refreshedData = await dailyActionsService.listActions(
+          user?.id,
+          targetDate || new Date().toISOString().split('T')[0],
+        )
+        setActions(refreshedData.length > 0 ? refreshedData : data)
       } else {
         setActions(data)
       }
