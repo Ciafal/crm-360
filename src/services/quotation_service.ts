@@ -3,26 +3,58 @@ import type {
   Quotation,
   QuotationItem,
   QuotationStatus,
-  StockSnapshotRecord,
-  StockConfirmationRequest,
-  SapOrderQueueItem,
+  StockSituation,
+  ApprovalStatus,
+  QuoteVersion,
+  InventoryConfirmationRequest,
+  QuoteOrderIntegration,
   SapOrderMessage,
   QuotationCommunication,
-  StockSituation,
+  LossReason,
+  MaterialStockInfo,
+  MaterialPlannedProduction,
 } from '@/types/quotation'
 
-// Configurações comerciais
+// Configurações comerciais CIAFAL
 export const STOCK_CONFIRMATION_THRESHOLD_TONS = 5.0
+export const FOLLOW_UP_SLA_HOURS = 48
+export const INVENTORY_CONFIRMATION_SLA_HOURS = 48
 
-// Banco de dados em memória / localStorage para fallback rápido e alta responsividade
+// Storage keys
 const STORAGE_KEY_QUOTES = 'ciafal_crm_quotations'
-const STORAGE_KEY_STOCK = 'ciafal_sap_stock_snapshot'
 const STORAGE_KEY_STOCK_CONFIRM = 'ciafal_stock_confirmation_requests'
 const STORAGE_KEY_SAP_QUEUE = 'ciafal_crm_sap_order_queue'
 const STORAGE_KEY_SAP_MSGS = 'ciafal_crm_sap_order_messages'
 const STORAGE_KEY_COMMUNICATIONS = 'ciafal_quotation_communications'
+const STORAGE_KEY_ADMIN_SETTINGS = 'ciafal_quotation_admin_settings'
 
-// Catálogo Mestre de Materiais SAP ECC
+export interface QuotationAdminSettings {
+  defaultValidityDays: number
+  followUpSlaHours: number
+  stockConfirmationSlaHours: number
+  approvalThresholds: {
+    sellerMaxDiscount: number // ex: 3%
+    supervisorMaxDiscount: number // ex: 7%
+    managerMaxDiscount: number // ex: 15%
+  }
+  sapAutoJobSimulation: boolean
+  pdfTemplateHeader: string
+}
+
+export const DEFAULT_ADMIN_SETTINGS: QuotationAdminSettings = {
+  defaultValidityDays: 10,
+  followUpSlaHours: 48,
+  stockConfirmationSlaHours: 48,
+  approvalThresholds: {
+    sellerMaxDiscount: 3.0,
+    supervisorMaxDiscount: 7.0,
+    managerMaxDiscount: 15.0,
+  },
+  sapAutoJobSimulation: true,
+  pdfTemplateHeader: 'CIAFAL FERRO & AÇO — COMPANHIA INDUSTRIAL DE AÇOS E FERRAGENS',
+}
+
+// Catálogo Mestre de Materiais SAP ECC com lotes, peso médio/moda e produção prevista
 export interface CatalogMaterial {
   code: string
   description: string
@@ -34,6 +66,8 @@ export interface CatalogMaterial {
   plant: string
   storageLocation: string
   stockUpdatedAt: string
+  stockDetails: MaterialStockInfo
+  plannedProduction: MaterialPlannedProduction
 }
 
 export const CATALOG_MATERIALS: CatalogMaterial[] = [
@@ -48,6 +82,31 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '1000 - Contagem Matriz',
     storageLocation: '0001 - Depósito Tubos Inox',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 12.5,
+      batchCount: 6,
+      averageBatchWeightTons: 2.08,
+      modeBatchWeightTons: 2.1,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0001 - Depósito Tubos Inox',
+      lastUpdatedAt: '2024-10-24 16:30',
+      batches: [
+        { batchNumber: 'LOTE-304-01', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
+        { batchNumber: 'LOTE-304-02', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
+        { batchNumber: 'LOTE-304-03', quantity: 1, weightTons: 2.05, storageLocation: '0001' },
+        { batchNumber: 'LOTE-304-04', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
+        { batchNumber: 'LOTE-304-05', quantity: 1, weightTons: 2.05, storageLocation: '0001' },
+        { batchNumber: 'LOTE-304-06', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
+      ],
+    },
+    plannedProduction: {
+      hasPlannedProduction: true,
+      plannedDate: '2024-11-12',
+      plannedQuantityTons: 18.0,
+      productionLineCenter: 'Linha de Conformação e Solda TIG 02',
+      lastUpdatedAt: '2024-10-24 08:00',
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
   {
     code: 'CH-304-3MM',
@@ -60,6 +119,27 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '1000 - Contagem Matriz',
     storageLocation: '0002 - Pátio Chapas Planas',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 3.2,
+      batchCount: 2,
+      averageBatchWeightTons: 1.6,
+      modeBatchWeightTons: 1.6,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0002 - Pátio Chapas Planas',
+      lastUpdatedAt: '2024-10-24 16:30',
+      batches: [
+        { batchNumber: 'LOTE-CH304-01', quantity: 1, weightTons: 1.6, storageLocation: '0002' },
+        { batchNumber: 'LOTE-CH304-02', quantity: 1, weightTons: 1.6, storageLocation: '0002' },
+      ],
+    },
+    plannedProduction: {
+      hasPlannedProduction: true,
+      plannedDate: '2024-11-08',
+      plannedQuantityTons: 10.5,
+      productionLineCenter: 'Laminação e Acabamento Inox 01',
+      lastUpdatedAt: '2024-10-24 09:15',
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
   {
     code: 'VIG-W200-26',
@@ -72,6 +152,19 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '2000 - Filial Betim',
     storageLocation: '0001 - Pátio Vigas Laminadas',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 18.0,
+      batchCount: 9,
+      averageBatchWeightTons: 2.0,
+      modeBatchWeightTons: 2.0,
+      plant: '2000 - Filial Betim',
+      storageLocation: '0001 - Pátio Vigas Laminadas',
+      lastUpdatedAt: '2024-10-24 16:30',
+    },
+    plannedProduction: {
+      hasPlannedProduction: false,
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
   {
     code: 'CH-A36-12MM',
@@ -84,6 +177,23 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '1000 - Contagem Matriz',
     storageLocation: '0002 - Pátio Chapas Planas',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 4.8,
+      batchCount: 3,
+      averageBatchWeightTons: 1.6,
+      modeBatchWeightTons: 1.6,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0002 - Pátio Chapas Planas',
+      lastUpdatedAt: '2024-10-24 16:30',
+    },
+    plannedProduction: {
+      hasPlannedProduction: true,
+      plannedDate: '2024-11-05',
+      plannedQuantityTons: 24.0,
+      productionLineCenter: 'Laminação a Quente e Corte Pesado',
+      lastUpdatedAt: '2024-10-24 11:00',
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
   {
     code: 'BOB-INOX-430',
@@ -96,6 +206,23 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '1000 - Contagem Matriz',
     storageLocation: '0003 - Linha de Corte',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 0,
+      batchCount: 0,
+      averageBatchWeightTons: 0,
+      modeBatchWeightTons: 0,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0003 - Linha de Corte',
+      lastUpdatedAt: '2024-10-24 16:30',
+    },
+    plannedProduction: {
+      hasPlannedProduction: true,
+      plannedDate: '2024-11-20',
+      plannedQuantityTons: 15.0,
+      productionLineCenter: 'Linha Slitter Inox 03',
+      lastUpdatedAt: '2024-10-24 14:00',
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
   {
     code: 'PERF-U-100',
@@ -108,6 +235,19 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     plant: '1000 - Contagem Matriz',
     storageLocation: '0001 - Pátio Perfis',
     stockUpdatedAt: '2024-10-24 16:30',
+    stockDetails: {
+      availableStockTons: 9.4,
+      batchCount: 4,
+      averageBatchWeightTons: 2.35,
+      modeBatchWeightTons: 2.35,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0001 - Pátio Perfis',
+      lastUpdatedAt: '2024-10-24 16:30',
+    },
+    plannedProduction: {
+      hasPlannedProduction: false,
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
   },
 ]
 
@@ -121,6 +261,9 @@ export interface PreloadedCustomer {
   cidade: string
   uf: string
   vendedor: string
+  representativeName?: string
+  archetype: string
+  abcHistorico: 'A' | 'B' | 'C'
   contatos: Array<{
     nome: string
     cargo: string
@@ -149,6 +292,8 @@ export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
     cidade: 'Campinas',
     uf: 'SP',
     vendedor: 'Carlos Mendonça',
+    archetype: 'INDÚSTRIA',
+    abcHistorico: 'A',
     contatos: [
       {
         nome: 'Roberto Antunes',
@@ -190,6 +335,8 @@ export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
     cidade: 'Sertãozinho',
     uf: 'SP',
     vendedor: 'Carlos Mendonça',
+    archetype: 'INDÚSTRIA',
+    abcHistorico: 'B',
     contatos: [
       {
         nome: 'Fernando Silveira',
@@ -220,6 +367,8 @@ export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
     cidade: 'Joinville',
     uf: 'SC',
     vendedor: 'Carlos Mendonça',
+    archetype: 'INDÚSTRIA',
+    abcHistorico: 'A',
     contatos: [
       {
         nome: 'Cláudia Meireles',
@@ -241,9 +390,41 @@ export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
     division: '15',
     limiteCreditoDisponivel: 150000,
   },
+  {
+    id: 'CLI-5541',
+    sapCode: '0001085541',
+    razaoSocial: 'Aço Forte Distribuidora de Ferragens Ltda',
+    nomeFantasia: 'Aço Forte Minas',
+    cnpj: '21.094.112/0001-08',
+    cidade: 'Contagem',
+    uf: 'MG',
+    vendedor: 'Carlos Mendonça',
+    archetype: 'REVENDA',
+    abcHistorico: 'A',
+    contatos: [
+      {
+        nome: 'Mauro Nogueira',
+        cargo: 'Sócio-Diretor Comercial',
+        telefone: '(31) 98822-5500',
+        email: 'mauro@acoforteminas.com.br',
+      },
+    ],
+    shipToAddresses: [
+      {
+        code: '0001085541-01',
+        label: 'Centro de Distribuição Contagem',
+        address: 'Av. Cardeal Eugênio Pacelli, 2100 - Cidade Industrial - Contagem/MG',
+      },
+    ],
+    condicoesPagamento: ['28/42/56 DDL (Boleto)', '30 DDL', 'À Vista'],
+    salesOrg: '1000',
+    distributionChannel: '10',
+    division: '20',
+    limiteCreditoDisponivel: 320000,
+  },
 ]
 
-// Mock Inicial de Cotações
+// Mock Inicial de Cotações atualizado com ciclo completo
 const INITIAL_QUOTATIONS: Quotation[] = [
   {
     id: 'quote-98104',
@@ -253,7 +434,12 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     customer_sap_code: '0001088041',
     customer_name: 'Metalúrgica Santa Rita Ltda',
     customer_cnpj: '45.182.903/0001-44',
+    customer_city: 'Campinas',
+    customer_uf: 'SP',
+    customer_archetype: 'INDÚSTRIA',
+    customer_abc: 'A',
     contact_name: 'Roberto Antunes',
+    contact_role: 'Gerente de Compras',
     contact_email: 'compras@santarita.ind.br',
     contact_phone: '(19) 99872-4411',
     ship_to_code: '0001088041-01',
@@ -302,17 +488,20 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     surcharge_total: 0,
     total_tons: 6.0,
     total_value: 206500,
+    probability_pct: 90,
     price_status: 'DENTRO_DA_REGRA',
     stock_status: 'ESTOQUE_SUFICIENTE',
-    approval_status: 'APROVADA_AUTOMATICAMENTE',
+    approval_status: 'APPROVED',
     approval_level_required: 'NENHUM',
     client_status: 'ACEITA',
     client_acceptance_notes: 'Cliente formalizou aceite via WhatsApp com PO #PO-88219.',
     client_accepted_at: '2024-10-24 17:50',
-    status: 'AGUARDANDO_IMPLANTACAO_SAP',
+    client_accepted_source: 'WHATSAPP',
+    status: 'CONVERSAO_SAP',
     notes: 'Entrega programada para primeira quinzena de Novembro com caminhão dedicado.',
+    stage_entered_at: '2024-10-24T17:52:00Z',
     sap_order_number: '',
-    sap_processing_status: 'Posicionado na fila de integração SAP',
+    sap_processing_status: 'Posicionado na fila de integração SAP (READY_FOR_SAP)',
     timeline: [
       {
         time: '16:30',
@@ -365,7 +554,12 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     customer_sap_code: '0001087910',
     customer_name: 'Caldeiraria & Tanques Industrial Paulista',
     customer_cnpj: '12.894.210/0001-92',
+    customer_city: 'Sertãozinho',
+    customer_uf: 'SP',
+    customer_archetype: 'INDÚSTRIA',
+    customer_abc: 'B',
     contact_name: 'Fernando Silveira',
+    contact_role: 'Diretor de Suprimentos',
     contact_email: 'fernando@tanquespaulista.com.br',
     contact_phone: '(16) 99123-8877',
     ship_to_code: '0001087910-01',
@@ -414,13 +608,15 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     surcharge_total: 0,
     total_tons: 4.5,
     total_value: 132750,
+    probability_pct: 65,
     price_status: 'EXCECAO_PRECO',
     stock_status: 'AGUARDANDO_CONFIRMACAO',
-    approval_status: 'AGUARDANDO_APROVACAO',
+    approval_status: 'PENDING',
     approval_level_required: 'GERENCIA',
     client_status: 'EM_NEGOCIACAO',
-    status: 'AGUARDANDO_CONFIRMACAO_ESTOQUE',
+    status: 'AGUARDANDO_APROVACAO',
     notes: 'Cliente aguarda confirmação de estoque e flexibilização de tabela.',
+    stage_entered_at: '2024-10-24T17:20:00Z',
     timeline: [
       {
         time: '16:30',
@@ -458,7 +654,12 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     customer_sap_code: '0001086523',
     customer_name: 'Indústria Mecânica Alvorada S/A',
     customer_cnpj: '03.771.820/0002-18',
+    customer_city: 'Joinville',
+    customer_uf: 'SC',
+    customer_archetype: 'INDÚSTRIA',
+    customer_abc: 'A',
     contact_name: 'Cláudia Meireles',
+    contact_role: 'Compradora Pleno',
     contact_email: 'claudia.m@mecanicaalvorada.com.br',
     contact_phone: '(47) 99744-1188',
     ship_to_code: '0001086523-01',
@@ -505,15 +706,18 @@ const INITIAL_QUOTATIONS: Quotation[] = [
     surcharge_total: 0,
     total_tons: 12.0,
     total_value: 97400,
+    probability_pct: 100,
     price_status: 'DENTRO_DA_REGRA',
     stock_status: 'ESTOQUE_SUFICIENTE',
-    approval_status: 'APROVADA_AUTOMATICAMENTE',
+    approval_status: 'APPROVED',
     approval_level_required: 'NENHUM',
     client_status: 'ACEITA',
     client_acceptance_notes: 'PO 99018 recebido e aceito pelo cliente.',
     client_accepted_at: '2024-10-24 11:30',
-    status: 'PEDIDO_SAP_IMPLANTADO',
+    client_accepted_source: 'EMAIL',
+    status: 'PEDIDO_IMPLANTADO',
     notes: 'Pedido faturado e liberado pelo SAP ECC.',
+    stage_entered_at: '2024-10-23T11:35:00Z',
     sap_order_number: '10049281',
     sap_processing_status: 'Ordem de Venda Criada com Sucesso no SAP ECC',
     timeline: [
@@ -527,7 +731,7 @@ const INITIAL_QUOTATIONS: Quotation[] = [
   },
 ]
 
-const INITIAL_STOCK_CONFIRMATIONS: StockConfirmationRequest[] = [
+const INITIAL_STOCK_CONFIRMATIONS: InventoryConfirmationRequest[] = [
   {
     id: 'conf-1',
     quotation_id: 'quote-98105',
@@ -541,6 +745,7 @@ const INITIAL_STOCK_CONFIRMATIONS: StockConfirmationRequest[] = [
     stock_snapshot_qty: 3.2,
     confirmed_qty: 0,
     request_datetime: '2024-10-24 17:25',
+    sla_deadline: '2024-10-26 17:25',
     requested_by: 'Carlos Mendonça',
     assigned_area: 'PCP / Laminação Inox',
     confirmation_status: 'AGUARDANDO_ANALISE',
@@ -550,17 +755,21 @@ const INITIAL_STOCK_CONFIRMATIONS: StockConfirmationRequest[] = [
   },
 ]
 
-const INITIAL_SAP_QUEUE: SapOrderQueueItem[] = [
+const INITIAL_SAP_QUEUE: QuoteOrderIntegration[] = [
   {
     id: 'queue-1',
     integration_id: 'INT-SAP-20241024-001',
+    quote_id: 'quote-98104',
     quotation_id: 'quote-98104',
     quotation_code: 'COT-98104',
     quotation_version: 1,
+    status: 'READY_FOR_SAP',
     request_status: 'READY_FOR_SAP',
+    requested_at: '2024-10-24 17:52',
     created_at: '2024-10-24 17:52',
     created_by: 'Carlos Mendonça',
-    customer_sap_code: '0001088041',
+    customer_id: 'CLI-8041',
+    sap_customer_code: '0001088041',
     customer_name: 'Metalúrgica Santa Rita Ltda',
     ship_to_code: '0001088041-01',
     sales_org: '1000',
@@ -598,13 +807,17 @@ const INITIAL_SAP_QUEUE: SapOrderQueueItem[] = [
   {
     id: 'queue-2',
     integration_id: 'INT-SAP-20241023-088',
+    quote_id: 'quote-98106',
     quotation_id: 'quote-98106',
     quotation_code: 'COT-98106',
     quotation_version: 1,
+    status: 'IMPLANTED',
     request_status: 'SAP_CREATED',
+    requested_at: '2024-10-23 11:32',
     created_at: '2024-10-23 11:32',
     created_by: 'Carlos Mendonça',
-    customer_sap_code: '0001086523',
+    customer_id: 'CLI-6523',
+    sap_customer_code: '0001086523',
     customer_name: 'Indústria Mecânica Alvorada S/A',
     ship_to_code: '0001086523-01',
     sales_org: '2000',
@@ -669,10 +882,6 @@ const INITIAL_SAP_MESSAGES: SapOrderMessage[] = [
   },
 ]
 
-// ==========================================
-// SERVIÇO DE COTAÇÕES
-// ==========================================
-
 export class QuotationService {
   private getStoredQuotes(): Quotation[] {
     try {
@@ -689,6 +898,20 @@ export class QuotationService {
     localStorage.setItem(STORAGE_KEY_QUOTES, JSON.stringify(quotes))
   }
 
+  getAdminSettings(): QuotationAdminSettings {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_ADMIN_SETTINGS)
+      if (stored) return JSON.parse(stored)
+    } catch {
+      /* intentionally ignored */
+    }
+    return DEFAULT_ADMIN_SETTINGS
+  }
+
+  saveAdminSettings(settings: QuotationAdminSettings) {
+    localStorage.setItem(STORAGE_KEY_ADMIN_SETTINGS, JSON.stringify(settings))
+  }
+
   async getAllQuotations(): Promise<Quotation[]> {
     return this.getStoredQuotes()
   }
@@ -702,15 +925,17 @@ export class QuotationService {
     const quotes = this.getStoredQuotes()
     const now = new Date()
     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const nowIso = now.toISOString()
 
     let existingIdx = quotes.findIndex((q) => q.id === quoteData.id || q.code === quoteData.code)
 
     if (existingIdx >= 0) {
-      // Atualizar cotação existente
       const existing = quotes[existingIdx]
+      const statusChanged = quoteData.status && quoteData.status !== existing.status
       const updated: Quotation = {
         ...existing,
         ...quoteData,
+        stage_entered_at: statusChanged ? nowIso : existing.stage_entered_at || nowIso,
         updated: nowStr,
         timeline: [
           ...(existing.timeline || []),
@@ -725,7 +950,6 @@ export class QuotationService {
       this.saveStoredQuotes(quotes)
       return updated
     } else {
-      // Criar nova cotação
       const newNum = 98100 + quotes.length + 1
       const newCode = quoteData.code || `COT-${newNum}`
       const newId = `quote-${newNum}`
@@ -734,17 +958,24 @@ export class QuotationService {
         id: newId,
         code: newCode,
         version: 1,
+        versions_history: [],
         customer_id: quoteData.customer_id || 'CLI-8041',
         customer_sap_code: quoteData.customer_sap_code || '0001088041',
-        customer_name: quoteData.customer_name || 'Cliente Sem Razão',
+        customer_name: quoteData.customer_name || 'Cliente',
         customer_cnpj: quoteData.customer_cnpj,
+        customer_city: quoteData.customer_city || 'Campinas',
+        customer_uf: quoteData.customer_uf || 'SP',
+        customer_archetype: quoteData.customer_archetype || 'INDÚSTRIA',
+        customer_abc: quoteData.customer_abc || 'A',
         contact_name: quoteData.contact_name || '',
+        contact_role: quoteData.contact_role,
         contact_email: quoteData.contact_email,
         contact_phone: quoteData.contact_phone,
         ship_to_code: quoteData.ship_to_code || '',
         ship_to_address: quoteData.ship_to_address,
         seller_id: quoteData.seller_id || 'qas-vendedor_teste',
         seller_name: quoteData.seller_name || 'Carlos Mendonça',
+        representative_name: quoteData.representative_name,
         issue_date: quoteData.issue_date || nowStr.split(' ')[0],
         valid_until:
           quoteData.valid_until ||
@@ -763,13 +994,15 @@ export class QuotationService {
         surcharge_total: quoteData.surcharge_total || 0,
         total_tons: quoteData.total_tons || 0,
         total_value: quoteData.total_value || 0,
+        probability_pct: quoteData.probability_pct ?? 50,
         price_status: quoteData.price_status || 'DENTRO_DA_REGRA',
         stock_status: quoteData.stock_status || 'ESTOQUE_SUFICIENTE',
-        approval_status: quoteData.approval_status || 'APROVADA_AUTOMATICAMENTE',
+        approval_status: quoteData.approval_status || 'NOT_REQUIRED',
         approval_level_required: quoteData.approval_level_required || 'NENHUM',
         client_status: quoteData.client_status || 'NAO_ENVIADA',
         status: quoteData.status || 'RASCUNHO',
         notes: quoteData.notes || '',
+        stage_entered_at: nowIso,
         timeline: [
           {
             time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
@@ -786,30 +1019,47 @@ export class QuotationService {
     }
   }
 
-  // Criar nova versão da cotação (Versionamento sem sobrescrever)
+  // Versionamento formal com criação de QuoteVersion
   async createNewVersion(quoteId: string, notes: string): Promise<Quotation> {
     const quotes = this.getStoredQuotes()
     const base = quotes.find((q) => q.id === quoteId || q.code === quoteId)
     if (!base) throw new Error('Cotação base não encontrada')
 
-    const newVersion = base.version + 1
-    const newId = `${base.id}-v${newVersion}`
+    const newVersionNum = base.version + 1
+    const newId = `${base.id}-v${newVersionNum}`
     const now = new Date()
     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+    const snapshotVersion: QuoteVersion = {
+      version: base.version,
+      created_at: nowStr,
+      created_by: base.seller_name,
+      items: JSON.parse(JSON.stringify(base.items)),
+      total_value: base.total_value,
+      total_tons: base.total_tons,
+      payment_terms: base.payment_terms,
+      freight_type: base.freight_type,
+      freight_value: base.freight_value,
+      status: base.status,
+      notes: base.notes,
+      pdf_reference: `Proposta_CIAFAL_${base.code}_v${base.version}.pdf`,
+    }
 
     const newQuote: Quotation = {
       ...base,
       id: newId,
-      version: newVersion,
-      status: 'EM_ELABORACAO',
-      approval_status: 'AGUARDANDO_APROVACAO',
+      version: newVersionNum,
+      versions_history: [...(base.versions_history || []), snapshotVersion],
+      status: 'EM_PREPARACAO',
+      approval_status: 'PENDING',
       client_status: 'NAO_ENVIADA',
-      notes: `${base.notes ? base.notes + ' | ' : ''}Nova versão v${newVersion}: ${notes}`,
+      stage_entered_at: now.toISOString(),
+      notes: `${base.notes ? base.notes + ' | ' : ''}Nova versão v${newVersionNum}: ${notes}`,
       timeline: [
         ...(base.timeline || []),
         {
           time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-          description: `Versão v${newVersion} gerada a partir da v${base.version}. Motivo: ${notes}`,
+          description: `Versão v${newVersionNum} gerada a partir da v${base.version}. Motivo: ${notes}`,
           type: 'INFO',
         },
       ],
@@ -821,12 +1071,14 @@ export class QuotationService {
     return newQuote
   }
 
-  // Avaliação da Matriz de Aprovação Dinâmica (Sem Hardcode)
+  // Avaliação da Matriz de Alçada Dinâmica
   calculateApprovalStatus(items: QuotationItem[]): {
-    approvalStatus: Quotation['approval_status']
+    approvalStatus: ApprovalStatus
     approvalLevel: Quotation['approval_level_required']
     priceStatus: Quotation['price_status']
+    ruleTriggered?: string
   } {
+    const settings = this.getAdminSettings()
     let maxDiscount = 0
     let hasDeviation = false
 
@@ -838,29 +1090,32 @@ export class QuotationService {
       }
     }
 
-    if (!hasDeviation || maxDiscount <= 3.0) {
+    if (!hasDeviation || maxDiscount <= settings.approvalThresholds.sellerMaxDiscount) {
       return {
-        approvalStatus: 'APROVADA_AUTOMATICAMENTE',
+        approvalStatus: 'NOT_REQUIRED',
         approvalLevel: 'NENHUM',
         priceStatus: 'DENTRO_DA_REGRA',
       }
-    } else if (maxDiscount <= 7.0) {
+    } else if (maxDiscount <= settings.approvalThresholds.supervisorMaxDiscount) {
       return {
-        approvalStatus: 'AGUARDANDO_APROVACAO',
+        approvalStatus: 'PENDING',
         approvalLevel: 'SUPERVISOR',
         priceStatus: 'EXCECAO_PRECO',
+        ruleTriggered: `Desconto de ${maxDiscount.toFixed(1)}% requer alçada de Supervisor (limite > ${settings.approvalThresholds.sellerMaxDiscount}%)`,
       }
-    } else if (maxDiscount <= 15.0) {
+    } else if (maxDiscount <= settings.approvalThresholds.managerMaxDiscount) {
       return {
-        approvalStatus: 'AGUARDANDO_APROVACAO',
+        approvalStatus: 'PENDING',
         approvalLevel: 'GERENCIA',
         priceStatus: 'EXCECAO_PRECO',
+        ruleTriggered: `Desconto de ${maxDiscount.toFixed(1)}% requer alçada da Gerência Comercial (limite > ${settings.approvalThresholds.supervisorMaxDiscount}%)`,
       }
     } else {
       return {
-        approvalStatus: 'AGUARDANDO_APROVACAO',
+        approvalStatus: 'PENDING',
         approvalLevel: 'DIRETORIA',
         priceStatus: 'EXCECAO_PRECO',
+        ruleTriggered: `Desconto de ${maxDiscount.toFixed(1)}% requer aprovação da Diretoria Executiva (> ${settings.approvalThresholds.managerMaxDiscount}%)`,
       }
     }
   }
@@ -869,7 +1124,7 @@ export class QuotationService {
   async approveQuotation(
     quoteId: string,
     approverName: string,
-    approverLevel: string,
+    approverLevel: 'SUPERVISOR' | 'GERENCIA' | 'DIRETORIA',
     notes?: string,
   ): Promise<Quotation> {
     const quote = await this.getQuotationById(quoteId)
@@ -880,16 +1135,23 @@ export class QuotationService {
 
     const updated: Quotation = {
       ...quote,
-      approval_status:
-        approverLevel === 'DIRETORIA'
-          ? 'APROVADA_DIRETORIA'
-          : approverLevel === 'GERENCIA'
-            ? 'APROVADA_GERENCIA'
-            : 'APROVADA_SUPERVISOR',
+      approval_status: 'APPROVED',
       approved_by: approverName,
-      approved_at: new Date().toISOString(),
+      approved_at: now.toISOString(),
       approval_notes: notes,
-      status: 'APROVADA_INTERNAMENTE',
+      status: 'PRONTA_PARA_ENVIO',
+      approval_audit: {
+        requested_by: quote.seller_name,
+        requested_at: quote.created || now.toISOString(),
+        rule_triggered: 'Alçada de Desconto/Margem',
+        discount_requested_pct: Math.abs(
+          quote.items.reduce((max, it) => Math.min(max, it.deviation_pct), 0),
+        ),
+        approver_name: approverName,
+        approver_level: approverLevel,
+        approved_at: now.toISOString(),
+        status: 'APPROVED',
+      },
       timeline: [
         ...(quote.timeline || []),
         {
@@ -903,11 +1165,38 @@ export class QuotationService {
     return this.saveQuotation(updated)
   }
 
+  // Rejeitar Cotação
+  async rejectQuotation(quoteId: string, approverName: string, reason: string): Promise<Quotation> {
+    const quote = await this.getQuotationById(quoteId)
+    if (!quote) throw new Error('Cotação não encontrada')
+
+    const now = new Date()
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+    const updated: Quotation = {
+      ...quote,
+      approval_status: 'REJECTED',
+      status: 'EM_PREPARACAO',
+      approval_notes: `Rejeitado por ${approverName}: ${reason}`,
+      timeline: [
+        ...(quote.timeline || []),
+        {
+          time: nowTime,
+          description: `Aprovação comercial REJEITADA por ${approverName}. Motivo: ${reason}`,
+          type: 'ERROR',
+        },
+      ],
+    }
+
+    return this.saveQuotation(updated)
+  }
+
   // Registrar Aceite do Cliente
   async registerClientAcceptance(
     quoteId: string,
     notes: string,
     poNumber?: string,
+    source: 'WHATSAPP' | 'EMAIL' | 'TELEFONE' | 'PORTAL' = 'WHATSAPP',
   ): Promise<Quotation> {
     const quote = await this.getQuotationById(quoteId)
     if (!quote) throw new Error('Cotação não encontrada')
@@ -918,14 +1207,16 @@ export class QuotationService {
     const updated: Quotation = {
       ...quote,
       client_status: 'ACEITA',
-      client_accepted_at: new Date().toISOString(),
+      client_accepted_at: now.toISOString(),
+      client_accepted_source: source,
       client_acceptance_notes: `${notes}${poNumber ? ` (PO #${poNumber})` : ''}`,
       status: 'ACEITA',
+      probability_pct: 100,
       timeline: [
         ...(quote.timeline || []),
         {
           time: nowTime,
-          description: `Aceite comercial formalizado pelo cliente. ${poNumber ? `PO #${poNumber}` : ''} - ${notes}`,
+          description: `Aceite comercial formalizado pelo cliente via ${source}. ${poNumber ? `PO #${poNumber}` : ''} - ${notes}`,
           type: 'SUCCESS',
         },
       ],
@@ -934,37 +1225,67 @@ export class QuotationService {
     return this.saveQuotation(updated)
   }
 
-  // Solicitar Implantação no SAP ECC (NÃO CRIA PEDIDO DIRETO)
-  async requestSapOrderQueue(quoteId: string, requestedBy: string): Promise<SapOrderQueueItem> {
+  // Registrar Perda da Cotação com Motivo Obrigatório
+  async registerQuotationLoss(
+    quoteId: string,
+    reason: LossReason,
+    notes: string,
+  ): Promise<Quotation> {
     const quote = await this.getQuotationById(quoteId)
     if (!quote) throw new Error('Cotação não encontrada')
 
-    // Pré-Validações obrigatórias antes de enviar para a fila SAP
+    const now = new Date()
+    const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+    const updated: Quotation = {
+      ...quote,
+      status: 'PERDIDA',
+      loss_reason: reason,
+      loss_notes: notes,
+      probability_pct: 0,
+      timeline: [
+        ...(quote.timeline || []),
+        {
+          time: nowTime,
+          description: `Cotação marcada como PERDIDA. Motivo: ${reason}. Observações: ${notes}`,
+          type: 'ERROR',
+        },
+      ],
+    }
+
+    return this.saveQuotation(updated)
+  }
+
+  // Solicitar Implantação no SAP ECC
+  async requestSapOrderQueue(quoteId: string, requestedBy: string): Promise<QuoteOrderIntegration> {
+    const quote = await this.getQuotationById(quoteId)
+    if (!quote) throw new Error('Cotação não encontrada')
+
     if (!quote.customer_sap_code) throw new Error('Código de cliente SAP não informado')
     if (!quote.ship_to_code) throw new Error('Recebedor de mercadoria (Ship-To) inválido')
     if (quote.items.length === 0) throw new Error('A cotação não possui itens')
-    if (quote.approval_status === 'AGUARDANDO_APROVACAO' || quote.approval_status === 'REJEITADA') {
-      throw new Error('Aprovação comercial pendente')
+    if (quote.approval_status === 'PENDING' || quote.approval_status === 'REJECTED') {
+      throw new Error('Aprovação comercial pendente ou rejeitada')
     }
     if (quote.client_status !== 'ACEITA') {
-      throw new Error('Aceite do cliente é obrigatório antes da implantação SAP')
+      throw new Error('Aceite formal do cliente é obrigatório antes da implantação SAP')
     }
 
-    // Verificar se algum item precisa de confirmação de estoque que não foi confirmada
     const hasPendingStock = quote.items.some(
       (it) => it.stock_confirmation_required && !it.stock_confirmed,
     )
     if (hasPendingStock) {
-      throw new Error('Há itens com estoque abaixo do limite que ainda não foram confirmados')
+      throw new Error(
+        'Há itens com saldo < 5t aguardando confirmação física do pátio antes da emissão SAP',
+      )
     }
 
-    // Idempotência: Checar se já existe registro na fila para esta cotação e versão
     const storedQueue = this.getStoredSapQueue()
     const existing = storedQueue.find(
       (q) =>
-        q.quotation_id === quote.id &&
+        (q.quote_id === quote.id || q.quotation_id === quote.id) &&
         q.quotation_version === quote.version &&
-        q.request_status !== 'CANCELLED',
+        q.status !== 'CANCELLED',
     )
 
     if (existing) {
@@ -975,16 +1296,20 @@ export class QuotationService {
     const now = new Date()
     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-    const queueItem: SapOrderQueueItem = {
+    const queueItem: QuoteOrderIntegration = {
       id: `queue-${Date.now()}`,
       integration_id: integId,
+      quote_id: quote.id,
       quotation_id: quote.id,
       quotation_code: quote.code,
       quotation_version: quote.version,
+      status: 'READY_FOR_SAP',
       request_status: 'READY_FOR_SAP',
+      requested_at: nowStr,
       created_at: nowStr,
       created_by: requestedBy,
-      customer_sap_code: quote.customer_sap_code,
+      customer_id: quote.customer_id,
+      sap_customer_code: quote.customer_sap_code,
       customer_name: quote.customer_name,
       ship_to_code: quote.ship_to_code,
       sales_org: quote.sales_org || '1000',
@@ -998,9 +1323,10 @@ export class QuotationService {
       requested_delivery_date: quote.items[0]?.requested_date || quote.valid_until,
       crm_reference: `${quote.code}-v${quote.version}`,
       sap_order_number: '',
-      sap_processing_status: 'Aguardando execução do JOB SAP_SD_ORDER_IMPORT',
+      sap_return_status: 'READY_FOR_SAP',
+      sap_processing_status: 'Aguardando leitura pelo JOB SAP_SD_ORDER_IMPORT',
       sap_return_code: '',
-      sap_return_message: 'Registro posicionado na fila de integração',
+      sap_return_message: 'Registro posicionado na fila de integração QuoteOrderIntegration',
       retry_count: 0,
       locked_for_processing: false,
       items_payload: quote.items.map((it, idx) => ({
@@ -1021,9 +1347,9 @@ export class QuotationService {
     storedQueue.unshift(queueItem)
     this.saveStoredSapQueue(storedQueue)
 
-    // Atualizar status da cotação
-    quote.status = 'AGUARDANDO_IMPLANTACAO_SAP'
+    quote.status = 'CONVERSAO_SAP'
     quote.sap_processing_status = 'READY_FOR_SAP'
+    quote.sap_integration_id = integId
     quote.timeline.push({
       time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
       description: `Solicitação de implantação gerada na fila SAP (ID: ${integId})`,
@@ -1035,10 +1361,10 @@ export class QuotationService {
   }
 
   // ==========================================
-  // FILA SAP ECC & SIMULAÇÃO DE PROCESSAMENTO DE JOB
+  // FILA SAP ECC & DAEMON SIMULATOR
   // ==========================================
 
-  getStoredSapQueue(): SapOrderQueueItem[] {
+  getStoredSapQueue(): QuoteOrderIntegration[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_SAP_QUEUE)
       if (stored) return JSON.parse(stored)
@@ -1049,7 +1375,7 @@ export class QuotationService {
     return INITIAL_SAP_QUEUE
   }
 
-  saveStoredSapQueue(items: SapOrderQueueItem[]) {
+  saveStoredSapQueue(items: QuoteOrderIntegration[]) {
     localStorage.setItem(STORAGE_KEY_SAP_QUEUE, JSON.stringify(items))
   }
 
@@ -1068,8 +1394,8 @@ export class QuotationService {
     localStorage.setItem(STORAGE_KEY_SAP_MSGS, JSON.stringify(msgs))
   }
 
-  // Processamento do JOB SAP (Simulação do Daemon SAP ECC lendo a fila)
-  async simulateSapJobExecution(integrationId: string): Promise<SapOrderQueueItem> {
+  // Simulação do Daemon SAP ECC
+  async simulateSapJobExecution(integrationId: string): Promise<QuoteOrderIntegration> {
     const queue = this.getStoredSapQueue()
     const itemIdx = queue.findIndex((q) => q.integration_id === integrationId)
     if (itemIdx < 0) throw new Error('Item não encontrado na fila SAP')
@@ -1078,29 +1404,30 @@ export class QuotationService {
     const now = new Date()
     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
-    // Lock de processamento
     item.locked_for_processing = true
     item.locked_at = nowStr
     item.locked_by = 'JOB_SAP_SD_ORDER_IMPORT'
+    item.status = 'SAP_READING'
     item.request_status = 'SAP_PROCESSING'
     item.sap_processing_status = 'JOB SAP lendo e validando estrutura SD...'
     this.saveStoredSapQueue(queue)
 
-    // Aguardar simulação rápida
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    await new Promise((resolve) => setTimeout(resolve, 600))
 
-    // Simular resultado de sucesso ou bloqueio de crédito baseado no valor
     const msgs = this.getStoredSapMessages()
-    const quote = await this.getQuotationById(item.quotation_id)
+    const quote = await this.getQuotationById(item.quote_id || item.quotation_id || '')
 
     if (item.quotation_total > 400000) {
-      // Caso de Bloqueio de Crédito no SAP
       const generatedOrder = `1004${Math.floor(1000 + Math.random() * 9000)}`
+      item.status = 'BLOCKED'
       item.request_status = 'SAP_BLOCKED'
       item.sap_order_number = generatedOrder
+      item.sap_return_status = 'BLOCKED_CREDIT'
       item.sap_processing_status = 'Pedido Criado no SAP mas Bloqueado por Crédito (Status 02)'
       item.sap_return_code = 'W'
-      item.sap_return_message = `Ordem de Venda ${generatedOrder} criada com bloqueio financeiro F.35.`
+      item.sap_error_code = 'SAP_CREDIT_LOCK_02'
+      item.sap_error_message = `Ordem de Venda ${generatedOrder} criada com bloqueio financeiro F.35 (limite excedido).`
+      item.sap_return_message = item.sap_error_message
       item.processed_at = nowStr
       item.sap_job_id = `JOB_SAP_SD_IMPORT_${Date.now()}`
       item.locked_for_processing = false
@@ -1108,17 +1435,17 @@ export class QuotationService {
       msgs.unshift({
         id: `msg-${Date.now()}-1`,
         integration_id: item.integration_id,
-        quotation_id: item.quotation_id,
+        quotation_id: item.quote_id,
         message_type: 'WARNING',
         message_class: 'V1',
         message_number: '149',
-        message_text: `Ordem ${generatedOrder} gerada. Limite de crédito excedido: Bloqueio automático ativado.`,
+        message_text: `Ordem ${generatedOrder} gerada. Limite de crédito excedido: Bloqueio automático ativado via F.35.`,
         source: 'SAP ECC Credit Management',
         created_at: nowStr,
       })
 
       if (quote) {
-        quote.status = 'BLOQUEADO_NO_SAP'
+        quote.status = 'CONVERSAO_SAP'
         quote.sap_order_number = generatedOrder
         quote.sap_processing_status = item.sap_processing_status
         quote.timeline.push({
@@ -1129,10 +1456,11 @@ export class QuotationService {
         await this.saveQuotation(quote)
       }
     } else {
-      // Sucesso Total
       const generatedOrder = `1004${Math.floor(1000 + Math.random() * 9000)}`
+      item.status = 'IMPLANTED'
       item.request_status = 'SAP_CREATED'
       item.sap_order_number = generatedOrder
+      item.sap_return_status = 'IMPLANTED'
       item.sap_processing_status = 'Pedido SAP Implantado com Sucesso'
       item.sap_return_code = 'S'
       item.sap_return_message = `Ordem de Venda ${generatedOrder} gravada com sucesso nas tabelas VBAK/VBAP.`
@@ -1143,22 +1471,22 @@ export class QuotationService {
       msgs.unshift({
         id: `msg-${Date.now()}-1`,
         integration_id: item.integration_id,
-        quotation_id: item.quotation_id,
+        quotation_id: item.quote_id,
         message_type: 'SUCCESS',
         message_class: 'V1',
         message_number: '311',
-        message_text: `Ordem de venda ${generatedOrder} criada com sucesso para o emissor da ordem ${item.customer_sap_code}.`,
+        message_text: `Ordem de venda ${generatedOrder} criada com sucesso para o emissor da ordem ${item.sap_customer_code}.`,
         source: 'SAP ECC SD-SLS',
         created_at: nowStr,
       })
 
       if (quote) {
-        quote.status = 'PEDIDO_SAP_IMPLANTADO'
+        quote.status = 'PEDIDO_IMPLANTADO'
         quote.sap_order_number = generatedOrder
         quote.sap_processing_status = item.sap_processing_status
         quote.timeline.push({
           time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-          description: `JOB SAP processou a solicitação: Pedido de Venda ${generatedOrder} oficializado`,
+          description: `JOB SAP processou a solicitação: Pedido de Venda ${generatedOrder} oficializado no SAP ECC`,
           type: 'SUCCESS',
         })
         await this.saveQuotation(quote)
@@ -1171,14 +1499,14 @@ export class QuotationService {
     return item
   }
 
-  // Reprocessamento de Erros da Fila SAP
-  async retrySapQueueItem(integrationId: string): Promise<SapOrderQueueItem> {
+  async retrySapQueueItem(integrationId: string): Promise<QuoteOrderIntegration> {
     const queue = this.getStoredSapQueue()
     const itemIdx = queue.findIndex((q) => q.integration_id === integrationId)
     if (itemIdx < 0) throw new Error('Item não encontrado na fila SAP')
 
     const item = queue[itemIdx]
     item.retry_count = (item.retry_count || 0) + 1
+    item.status = 'RETRY'
     item.request_status = 'RETRY_PENDING'
     item.sap_processing_status = `Aguardando reprocessamento pelo JOB SAP (Tentativa #${item.retry_count})`
     item.locked_for_processing = false
@@ -1191,7 +1519,7 @@ export class QuotationService {
     msgs.unshift({
       id: `msg-${Date.now()}`,
       integration_id: item.integration_id,
-      quotation_id: item.quotation_id,
+      quotation_id: item.quote_id,
       message_type: 'INFO',
       message_class: 'CRM',
       message_number: '002',
@@ -1204,13 +1532,13 @@ export class QuotationService {
     return item
   }
 
-  // Cancelar Solicitação da Fila
-  async cancelSapQueueItem(integrationId: string): Promise<SapOrderQueueItem> {
+  async cancelSapQueueItem(integrationId: string): Promise<QuoteOrderIntegration> {
     const queue = this.getStoredSapQueue()
     const itemIdx = queue.findIndex((q) => q.integration_id === integrationId)
     if (itemIdx < 0) throw new Error('Item não encontrado na fila SAP')
 
     const item = queue[itemIdx]
+    item.status = 'CANCELLED'
     item.request_status = 'CANCELLED'
     item.sap_processing_status = 'Solicitação cancelada pelo operador CRM'
     queue[itemIdx] = item
@@ -1219,10 +1547,10 @@ export class QuotationService {
   }
 
   // ==========================================
-  // CONFIRMAÇÃO DE ESTOQUE (PCP / LOGÍSTICA)
+  // CONFIRMAÇÃO DE ESTOQUE (PCP / WMS / PÁTIO)
   // ==========================================
 
-  getStoredStockConfirmations(): StockConfirmationRequest[] {
+  getStoredStockConfirmations(): InventoryConfirmationRequest[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_STOCK_CONFIRM)
       if (stored) return JSON.parse(stored)
@@ -1233,28 +1561,33 @@ export class QuotationService {
     return INITIAL_STOCK_CONFIRMATIONS
   }
 
-  saveStoredStockConfirmations(items: StockConfirmationRequest[]) {
+  saveStoredStockConfirmations(items: InventoryConfirmationRequest[]) {
     localStorage.setItem(STORAGE_KEY_STOCK_CONFIRM, JSON.stringify(items))
   }
 
   async requestStockConfirmation(
-    reqData: Omit<StockConfirmationRequest, 'id' | 'request_datetime' | 'confirmation_status'>,
-  ): Promise<StockConfirmationRequest> {
+    reqData: Omit<
+      InventoryConfirmationRequest,
+      'id' | 'request_datetime' | 'confirmation_status' | 'sla_deadline'
+    >,
+  ): Promise<InventoryConfirmationRequest> {
     const list = this.getStoredStockConfirmations()
     const now = new Date()
+    const slaDate = new Date(now.getTime() + INVENTORY_CONFIRMATION_SLA_HOURS * 60 * 60 * 1000)
     const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    const slaStr = `${slaDate.getFullYear()}-${String(slaDate.getMonth() + 1).padStart(2, '0')}-${String(slaDate.getDate()).padStart(2, '0')} ${String(slaDate.getHours()).padStart(2, '0')}:${String(slaDate.getMinutes()).padStart(2, '0')}`
 
-    const newReq: StockConfirmationRequest = {
+    const newReq: InventoryConfirmationRequest = {
       ...reqData,
       id: `conf-${Date.now()}`,
       request_datetime: nowStr,
+      sla_deadline: slaStr,
       confirmation_status: 'AGUARDANDO_ANALISE',
     }
 
     list.unshift(newReq)
     this.saveStoredStockConfirmations(list)
 
-    // Atualizar status no item da cotação
     const quote = await this.getQuotationById(reqData.quotation_id)
     if (quote) {
       const item = quote.items.find((it) => it.id === reqData.quotation_item_id)
@@ -1264,10 +1597,9 @@ export class QuotationService {
         item.stock_confirmed = false
       }
       quote.stock_status = 'AGUARDANDO_CONFIRMACAO'
-      quote.status = 'AGUARDANDO_CONFIRMACAO_ESTOQUE'
       quote.timeline.push({
         time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
-        description: `Confirmação de estoque solicitada para ${reqData.material_code} (${reqData.requested_qty} ${reqData.unit}) -> ${reqData.assigned_area}`,
+        description: `Confirmação de estoque solicitada para ${reqData.material_code} (${reqData.requested_qty} ${reqData.unit}) -> SLA 48h`,
         type: 'WARNING',
       })
       await this.saveQuotation(quote)
@@ -1283,7 +1615,7 @@ export class QuotationService {
     expectedDate: string,
     comment: string,
     responderName: string,
-  ): Promise<StockConfirmationRequest> {
+  ): Promise<InventoryConfirmationRequest> {
     const list = this.getStoredStockConfirmations()
     const idx = list.findIndex((r) => r.id === confirmationId)
     if (idx < 0) throw new Error('Solicitação de confirmação não encontrada')
@@ -1314,7 +1646,6 @@ export class QuotationService {
     list[idx] = req
     this.saveStoredStockConfirmations(list)
 
-    // Atualizar cotação e item
     const quote = await this.getQuotationById(req.quotation_id)
     if (quote) {
       const item = quote.items.find((it) => it.id === req.quotation_item_id)
@@ -1325,7 +1656,6 @@ export class QuotationService {
         item.stock_confirmation_date = expectedDate
       }
 
-      // Checar se todos os itens que precisavam de confirmação foram resolvidos
       const anyDenied = quote.items.some((it) => it.stock_situation === 'CONFIRMACAO_NEGADA')
       const anyWaiting = quote.items.some((it) => it.stock_situation === 'AGUARDANDO_CONFIRMACAO')
 
@@ -1335,12 +1665,6 @@ export class QuotationService {
         quote.stock_status = 'AGUARDANDO_CONFIRMACAO'
       } else {
         quote.stock_status = 'CONFIRMADO'
-        if (quote.status === 'AGUARDANDO_CONFIRMACAO_ESTOQUE') {
-          quote.status =
-            quote.approval_status === 'AGUARDANDO_APROVACAO'
-              ? 'AGUARDANDO_APROVACAO'
-              : 'APROVADA_INTERNAMENTE'
-        }
       }
 
       quote.timeline.push({
@@ -1390,13 +1714,22 @@ export class QuotationService {
     list.unshift(newComm)
     this.saveStoredCommunications(list)
 
-    // Atualizar status da cotação para ENVIADA_AO_CLIENTE se ainda estiver interna
     const quote = await this.getQuotationById(comm.quotation_id)
     if (quote) {
-      if (quote.status === 'APROVADA_INTERNAMENTE' || quote.status === 'RASCUNHO') {
+      if (
+        quote.status === 'PRONTA_PARA_ENVIO' ||
+        quote.status === 'RASCUNHO' ||
+        quote.status === 'EM_PREPARACAO'
+      ) {
         quote.status = 'ENVIADA_AO_CLIENTE'
         quote.client_status = 'ENVIADA'
       }
+      quote.last_contact_at = nowStr
+      quote.next_action_due = new Date(now.getTime() + FOLLOW_UP_SLA_HOURS * 60 * 60 * 1000)
+        .toISOString()
+        .split('T')[0]
+      quote.next_action_description = `Follow-up comercial (SLA ${FOLLOW_UP_SLA_HOURS}h pós envio)`
+
       quote.timeline.push({
         time: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
         description: `Cotação enviada via ${comm.channel} para ${comm.recipient_name || comm.recipient} (${comm.attached_pdf_name || 'PDF Oficial'})`,

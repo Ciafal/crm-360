@@ -1,376 +1,126 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
+import { useNavigate } from 'react-router-dom'
 import {
+  ArrowLeft,
+  Search,
   Building2,
+  User,
+  Phone,
+  Mail,
+  CreditCard,
+  Package,
+  Layers,
+  AlertTriangle,
+  CheckCircle2,
   Calendar,
   DollarSign,
   Plus,
   Trash2,
   FileText,
-  Printer,
   Send,
-  MessageSquare,
-  AlertTriangle,
-  CheckCircle2,
-  Clock,
-  ArrowLeft,
-  ChevronRight,
-  ShieldCheck,
-  Server,
-  Zap,
-  HelpCircle,
-  RefreshCw,
   Sparkles,
-  Info,
-  Check,
-  Layers,
-  Search,
+  RefreshCw,
+  ExternalLink,
+  ShieldCheck,
+  Factory,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { useToast } from '@/hooks/use-toast'
 import {
   quotationService,
   PRELOADED_CUSTOMERS,
   CATALOG_MATERIALS,
-  PreloadedCustomer,
-  CatalogMaterial,
+  type PreloadedCustomer,
+  type CatalogMaterial,
   STOCK_CONFIRMATION_THRESHOLD_TONS,
 } from '@/services/quotation_service'
-import { StockBadge } from '@/components/cotacoes/StockBadge'
-import { PriceDeviationBadge } from '@/components/cotacoes/PriceDeviationBadge'
-import {
-  QuotationStatusBadge,
-  ApprovalStatusBadge,
-} from '@/components/cotacoes/QuotationStatusBadge'
-import { StockConfirmationDialog } from '@/components/cotacoes/StockConfirmationDialog'
-import { StockResponseDialog } from '@/components/cotacoes/StockResponseDialog'
-import { PricingDetailsDrawer } from '@/components/cotacoes/PricingDetailsDrawer'
+import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
+import type { QuotationItem, Quotation } from '@/types/quotation'
+import type { SAPCreditStatus } from '@/providers/SAPCreditProvider'
 import { PDFPreviewDialog } from '@/components/cotacoes/PDFPreviewDialog'
-import { CommunicationComposer } from '@/components/cotacoes/CommunicationComposer'
-import { ClientAcceptanceDialog } from '@/components/cotacoes/ClientAcceptanceDialog'
-import { InternalApprovalDialog } from '@/components/cotacoes/InternalApprovalDialog'
-import { SapIntegrationRequestDialog } from '@/components/cotacoes/SapIntegrationRequestDialog'
-import { toast } from 'sonner'
-import type { Quotation, QuotationItem, StockSituation } from '@/types/quotation'
+import { StockConfirmationDialog } from '@/components/cotacoes/StockConfirmationDialog'
+import { PriceDeviationBadge } from '@/components/cotacoes/PriceDeviationBadge'
+import { StockBadge } from '@/components/cotacoes/StockBadge'
 
 export default function NovaCotacao() {
-  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { toast } = useToast()
 
-  const [loading, setLoading] = useState(false)
-  const [quotation, setQuotation] = useState<Quotation | null>(null)
+  // Etapa do Wizard
+  const [currentStep, setCurrentStep] = useState<number>(1)
 
-  // BLOCO 1: CLIENTE
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('CLI-8041')
-  const [selectedCustomer, setSelectedCustomer] = useState<PreloadedCustomer>(
-    PRELOADED_CUSTOMERS[0],
-  )
-  const [selectedContact, setSelectedContact] = useState<string>('Roberto Antunes')
-  const [selectedShipTo, setSelectedShipTo] = useState<string>('0001088041-01')
-  const [sellerName, setSellerName] = useState('Carlos Mendonça')
+  // Seleção de Cliente
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [selectedCustomer, setSelectedCustomer] = useState<PreloadedCustomer | null>(null)
+  const [selectedContact, setSelectedContact] = useState<{
+    nome: string
+    cargo: string
+    telefone: string
+    email: string
+  } | null>(null)
+  const [selectedShipTo, setSelectedShipTo] = useState<string>('')
 
-  // BLOCO 2: CONDIÇÕES
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0])
-  const [validUntil, setValidUntil] = useState(
-    new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  )
-  const [paymentTerms, setPaymentTerms] = useState('28/42/56 DDL (Boleto)')
-  const [incoterm, setIncoterm] = useState('CIF - Posto Cliente')
-  const [freightType, setFreightType] = useState<'CIF' | 'FOB'>('CIF')
-  const [freightValue, setFreightValue] = useState<number>(2500)
-  const [currency, setCurrency] = useState<'BRL' | 'USD'>('BRL')
-  const [notes, setNotes] = useState('')
+  // Consulta de Crédito SAP ECC F.35
+  const [creditStatus, setCreditStatus] = useState<SAPCreditStatus | null>(null)
+  const [loadingCredit, setLoadingCredit] = useState(false)
 
-  // BLOCO 3: PRODUTOS
+  // Itens da Cotação
   const [items, setItems] = useState<QuotationItem[]>([])
   const [materialSearch, setMaterialSearch] = useState('')
-  const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<CatalogMaterial | null>(null)
-
-  // MODAIS E GAVETAS
-  const [stockConfirmDialogOpen, setStockConfirmDialogOpen] = useState(false)
-  const [stockConfirmItem, setStockConfirmItem] = useState<QuotationItem | null>(null)
-
-  const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false)
-  const [pricingDrawerItem, setPricingDrawerItem] = useState<QuotationItem | null>(null)
-
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
-  const [commDialogOpen, setCommDialogOpen] = useState(false)
-  const [clientAcceptDialogOpen, setClientAcceptDialogOpen] = useState(false)
-  const [internalApprovalDialogOpen, setInternalApprovalDialogOpen] = useState(false)
-  const [sapRequestDialogOpen, setSapRequestDialogOpen] = useState(false)
-
-  // Carregar dados se for edição
-  useEffect(() => {
-    async function loadQuote() {
-      if (!id || id === 'nova') {
-        // Inicializar com 1 item padrão para agilidade do vendedor
-        const defaultMat = CATALOG_MATERIALS[0]
-        const defaultItem: QuotationItem = {
-          id: `item-${Date.now()}`,
-          item_sequence: 10,
-          material_code: defaultMat.code,
-          description: defaultMat.description,
-          family: defaultMat.family,
-          dimension: defaultMat.dimension,
-          quantity: 6.0,
-          unit: defaultMat.unit,
-          requested_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
-          sap_price: defaultMat.sapPrice,
-          proposed_price: defaultMat.sapPrice,
-          deviation_pct: 0,
-          final_price: defaultMat.sapPrice,
-          total: 6.0 * defaultMat.sapPrice,
-          stock_available: defaultMat.availableStock,
-          stock_situation:
-            defaultMat.availableStock >= 5.0 ? 'ESTOQUE_SUFICIENTE' : 'ESTOQUE_BAIXO',
-          stock_updated_at: defaultMat.stockUpdatedAt,
-          stock_confirmation_required: defaultMat.availableStock < 5.0,
-          stock_confirmed: defaultMat.availableStock >= 5.0,
-          plant: defaultMat.plant,
-          storage_location: defaultMat.storageLocation,
-        }
-        setItems([defaultItem])
-        return
-      }
-
-      try {
-        setLoading(true)
-        const q = await quotationService.getQuotationById(id)
-        if (q) {
-          setQuotation(q)
-          setSelectedCustomerId(q.customer_id)
-          const cust = PRELOADED_CUSTOMERS.find((c) => c.id === q.customer_id)
-          if (cust) setSelectedCustomer(cust)
-          setSelectedContact(q.contact_name)
-          setSelectedShipTo(q.ship_to_code)
-          setSellerName(q.seller_name)
-          setIssueDate(q.issue_date)
-          setValidUntil(q.valid_until)
-          setPaymentTerms(q.payment_terms)
-          setIncoterm(q.incoterm)
-          setFreightType(q.freight_type)
-          setFreightValue(q.freight_value)
-          setCurrency(q.currency)
-          setNotes(q.notes || '')
-          setItems(q.items || [])
-        }
-      } catch (err) {
-        toast.error('Erro ao carregar cotação.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadQuote()
-  }, [id])
-
-  // Troca de Cliente
-  const handleCustomerChange = (customerId: string) => {
-    const cust = PRELOADED_CUSTOMERS.find((c) => c.id === customerId)
-    if (!cust) return
-    setSelectedCustomerId(customerId)
-    setSelectedCustomer(cust)
-    setSelectedContact(cust.contatos[0]?.nome || '')
-    setSelectedShipTo(cust.shipToAddresses[0]?.code || '')
-    setPaymentTerms(cust.condicoesPagamento[0] || '28 DDL')
-  }
-
-  // Recalcular Totais e Desvios dos Itens
-  const handleItemChange = (
-    index: number,
-    field: 'quantity' | 'proposed_price' | 'price_justification' | 'requested_date',
-    value: any,
-  ) => {
-    const newItems = [...items]
-    const item = { ...newItems[index] }
-
-    if (field === 'quantity') {
-      const q = Math.max(0.01, Number(value))
-      item.quantity = q
-      item.total = q * item.proposed_price
-    } else if (field === 'proposed_price') {
-      const p = Math.max(0, Number(value))
-      item.proposed_price = p
-      item.final_price = p
-      item.deviation_pct = item.sap_price > 0 ? ((p - item.sap_price) / item.sap_price) * 100 : 0
-      item.total = item.quantity * p
-    } else if (field === 'price_justification') {
-      item.price_justification = value
-    } else if (field === 'requested_date') {
-      item.requested_date = value
-    }
-
-    newItems[index] = item
-    setItems(newItems)
-  }
-
-  // Adicionar Material do Catálogo
-  const handleAddMaterial = (mat: CatalogMaterial) => {
-    const isBelowLimit = mat.availableStock < STOCK_CONFIRMATION_THRESHOLD_TONS
-    const initialSituation: StockSituation =
-      mat.availableStock <= 0
-        ? 'SEM_ESTOQUE'
-        : isBelowLimit
-          ? 'ESTOQUE_BAIXO'
-          : 'ESTOQUE_SUFICIENTE'
-
-    const newItem: QuotationItem = {
-      id: `item-${Date.now()}-${items.length + 1}`,
-      item_sequence: (items.length + 1) * 10,
-      material_code: mat.code,
-      description: mat.description,
-      family: mat.family,
-      dimension: mat.dimension,
-      quantity: 5.0,
-      unit: mat.unit,
-      requested_date: validUntil,
-      sap_price: mat.sapPrice,
-      proposed_price: mat.sapPrice,
-      deviation_pct: 0,
-      final_price: mat.sapPrice,
-      total: 5.0 * mat.sapPrice,
-      stock_available: mat.availableStock,
-      stock_situation: initialSituation,
-      stock_updated_at: mat.stockUpdatedAt,
-      stock_confirmation_required: isBelowLimit,
-      stock_confirmed: !isBelowLimit,
-      plant: mat.plant,
-      storage_location: mat.storageLocation,
-    }
-
-    setItems([...items, newItem])
-    setSelectedMaterialToAdd(null)
-    setMaterialSearch('')
-    toast.success(`Material ${mat.code} adicionado à cotação!`)
-  }
-
-  const handleRemoveItem = (index: number) => {
-    const newItems = items.filter((_, i) => i !== index)
-    setItems(newItems)
-  }
-
-  // Cálculos do Resumo Geral
-  const subtotal = items.reduce((acc, it) => acc + it.total, 0)
-  const totalTons = items.reduce((acc, it) => acc + (it.unit === 't' ? it.quantity : 0), 0)
-
-  // Desconto calculado contra o Preço de Tabela SAP
-  const sapTotalReference = items.reduce((acc, it) => acc + it.quantity * it.sap_price, 0)
-  const discountTotal = Math.max(0, sapTotalReference - subtotal)
-  const totalValue = subtotal + (freightType === 'CIF' ? freightValue : 0)
-
-  // Avaliação de Aprovação e Estoque
-  const approvalCalc = quotationService.calculateApprovalStatus(items)
-
-  const hasPendingStockConfirmation = items.some(
-    (it) => it.stock_confirmation_required && !it.stock_confirmed,
+  const [selectedMaterial, setSelectedMaterial] = useState<CatalogMaterial | null>(null)
+  const [itemQtyTons, setItemQtyTons] = useState<string>('5.0')
+  const [itemProposedPrice, setItemProposedPrice] = useState<string>('')
+  const [itemDeliveryDate, setItemDeliveryDate] = useState<string>(
+    new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   )
 
-  const overallStockSituation: StockSituation = items.some(
-    (it) => it.stock_situation === 'CONFIRMACAO_NEGADA',
+  // Condições Gerais
+  const [paymentTerms, setPaymentTerms] = useState('28 DDL')
+  const [freightType, setFreightType] = useState<'CIF' | 'FOB'>('CIF')
+  const [freightValue, setFreightValue] = useState<number>(1500)
+  const [validUntil, setValidUntil] = useState<string>(
+    new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   )
-    ? 'CONFIRMACAO_NEGADA'
-    : items.some((it) => it.stock_situation === 'AGUARDANDO_CONFIRMACAO')
-      ? 'AGUARDANDO_CONFIRMACAO'
-      : items.some((it) => it.stock_situation === 'ESTOQUE_BAIXO' && !it.stock_confirmed)
-        ? 'ESTOQUE_BAIXO'
-        : 'ESTOQUE_SUFICIENTE'
+  const [commercialNotes, setCommercialNotes] = useState('')
 
-  // Salvar Cotação
-  const handleSave = async (customStatus?: Quotation['status']) => {
-    if (!selectedCustomer) {
-      toast.error('Selecione um cliente válido.')
-      return
-    }
-    if (items.length === 0) {
-      toast.error('Adicione pelo menos um item à cotação.')
-      return
-    }
+  // Modais
+  const [stockConfirmItem, setStockConfirmItem] = useState<{
+    item: QuotationItem
+    material: CatalogMaterial
+  } | null>(null)
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
+  const [createdQuotation, setCreatedQuotation] = useState<Quotation | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-    try {
-      setLoading(true)
+  // Clientes filtrados
+  const filteredCustomers = PRELOADED_CUSTOMERS.filter(
+    (c) =>
+      c.razaoSocial.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      c.nomeFantasia.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      c.sapCode.includes(customerSearch) ||
+      c.cnpj.includes(customerSearch),
+  )
 
-      const payload: Partial<Quotation> = {
-        id: quotation?.id,
-        code: quotation?.code,
-        version: quotation?.version || 1,
-        customer_id: selectedCustomer.id,
-        customer_sap_code: selectedCustomer.sapCode,
-        customer_name: selectedCustomer.razaoSocial,
-        customer_cnpj: selectedCustomer.cnpj,
-        contact_name: selectedContact,
-        ship_to_code: selectedShipTo,
-        ship_to_address: selectedCustomer.shipToAddresses.find((s) => s.code === selectedShipTo)
-          ?.address,
-        seller_id: 'qas-vendedor_teste',
-        seller_name: sellerName,
-        issue_date: issueDate,
-        valid_until: validUntil,
-        payment_terms: paymentTerms,
-        incoterm: incoterm,
-        freight_type: freightType,
-        freight_value: freightValue,
-        currency: currency,
-        sales_org: selectedCustomer.salesOrg,
-        distribution_channel: selectedCustomer.distributionChannel,
-        division: selectedCustomer.division,
-        items: items,
-        subtotal: subtotal,
-        discount_total: discountTotal,
-        surcharge_total: 0,
-        total_tons: totalTons,
-        total_value: totalValue,
-        price_status: approvalCalc.priceStatus,
-        stock_status: overallStockSituation,
-        approval_status: quotation?.approval_status || approvalCalc.approvalStatus,
-        approval_level_required: approvalCalc.approvalLevel,
-        client_status: quotation?.client_status || 'NAO_ENVIADA',
-        status:
-          customStatus ||
-          quotation?.status ||
-          (hasPendingStockConfirmation
-            ? 'AGUARDANDO_CONFIRMACAO_ESTOQUE'
-            : approvalCalc.approvalStatus === 'AGUARDANDO_APROVACAO'
-              ? 'AGUARDANDO_APROVACAO'
-              : 'APROVADA_INTERNAMENTE'),
-        notes: notes,
-      }
-
-      const saved = await quotationService.saveQuotation(payload)
-      setQuotation(saved)
-      toast.success(`Cotação ${saved.code} salva com sucesso!`)
-      if (!id || id === 'nova') {
-        navigate(`/crm/cotacoes/${saved.id}`, { replace: true })
-      }
-    } catch (err: any) {
-      toast.error(`Erro ao salvar cotação: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Criar Nova Versão
-  const handleCreateVersion = async () => {
-    if (!quotation) return
-    try {
-      setLoading(true)
-      const newVersion = await quotationService.createNewVersion(
-        quotation.id,
-        'Ajuste comercial solicitado pelo cliente',
-      )
-      toast.success(`Nova versão v${newVersion.version} criada com sucesso!`)
-      navigate(`/crm/cotacoes/${newVersion.id}`)
-    } catch (err: any) {
-      toast.error(`Erro ao gerar versão: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Materiais filtrados para a busca rápida
+  // Materiais filtrados
   const filteredMaterials = CATALOG_MATERIALS.filter(
     (m) =>
       m.code.toLowerCase().includes(materialSearch.toLowerCase()) ||
@@ -378,816 +128,1075 @@ export default function NovaCotacao() {
       m.family.toLowerCase().includes(materialSearch.toLowerCase()),
   )
 
-  const currentQuotationForPreview: Quotation = quotation || {
-    id: 'temp-id',
-    code: 'COT-NOVA',
-    version: 1,
-    customer_id: selectedCustomer.id,
-    customer_sap_code: selectedCustomer.sapCode,
-    customer_name: selectedCustomer.razaoSocial,
-    customer_cnpj: selectedCustomer.cnpj,
-    contact_name: selectedContact,
-    contact_phone: selectedCustomer.contatos[0]?.telefone,
-    contact_email: selectedCustomer.contatos[0]?.email,
-    ship_to_code: selectedShipTo,
-    ship_to_address: selectedCustomer.shipToAddresses.find((s) => s.code === selectedShipTo)
-      ?.address,
-    seller_id: 'qas-vendedor_teste',
-    seller_name: sellerName,
-    issue_date: issueDate,
-    valid_until: validUntil,
-    payment_terms: paymentTerms,
-    incoterm: incoterm,
-    freight_type: freightType,
-    freight_value: freightValue,
-    currency: currency,
-    sales_org: selectedCustomer.salesOrg,
-    distribution_channel: selectedCustomer.distributionChannel,
-    division: selectedCustomer.division,
-    items: items,
-    subtotal: subtotal,
-    discount_total: discountTotal,
-    surcharge_total: 0,
-    total_tons: totalTons,
-    total_value: totalValue,
-    price_status: approvalCalc.priceStatus,
-    stock_status: overallStockSituation,
-    approval_status: approvalCalc.approvalStatus,
-    approval_level_required: approvalCalc.approvalLevel,
-    client_status: 'NAO_ENVIADA',
-    status: 'RASCUNHO',
-    notes: notes,
-    timeline: [],
+  // Carregar crédito quando seleciona cliente
+  const handleSelectCustomer = async (cust: PreloadedCustomer) => {
+    setSelectedCustomer(cust)
+    setSelectedContact(cust.contatos[0] || null)
+    setSelectedShipTo(cust.shipToAddresses[0]?.code || '')
+    setPaymentTerms(cust.condicoesPagamento[0] || '28 DDL')
+
+    await fetchCreditData(cust.sapCode)
+  }
+
+  const fetchCreditData = async (sapCustomerCode: string) => {
+    try {
+      setLoadingCredit(true)
+      const res = await defaultSAPCreditProvider.checkCustomerCredit(sapCustomerCode)
+      setCreditStatus(res)
+    } catch (err) {
+      toast({
+        title: 'Erro de conexão SAP',
+        description: 'Crédito indisponível no momento.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoadingCredit(false)
+    }
+  }
+
+  // Preencher preço sugerido quando seleciona material
+  const handleSelectMaterial = (mat: CatalogMaterial) => {
+    setSelectedMaterial(mat)
+    setItemProposedPrice(mat.sapPrice.toString())
+  }
+
+  // Adicionar Item
+  const handleAddItem = () => {
+    if (!selectedMaterial) return
+    const qty = parseFloat(itemQtyTons.replace(',', '.'))
+    const proposed = parseFloat(itemProposedPrice.replace(',', '.'))
+
+    if (isNaN(qty) || qty <= 0) {
+      toast({
+        title: 'Quantidade Inválida',
+        description: 'Informe a quantidade em toneladas (ex: 5 t, 12,5 t)',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (isNaN(proposed) || proposed <= 0) {
+      toast({
+        title: 'Preço Inválido',
+        description: 'Informe o preço proposto em R$/t',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const sapPrice = selectedMaterial.sapPrice
+    const deviationPct = ((proposed - sapPrice) / sapPrice) * 100
+    const total = proposed * qty
+
+    const isStockLow = selectedMaterial.availableStock < STOCK_CONFIRMATION_THRESHOLD_TONS
+    const situation =
+      selectedMaterial.availableStock === 0
+        ? 'SEM_ESTOQUE'
+        : isStockLow
+          ? 'ESTOQUE_BAIXO'
+          : 'ESTOQUE_SUFICIENTE'
+
+    const newItem: QuotationItem = {
+      id: `item-${Date.now()}`,
+      item_sequence: (items.length + 1) * 10,
+      material_code: selectedMaterial.code,
+      description: selectedMaterial.description,
+      family: selectedMaterial.family,
+      dimension: selectedMaterial.dimension,
+      quantity: qty,
+      unit: 't',
+      requested_date: itemDeliveryDate,
+      sap_price: sapPrice,
+      proposed_price: proposed,
+      deviation_pct: deviationPct,
+      final_price: proposed,
+      total,
+      stock_available: selectedMaterial.availableStock,
+      stock_situation: situation,
+      stock_updated_at: selectedMaterial.stockUpdatedAt,
+      stock_confirmation_required: isStockLow,
+      stock_confirmed: !isStockLow,
+      plant: selectedMaterial.plant,
+      storage_location: selectedMaterial.storageLocation,
+      stock_details: selectedMaterial.stockDetails,
+      planned_production: selectedMaterial.plannedProduction,
+    }
+
+    setItems([...items, newItem])
+    setSelectedMaterial(null)
+    setItemProposedPrice('')
+    setItemQtyTons('5.0')
+    setMaterialSearch('')
+
+    if (isStockLow) {
+      toast({
+        title: 'Alerta de Saldo Sistêmico (< 5 t)',
+        description:
+          'Saldo abaixo de 5t. A cotação pode continuar normalmente, mas você pode solicitar confirmação ao pátio.',
+        className: 'bg-amber-50 border-amber-200 text-amber-900',
+      })
+    }
+  }
+
+  const handleRemoveItem = (id: string) => {
+    setItems(items.filter((it) => it.id !== id))
+  }
+
+  // Totais
+  const totalTons = items.reduce((acc, it) => acc + it.quantity, 0)
+  const subtotalValue = items.reduce((acc, it) => acc + it.total, 0)
+  const totalQuotationValue = subtotalValue + (freightType === 'CIF' ? freightValue : 0)
+
+  // Alçada de Aprovação
+  const approvalEval = quotationService.calculateApprovalStatus(items)
+
+  // Finalizar e Salvar Cotação
+  const handleSaveQuotation = async (goToPdf = false) => {
+    if (!selectedCustomer) {
+      toast({
+        title: 'Selecione o Cliente',
+        description: 'É necessário vincular um cliente SAP para emitir a proposta.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (items.length === 0) {
+      toast({
+        title: 'Adicione Itens',
+        description: 'Inclua ao menos um produto no escopo da cotação.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const quotePayload: Partial<Quotation> = {
+        customer_id: selectedCustomer.id,
+        customer_sap_code: selectedCustomer.sapCode,
+        customer_name: selectedCustomer.razaoSocial,
+        customer_cnpj: selectedCustomer.cnpj,
+        customer_city: selectedCustomer.cidade,
+        customer_uf: selectedCustomer.uf,
+        customer_archetype: selectedCustomer.archetype,
+        customer_abc: selectedCustomer.abcHistorico,
+        contact_name: selectedContact?.nome || 'Contato Principal',
+        contact_role: selectedContact?.cargo,
+        contact_email: selectedContact?.email,
+        contact_phone: selectedContact?.telefone,
+        ship_to_code: selectedShipTo || selectedCustomer.shipToAddresses[0]?.code,
+        ship_to_address: selectedCustomer.shipToAddresses.find((s) => s.code === selectedShipTo)
+          ?.address,
+        seller_id: 'qas-vendedor_teste',
+        seller_name: selectedCustomer.vendedor || 'Carlos Mendonça',
+        valid_until: validUntil,
+        payment_terms: paymentTerms,
+        incoterm: freightType === 'CIF' ? 'CIF - Posto Cliente' : 'FOB - Retira Betim',
+        freight_type: freightType,
+        freight_value: freightType === 'CIF' ? freightValue : 0,
+        sales_org: selectedCustomer.salesOrg,
+        distribution_channel: selectedCustomer.distributionChannel,
+        division: selectedCustomer.division,
+        items,
+        subtotal: subtotalValue,
+        total_tons: totalTons,
+        total_value: totalQuotationValue,
+        price_status: approvalEval.priceStatus,
+        approval_status: approvalEval.approvalStatus,
+        approval_level_required: approvalEval.approvalLevel,
+        status:
+          approvalEval.approvalStatus === 'PENDING' ? 'AGUARDANDO_APROVACAO' : 'PRONTA_PARA_ENVIO',
+        notes: commercialNotes,
+      }
+
+      const saved = await quotationService.saveQuotation(quotePayload)
+      setCreatedQuotation(saved)
+
+      toast({
+        title: 'Cotação Criada com Sucesso!',
+        description: `Proposta ${saved.code} registrada no CRM 360º.`,
+      })
+
+      if (goToPdf) {
+        setPdfPreviewOpen(true)
+      } else {
+        navigate('/cotacoes')
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao gerar cotação',
+        description: err.message || 'Falha ao salvar proposta no sistema.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-20">
-      {/* 1. CABEÇALHO DA COTAÇÃO */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 pb-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* Header com Navegação */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            size="icon"
-            onClick={() => navigate('/crm?tab=cotacoes')}
-            className="rounded-full h-9 w-9 text-muted-foreground hover:text-primary"
+            size="sm"
+            onClick={() => navigate('/cotacoes')}
+            className="text-slate-600 hover:text-slate-900"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
           </Button>
-
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary tracking-tight">
-                {quotation
-                  ? `Cotação ${quotation.code} (v${quotation.version})`
-                  : 'Nova Cotação Comercial'}
-              </h1>
-              {quotation && <QuotationStatusBadge status={quotation.status} />}
-            </div>
-            <p className="text-xs text-muted-foreground font-sans mt-0.5">
-              Elaboração de proposta comercial integrada ao SAP NetWeaver & Estoque em Tempo Real
+            <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-700" /> NOVA COTAÇÃO COMERCIAL CIAFAL
+            </h1>
+            <p className="text-xs text-slate-500">
+              Fluxo integrado: Cliente → Contato → Estoque Lotes → Produção Prevista → Crédito F.35
+              → Alçada
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPdfDialogOpen(true)}
-            className="h-9 gap-1.5 text-xs text-primary font-semibold"
+        {/* Wizard Steps */}
+        <div className="hidden md:flex items-center gap-2 text-xs font-semibold">
+          <span
+            className={`px-3 py-1 rounded-full ${
+              currentStep === 1
+                ? 'bg-blue-700 text-white'
+                : 'bg-slate-100 text-slate-600 cursor-pointer'
+            }`}
+            onClick={() => setCurrentStep(1)}
           >
-            <Printer className="w-3.5 h-3.5" /> Ver PDF
-          </Button>
-
-          {quotation && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateVersion}
-              className="h-9 gap-1.5 text-xs text-slate-700 font-semibold"
-            >
-              <Layers className="w-3.5 h-3.5" /> Nova Versão
-            </Button>
-          )}
-
-          <Button
-            size="sm"
-            onClick={() => handleSave()}
-            disabled={loading}
-            className="h-9 gap-1.5 text-xs bg-[#003A70] hover:bg-[#002850] text-white font-bold shadow-xs"
+            1. Cliente & Crédito
+          </span>
+          <span
+            className={`px-3 py-1 rounded-full ${
+              currentStep === 2
+                ? 'bg-blue-700 text-white'
+                : 'bg-slate-100 text-slate-600 cursor-pointer'
+            }`}
+            onClick={() => setCurrentStep(2)}
           >
-            <Check className="w-3.5 h-3.5" />
-            {loading ? 'Salvando...' : 'Salvar Cotação'}
-          </Button>
+            2. Itens & Estoque
+          </span>
+          <span
+            className={`px-3 py-1 rounded-full ${
+              currentStep === 3
+                ? 'bg-blue-700 text-white'
+                : 'bg-slate-100 text-slate-600 cursor-pointer'
+            }`}
+            onClick={() => setCurrentStep(3)}
+          >
+            3. Condições & Alçadas
+          </span>
         </div>
       </div>
 
-      {/* 2. LAYOUT EM GRID (CORPO PRINCIPAL À ESQUERDA + PAINEL STICKY À DIREITA) */}
-      <div className="grid grid-cols-12 gap-6 items-start">
-        {/* COLUNA ESQUERDA: BLOCOS 1, 2, 3, 4 E TIMELINE (8 COLUNAS) */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
-          {/* BLOCO 1 — CLIENTE */}
-          <Card className="bg-white/90 backdrop-blur-md border-border/40 shadow-xs rounded-3xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-primary" /> Bloco 1 — Identificação do Cliente
-              </h3>
-              <Badge variant="outline" className="text-[10px] bg-slate-50 font-mono">
-                SAP {selectedCustomer.sapCode}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {/* Cliente */}
-              <div className="space-y-1 sm:col-span-2">
-                <label className="text-[11px] font-bold text-primary">
-                  Cliente (Razão Social / Fantasia)*
-                </label>
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => handleCustomerChange(e.target.value)}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white font-medium"
-                >
-                  {PRELOADED_CUSTOMERS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.razaoSocial} ({c.nomeFantasia}) — SAP {c.sapCode} — {c.cidade}/{c.uf}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Contato Principal */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Contato Principal</label>
-                <select
-                  value={selectedContact}
-                  onChange={(e) => setSelectedContact(e.target.value)}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white"
-                >
-                  {selectedCustomer.contatos.map((ct, idx) => (
-                    <option key={idx} value={ct.nome}>
-                      {ct.nome} ({ct.cargo}) — {ct.telefone}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Recebedor de Mercadoria (Ship-to) */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">
-                  Local de Entrega (Ship-To SAP)*
-                </label>
-                <select
-                  value={selectedShipTo}
-                  onChange={(e) => setSelectedShipTo(e.target.value)}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white"
-                >
-                  {selectedCustomer.shipToAddresses.map((sh, idx) => (
-                    <option key={idx} value={sh.code}>
-                      [{sh.code}] {sh.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Vendedor Responsável (Automático) */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-muted-foreground">
-                  Vendedor Responsável (Automático)
-                </label>
-                <Input
-                  value={sellerName}
-                  disabled
-                  className="h-10 text-xs rounded-xl bg-slate-50 font-semibold text-slate-700"
-                />
-              </div>
-
-              {/* Limite de Crédito F.35 */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-muted-foreground">
-                  Saldo de Crédito F.35 SAP
-                </label>
-                <div className="h-10 px-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-800">
-                  <span>Disponível para faturamento:</span>
-                  <span className="font-mono font-bold">
-                    R$ {selectedCustomer.limiteCreditoDisponivel.toLocaleString('pt-BR')}
+      {/* ETAPA 1: CLIENTE, CONTATO & CRÉDITO SAP ECC */}
+      {currentStep === 1 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Coluna Esquerda: Busca e Seleção do Cliente */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card className="border-slate-200 shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-blue-600" /> Seleção do Cliente (Base SAP
+                    ECC)
                   </span>
+                  {selectedCustomer && (
+                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+                      Cliente Selecionado
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Campo de Busca */}
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                  <Input
+                    placeholder="Buscar por Razão Social, Fantasia, CNPJ ou Código SAP..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="pl-9 text-xs"
+                  />
                 </div>
-              </div>
-            </div>
-          </Card>
 
-          {/* BLOCO 2 — CONDIÇÕES COMERCIAIS */}
-          <Card className="bg-white/90 backdrop-blur-md border-border/40 shadow-xs rounded-3xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-primary" /> Bloco 2 — Condições Comerciais &
-                Prazos
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              {/* Data Emissão */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Data de Emissão</label>
-                <Input
-                  type="date"
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  className="h-10 text-xs rounded-xl"
-                />
-              </div>
-
-              {/* Data Validade */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Validade da Proposta*</label>
-                <Input
-                  type="date"
-                  value={validUntil}
-                  onChange={(e) => setValidUntil(e.target.value)}
-                  className="h-10 text-xs rounded-xl"
-                />
-              </div>
-
-              {/* Condição Pagamento */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Condição de Pagamento*</label>
-                <select
-                  value={paymentTerms}
-                  onChange={(e) => setPaymentTerms(e.target.value)}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white"
-                >
-                  {selectedCustomer.condicoesPagamento.map((cp, idx) => (
-                    <option key={idx} value={cp}>
-                      {cp}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Incoterm */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Incoterm*</label>
-                <select
-                  value={incoterm}
-                  onChange={(e) => {
-                    setIncoterm(e.target.value)
-                    setFreightType(e.target.value.startsWith('CIF') ? 'CIF' : 'FOB')
-                    if (e.target.value.startsWith('FOB')) setFreightValue(0)
-                  }}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white"
-                >
-                  <option value="CIF - Posto Cliente">CIF — Posto Cliente (Frete CIAFAL)</option>
-                  <option value="FOB - Retira Betim">FOB — Retira Pátio Betim/MG</option>
-                  <option value="FOB - Retira Contagem">FOB — Retira Matriz Contagem/MG</option>
-                </select>
-              </div>
-
-              {/* Valor Frete */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Valor do Frete (R$)</label>
-                <Input
-                  type="number"
-                  value={freightValue}
-                  disabled={freightType === 'FOB'}
-                  onChange={(e) => setFreightValue(Number(e.target.value))}
-                  className="h-10 text-xs rounded-xl font-mono"
-                />
-              </div>
-
-              {/* Moeda */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-primary">Moeda</label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as any)}
-                  className="w-full h-10 text-xs rounded-xl border border-input px-3 bg-white"
-                >
-                  <option value="BRL">BRL (Real R$)</option>
-                  <option value="USD">USD (Dólar US$)</option>
-                </select>
-              </div>
-            </div>
-          </Card>
-
-          {/* BLOCO 3 — PRODUTOS & MATERIAIS */}
-          <Card className="bg-white/90 backdrop-blur-md border-border/40 shadow-xs rounded-3xl p-5 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
-              <div>
-                <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-primary" /> Bloco 3 — Itens da Cotação &
-                  Consulta de Estoque SAP
-                </h3>
-                <span className="text-[11px] text-muted-foreground">
-                  Grid operacional: Preço SAP, Preço Proposto, Desvio %, Estoque e Confirmação
-                </span>
-              </div>
-
-              {/* Busca Rápida para Adicionar Produto */}
-              <div className="relative w-full sm:w-72">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar material SAP ou código..."
-                  value={materialSearch}
-                  onChange={(e) => setMaterialSearch(e.target.value)}
-                  className="h-9 pl-8 text-xs rounded-xl"
-                />
-
-                {materialSearch && (
-                  <div className="absolute top-10 left-0 right-0 z-30 bg-white border border-border/60 rounded-2xl shadow-xl max-h-60 overflow-y-auto p-1.5 space-y-1">
-                    {filteredMaterials.map((mat) => (
+                {/* Lista de Resultados */}
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {filteredCustomers.map((c) => {
+                    const isSelected = selectedCustomer?.id === c.id
+                    return (
                       <div
-                        key={mat.code}
-                        onClick={() => handleAddMaterial(mat)}
-                        className="p-2 rounded-xl hover:bg-slate-100 cursor-pointer text-xs flex items-center justify-between transition-colors"
+                        key={c.id}
+                        onClick={() => handleSelectCustomer(c)}
+                        className={`p-3 rounded-lg border text-xs cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-blue-600 bg-blue-50/70 ring-1 ring-blue-500'
+                            : 'border-slate-200 hover:border-slate-300 bg-white'
+                        }`}
                       >
-                        <div>
-                          <strong className="text-primary block font-mono">{mat.code}</strong>
-                          <span className="text-[11px] text-slate-700 block">
-                            {mat.description}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-serif font-bold text-emerald-700 block">
-                            R$ {mat.sapPrice.toLocaleString('pt-BR')} / {mat.unit}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-semibold">
-                            Estoque: {mat.availableStock} {mat.unit}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* GRID DE ITENS */}
-            <div className="space-y-3">
-              {items.length === 0 ? (
-                <div className="p-8 text-center text-xs text-muted-foreground border border-dashed rounded-2xl">
-                  Nenhum produto adicionado. Utilize a busca acima para incluir materiais SAP.
-                </div>
-              ) : (
-                items.map((it, idx) => {
-                  const isStockBelow5t = it.stock_available < STOCK_CONFIRMATION_THRESHOLD_TONS
-
-                  return (
-                    <div
-                      key={it.id || idx}
-                      className="p-4 rounded-2xl border border-border/60 bg-slate-50/40 space-y-3 hover:border-primary/40 transition-all text-xs"
-                    >
-                      {/* Topo do Item */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/30 pb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-muted-foreground font-bold">
-                            #{(idx + 1) * 10}
-                          </span>
-                          <span className="font-mono font-bold text-primary text-sm">
-                            {it.material_code}
-                          </span>
-                          <span className="text-slate-800 font-medium truncate max-w-md">
-                            {it.description}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0">
-                          <StockBadge situation={it.stock_situation} />
-                          <PriceDeviationBadge deviationPct={it.deviation_pct} />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="h-7 w-7 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg"
-                            title="Remover Item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Dados de Estoque e Posição SAP */}
-                      <div className="p-2.5 bg-white rounded-xl border border-border/40 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                        <div className="flex items-center gap-3">
-                          <span>
-                            Estoque Disponível:{' '}
-                            <strong className="font-mono text-slate-900 font-bold">
-                              {it.stock_available} {it.unit}
-                            </strong>
-                          </span>
-                          <span className="text-muted-foreground">
-                            Atualizado em: <strong>{it.stock_updated_at}</strong>
-                          </span>
-                          <span className="text-muted-foreground">
-                            Planta: <strong>{it.plant || '1000'}</strong>
-                          </span>
-                        </div>
-
-                        {/* Botão de Confirmação quando estoque < 5t */}
-                        {isStockBelow5t && (
-                          <div className="flex items-center gap-2">
-                            {it.stock_confirmed ? (
-                              <Badge className="bg-emerald-600 text-white text-[10px] gap-1 border-none font-bold">
-                                <Check className="w-3 h-3" /> Disponibilidade Confirmada
-                              </Badge>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setStockConfirmItem(it)
-                                  setStockConfirmDialogOpen(true)
-                                }}
-                                className="h-7 text-[10px] bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100 font-bold gap-1"
-                              >
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                Solicitar Confirmação (&lt; 5t)
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Inputs de Negociação: Quantidade, Preço SAP, Preço Proposto e Total */}
-                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-1">
-                        {/* Quantidade */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-primary uppercase">
-                            Qtd ({it.unit})*
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={it.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                            className="h-9 text-xs rounded-xl font-mono font-bold"
-                          />
-                        </div>
-
-                        {/* Preço Referência SAP */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase">
-                            Preço SAP (R$/{it.unit})
-                          </label>
-                          <div className="h-9 px-3 bg-slate-100 rounded-xl flex items-center font-mono text-slate-700 text-xs">
-                            R$ {it.sap_price.toLocaleString('pt-BR')}
-                          </div>
-                        </div>
-
-                        {/* Preço Proposto pelo Vendedor */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-primary uppercase">
-                            Preço Proposto (R$)*
-                          </label>
-                          <Input
-                            type="number"
-                            step="50"
-                            value={it.proposed_price}
-                            onChange={(e) =>
-                              handleItemChange(idx, 'proposed_price', e.target.value)
-                            }
-                            className="h-9 text-xs rounded-xl font-mono font-bold text-primary"
-                          />
-                        </div>
-
-                        {/* Data Solicitada */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-primary uppercase">
-                            Data Desejada
-                          </label>
-                          <Input
-                            type="date"
-                            value={it.requested_date}
-                            onChange={(e) =>
-                              handleItemChange(idx, 'requested_date', e.target.value)
-                            }
-                            className="h-9 text-xs rounded-xl"
-                          />
-                        </div>
-
-                        {/* Total do Item & Botão Detalhes */}
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-primary uppercase">
-                              Total Item
-                            </label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setPricingDrawerItem(it)
-                                setPricingDrawerOpen(true)
-                              }}
-                              className="text-[10px] text-primary hover:underline font-semibold"
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900">{c.razaoSocial}</span>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              SAP: {c.sapCode}
+                            </Badge>
+                            <Badge
+                              className={`text-[10px] ${
+                                c.abcHistorico === 'A'
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-blue-600 text-white'
+                              }`}
                             >
-                              Detalhar
-                            </button>
-                          </div>
-                          <div className="h-9 px-3 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-end font-serif font-bold text-emerald-800 text-xs">
-                            R$ {it.total.toLocaleString('pt-BR')}
+                              ABC {c.abcHistorico}
+                            </Badge>
                           </div>
                         </div>
+                        <div className="mt-1 text-slate-500 flex items-center gap-3 text-[11px]">
+                          <span>Fantasia: {c.nomeFantasia}</span>
+                          <span>CNPJ: {c.cnpj}</span>
+                          <span>
+                            {c.cidade}/{c.uf}
+                          </span>
+                        </div>
                       </div>
+                    )
+                  })}
+                </div>
 
-                      {/* Justificativa de Desvio se houver exceção */}
-                      {Math.abs(it.deviation_pct) > 0.01 && (
-                        <div className="space-y-1 pt-1">
-                          <label className="text-[10px] font-bold text-amber-900">
-                            Motivo / Justificativa do Desvio de Preço ({it.deviation_pct.toFixed(2)}
-                            %)*
-                          </label>
-                          <Input
-                            placeholder="Ex: Desconto alinhado para volume de fechamento / concorrência."
-                            value={it.price_justification || ''}
-                            onChange={(e) =>
-                              handleItemChange(idx, 'price_justification', e.target.value)
-                            }
-                            className="h-8 text-xs rounded-xl bg-amber-50/40 border-amber-200 text-amber-950"
-                          />
+                {/* Detalhes do Cliente Selecionado */}
+                {selectedCustomer && (
+                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Contato Principal */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">
+                        Contato Comercial
+                      </Label>
+                      <Select
+                        value={selectedContact?.nome}
+                        onValueChange={(val) => {
+                          const found = selectedCustomer.contatos.find((ct) => ct.nome === val)
+                          if (found) setSelectedContact(found)
+                        }}
+                      >
+                        <SelectTrigger className="text-xs">
+                          <SelectValue placeholder="Selecione o contato" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCustomer.contatos.map((ct) => (
+                            <SelectItem key={ct.nome} value={ct.nome}>
+                              {ct.nome} — {ct.cargo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedContact && (
+                        <div className="p-2 bg-slate-50 rounded text-[11px] text-slate-600 space-y-0.5">
+                          <div>
+                            <strong>E-mail:</strong> {selectedContact.email}
+                          </div>
+                          <div>
+                            <strong>WhatsApp:</strong> {selectedContact.telefone}
+                          </div>
                         </div>
                       )}
                     </div>
-                  )
-                })
-              )}
-            </div>
-          </Card>
 
-          {/* BLOCO 4 — OBSERVAÇÕES & TIMELINE HISTÓRICO */}
-          <Card className="bg-white/90 backdrop-blur-md border-border/40 shadow-xs rounded-3xl p-5 space-y-4">
-            <h3 className="font-serif font-bold text-sm text-primary flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" /> Histórico & Timeline de Ações
-            </h3>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-bold text-primary">Observações da Cotação</label>
-              <Textarea
-                placeholder="Instruções de entrega, restrições de descarregamento ou notas para faturamento SAP."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="text-xs rounded-xl min-h-[60px]"
-              />
-            </div>
-
-            {/* Timeline de Eventos */}
-            {quotation?.timeline && quotation.timeline.length > 0 && (
-              <div className="pt-2 border-t border-border/30 space-y-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Trilha de Auditoria Comercial
-                </span>
-
-                <div className="space-y-2">
-                  {quotation.timeline.map((evt, idx) => (
-                    <div
-                      key={idx}
-                      className="p-2.5 rounded-xl bg-slate-50 border border-border/30 flex items-start gap-2.5 text-xs"
-                    >
-                      <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md shrink-0">
-                        {evt.time}
-                      </span>
-                      <p className="text-slate-800 leading-relaxed">{evt.description}</p>
+                    {/* Local de Entrega (Ship-To) */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-slate-700">
+                        Recebedor de Mercadoria (Ship-To)
+                      </Label>
+                      <Select value={selectedShipTo} onValueChange={setSelectedShipTo}>
+                        <SelectTrigger className="text-xs">
+                          <SelectValue placeholder="Selecione o endereço de entrega" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedCustomer.shipToAddresses.map((st) => (
+                            <SelectItem key={st.code} value={st.code}>
+                              {st.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="p-2 bg-slate-50 rounded text-[11px] text-slate-600">
+                        {selectedCustomer.shipToAddresses.find((s) => s.code === selectedShipTo)
+                          ?.address || 'Selecione o endereço'}
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Coluna Direita: Cartão de Crédito Oficial SAP ECC F.35 */}
+          <div className="space-y-4">
+            <Card className="border-slate-200 shadow-xs bg-linear-to-b from-white to-slate-50/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    CRÉDITO SAP ECC (F.35 OFICIAL)
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => selectedCustomer && fetchCreditData(selectedCustomer.sapCode)}
+                    disabled={!selectedCustomer || loadingCredit}
+                    className="h-7 text-xs text-blue-700"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 mr-1 ${loadingCredit ? 'animate-spin' : ''}`}
+                    />
+                    Atualizar
+                  </Button>
                 </div>
-              </div>
-            )}
-          </Card>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!selectedCustomer ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    Selecione um cliente para carregar a posição financeira oficial SAP.
+                  </div>
+                ) : loadingCredit ? (
+                  <div className="text-center py-6 text-xs text-slate-500 animate-pulse">
+                    Consultando BAPI_CREDIT_MANAGEMENT no SAP ECC...
+                  </div>
+                ) : creditStatus ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200">
+                      <span className="text-xs font-semibold text-emerald-900">
+                        Status do Crédito
+                      </span>
+                      <Badge
+                        className={`text-[10px] ${
+                          creditStatus.creditCheckResult === 'LIBERADO'
+                            ? 'bg-emerald-600 text-white'
+                            : creditStatus.creditCheckResult === 'ATENCAO'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-rose-600 text-white'
+                        }`}
+                      >
+                        {creditStatus.creditCheckResult}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Limite Total Aprovado:</span>
+                        <span className="font-bold text-slate-900">
+                          R$ {creditStatus.creditLimit.toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Crédito Utilizado:</span>
+                        <span className="font-semibold text-slate-700">
+                          R$ {creditStatus.creditUsed.toLocaleString('pt-BR')} (
+                          {creditStatus.usedPercentage}%)
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Saldo Disponível:</span>
+                        <span className="font-extrabold text-emerald-700">
+                          R$ {creditStatus.creditAvailable.toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Títulos em Aberto:</span>
+                        <span className="font-medium text-slate-700">
+                          R$ {creditStatus.openOrdersValue.toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Títulos Vencidos:</span>
+                        <span
+                          className={`font-semibold ${
+                            creditStatus.overdueInvoicesValue > 0
+                              ? 'text-rose-600'
+                              : 'text-emerald-700'
+                          }`}
+                        >
+                          R$ {creditStatus.overdueInvoicesValue.toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Maior Atraso Histórico:</span>
+                        <span className="font-medium text-slate-700">
+                          {creditStatus.longestDelayDays} dias
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2 bg-slate-100 rounded text-[10px] text-slate-500 flex items-center justify-between">
+                      <span>Fonte: {creditStatus.dataSource}</span>
+                      <span>{creditStatus.lastUpdated.split('T')[0]}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-xs text-rose-600">
+                    Crédito indisponível no momento.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={() => setCurrentStep(2)}
+                disabled={!selectedCustomer}
+                className="bg-blue-700 hover:bg-blue-800 text-white font-semibold w-full"
+              >
+                Avançar para Itens & Estoque →
+              </Button>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* COLUNA DIREITA: PAINEL LATERAL STICKY (4 COLUNAS) */}
-        <div className="col-span-12 lg:col-span-4 sticky top-24 space-y-4">
-          <Card className="bg-white/95 backdrop-blur-md border border-primary/20 shadow-md rounded-3xl p-5 space-y-4">
-            {/* TOPO DO RESUMO */}
-            <div className="border-b border-border/40 pb-3">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground block">
-                Resumo da Cotação
-              </span>
-              <div className="flex items-baseline justify-between mt-1">
-                <span className="font-serif text-3xl font-bold text-emerald-700">
-                  R$ {totalValue.toLocaleString('pt-BR')}
-                </span>
-                <span className="text-xs font-mono font-bold text-primary">
-                  {totalTons.toFixed(1)} t
-                </span>
-              </div>
-            </div>
-
-            {/* CASCATA DE VALORES */}
-            <div className="space-y-2 text-xs divide-y divide-border/20">
-              <div className="flex justify-between text-slate-600 pt-1">
-                <span>Subtotal dos Produtos:</span>
-                <span className="font-mono font-semibold">
-                  R$ {subtotal.toLocaleString('pt-BR')}
-                </span>
-              </div>
-
-              <div className="flex justify-between text-slate-600 pt-2">
-                <span>Frete ({incoterm.split(' ')[0]}):</span>
-                <span className="font-mono font-semibold">
-                  R$ {freightValue.toLocaleString('pt-BR')}
-                </span>
-              </div>
-
-              {discountTotal > 0 && (
-                <div className="flex justify-between text-emerald-700 font-medium pt-2">
-                  <span>Desconto Total:</span>
-                  <span className="font-mono font-bold">
-                    -R$ {discountTotal.toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* STATUS CARDS RESUMIDOS */}
-            <div className="p-3 bg-slate-50 rounded-2xl border border-border/40 space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 text-[11px]">Status Preço:</span>
-                <Badge
-                  className={`text-[10px] font-bold border-none ${
-                    approvalCalc.priceStatus === 'DENTRO_DA_REGRA'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-amber-100 text-amber-800'
-                  }`}
-                >
-                  {approvalCalc.priceStatus === 'DENTRO_DA_REGRA' ? 'Dentro da Regra' : 'Exceção'}
-                </Badge>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 text-[11px]">Status Estoque:</span>
-                <StockBadge situation={overallStockSituation} />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 text-[11px]">Aprovação Interna:</span>
-                <ApprovalStatusBadge
-                  status={quotation?.approval_status || approvalCalc.approvalStatus}
-                  level={approvalCalc.approvalLevel}
+      {/* ETAPA 2: ITENS, ESTOQUE DE LOTES & PRODUÇÃO PREVISTA */}
+      {currentStep === 2 && (
+        <div className="space-y-6">
+          {/* Card de Inclusão de Produto */}
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Package className="w-4 h-4 text-blue-600" /> Catálogo de Produtos & Posição de
+                Estoque SAP ECC
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Busca de Materiais */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Input
+                  placeholder="Buscar material por código SAP, descrição, dimensão ou família..."
+                  value={materialSearch}
+                  onChange={(e) => setMaterialSearch(e.target.value)}
+                  className="pl-9 text-xs"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <span className="text-slate-600 text-[11px]">Aceite Cliente:</span>
-                <Badge
-                  className={`text-[10px] font-bold border-none ${
-                    quotation?.client_status === 'ACEITA'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-200 text-slate-700'
+              {/* Lista Selecionável de Materiais */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-1">
+                {filteredMaterials.map((mat) => {
+                  const isSelected = selectedMaterial?.code === mat.code
+                  const isLow = mat.availableStock < STOCK_CONFIRMATION_THRESHOLD_TONS
+                  return (
+                    <div
+                      key={mat.code}
+                      onClick={() => handleSelectMaterial(mat)}
+                      className={`p-3 rounded-lg border text-xs cursor-pointer transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50 ring-1 ring-blue-500'
+                          : 'border-slate-200 hover:border-slate-300 bg-white'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 font-mono">{mat.code}</span>
+                          <Badge
+                            className={`text-[9px] ${
+                              mat.availableStock === 0
+                                ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                : isLow
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            }`}
+                          >
+                            {mat.availableStock} t disp.
+                          </Badge>
+                        </div>
+                        <span className="font-semibold text-slate-800 line-clamp-1 mt-1 block">
+                          {mat.description}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">{mat.dimension}</span>
+                      </div>
+
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500">Tabela SAP:</span>
+                        <span className="font-bold text-slate-800">
+                          R$ {mat.sapPrice.toLocaleString('pt-BR')}/t
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Painel do Item Selecionado: Detalhes dos Lotes, Produção Prevista e Formulário de Adição */}
+              {selectedMaterial && (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                    <div>
+                      <span className="font-bold text-sm text-slate-900 font-mono">
+                        {selectedMaterial.code}
+                      </span>
+                      <p className="text-xs text-slate-600 font-medium">
+                        {selectedMaterial.description} • {selectedMaterial.dimension}
+                      </p>
+                    </div>
+
+                    {/* Alerta de confirmação se < 5t */}
+                    {selectedMaterial.availableStock < STOCK_CONFIRMATION_THRESHOLD_TONS && (
+                      <Badge className="bg-amber-500 text-white text-xs gap-1 py-1 px-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5" /> Saldo &lt; 5 t — Confirmação
+                        disponível
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Informações Avançadas de Estoque (Lotes, Moda, Média) + Produção Prevista */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    {/* Bloco de Estoque */}
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-blue-600" />
+                        Estrutura de Lotes & Pátio
+                      </span>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                        <div>
+                          Saldo: <strong>{selectedMaterial.availableStock} t</strong>
+                        </div>
+                        <div>
+                          Nº de Lotes: <strong>{selectedMaterial.stockDetails.batchCount}</strong>
+                        </div>
+                        <div>
+                          Peso Médio:{' '}
+                          <strong>{selectedMaterial.stockDetails.averageBatchWeightTons} t</strong>
+                        </div>
+                        <div>
+                          Peso Moda:{' '}
+                          <strong>{selectedMaterial.stockDetails.modeBatchWeightTons} t</strong>
+                        </div>
+                        <div className="col-span-2">
+                          Centro/Depósito:{' '}
+                          <strong>
+                            {selectedMaterial.plant} / {selectedMaterial.storageLocation}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bloco de Produção Prevista (Planejamento Oficial SAP) */}
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 space-y-1.5">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Factory className="w-3.5 h-3.5 text-purple-600" />
+                        Programação de Produção (SAP PP)
+                      </span>
+                      {selectedMaterial.plannedProduction.hasPlannedProduction ? (
+                        <div className="space-y-1 text-[11px] text-slate-600">
+                          <div className="flex justify-between">
+                            <span>Data Prevista:</span>
+                            <strong className="text-purple-700">
+                              {selectedMaterial.plannedProduction.plannedDate
+                                ?.split('-')
+                                .reverse()
+                                .join('/')}
+                            </strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Qtd Programada:</span>
+                            <strong>
+                              {selectedMaterial.plannedProduction.plannedQuantityTons} t
+                            </strong>
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            Linha: {selectedMaterial.plannedProduction.productionLineCenter}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-slate-500 italic py-2">
+                          Sem produção programada identificada no SAP ECC.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Inputs de Quantidade e Preço Proposto */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Quantidade (t) *</Label>
+                      <Input
+                        placeholder="Ex: 5.0"
+                        value={itemQtyTons}
+                        onChange={(e) => setItemQtyTons(e.target.value)}
+                        className="text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Preço Base SAP (R$/t)</Label>
+                      <Input
+                        disabled
+                        value={`R$ ${selectedMaterial.sapPrice.toLocaleString('pt-BR')}`}
+                        className="text-xs bg-slate-100 font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Preço Proposto (R$/t) *</Label>
+                      <Input
+                        placeholder="Ex: 34000"
+                        value={itemProposedPrice}
+                        onChange={(e) => setItemProposedPrice(e.target.value)}
+                        className="text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs font-semibold">Previsão de Entrega</Label>
+                      <Input
+                        type="date"
+                        value={itemDeliveryDate}
+                        onChange={(e) => setItemDeliveryDate(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedMaterial(null)}>
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleAddItem}
+                      className="bg-blue-700 hover:bg-blue-800 text-white font-semibold"
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Adicionar Item à Proposta
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tabela de Itens Adicionados */}
+          <Card className="border-slate-200 shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-bold text-slate-800">
+                Itens da Cotação ({items.length})
+              </CardTitle>
+              <div className="text-xs font-semibold text-slate-700 flex items-center gap-4">
+                <span>
+                  Volume Total: <strong>{totalTons.toLocaleString('pt-BR')} t</strong>
+                </span>
+                <span>
+                  Subtotal: <strong>R$ {subtotalValue.toLocaleString('pt-BR')}</strong>
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {items.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-400">
+                  Nenhum item adicionado à proposta. Selecione os produtos acima.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="p-2.5">Item</th>
+                        <th className="p-2.5">Material</th>
+                        <th className="p-2.5 text-right">Qtd (t)</th>
+                        <th className="p-2.5 text-right">Preço SAP</th>
+                        <th className="p-2.5 text-right">Preço Proposto</th>
+                        <th className="p-2.5 text-center">Desvio %</th>
+                        <th className="p-2.5 text-right">Total Item</th>
+                        <th className="p-2.5 text-center">Estoque</th>
+                        <th className="p-2.5 text-center">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {items.map((it, idx) => (
+                        <tr key={it.id} className="hover:bg-slate-50/60">
+                          <td className="p-2.5 font-mono text-slate-500">#{it.item_sequence}</td>
+                          <td className="p-2.5">
+                            <span className="font-bold text-slate-900 block font-mono">
+                              {it.material_code}
+                            </span>
+                            <span className="text-[11px] text-slate-500 line-clamp-1">
+                              {it.description}
+                            </span>
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-slate-900 font-mono">
+                            {it.quantity.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} t
+                          </td>
+                          <td className="p-2.5 text-right text-slate-500 font-mono">
+                            R$ {it.sap_price.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-slate-900 font-mono">
+                            R$ {it.proposed_price.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <PriceDeviationBadge deviationPct={it.deviation_pct} />
+                          </td>
+                          <td className="p-2.5 text-right font-extrabold text-slate-900 font-mono">
+                            R$ {it.total.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <StockBadge situation={it.stock_situation} />
+                            {it.stock_confirmation_required && (
+                              <button
+                                onClick={() => {
+                                  const mat = CATALOG_MATERIALS.find(
+                                    (m) => m.code === it.material_code,
+                                  )
+                                  if (mat) setStockConfirmItem({ item: it, material: mat })
+                                }}
+                                className="text-[10px] text-amber-700 hover:underline block mx-auto mt-0.5 font-semibold"
+                              >
+                                Solicitar Confirmação
+                              </button>
+                            )}
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <Button
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => handleRemoveItem(it.id)}
+                              className="text-rose-600 hover:bg-rose-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+              ← Voltar para Cliente
+            </Button>
+            <Button
+              onClick={() => setCurrentStep(3)}
+              disabled={items.length === 0}
+              className="bg-blue-700 hover:bg-blue-800 text-white font-semibold"
+            >
+              Avançar para Condições & Alçada →
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ETAPA 3: CONDIÇÕES COMERCIAIS & MATRIZ DE ALÇADA */}
+      {currentStep === 3 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Condições de Pagamento e Frete */}
+          <div className="lg:col-span-2 space-y-4">
+            <Card className="border-slate-200 shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-blue-600" /> Condições Comerciais da Proposta
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Condição de Pagamento */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Condição de Pagamento *</Label>
+                    <Select value={paymentTerms} onValueChange={setPaymentTerms}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Selecione o prazo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="28 DDL">28 DDL (Boleto Bancário)</SelectItem>
+                        <SelectItem value="28/42/56 DDL (Boleto)">
+                          28/42/56 DDL (Boleto Bancário)
+                        </SelectItem>
+                        <SelectItem value="30/60 DDL">30/60 DDL (Boleto Bancário)</SelectItem>
+                        <SelectItem value="45 DDL">45 DDL (Boleto Bancário)</SelectItem>
+                        <SelectItem value="À Vista (TED/PIX)">À Vista (TED/PIX)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Validade da Proposta */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Validade da Proposta *</Label>
+                    <Input
+                      type="date"
+                      value={validUntil}
+                      onChange={(e) => setValidUntil(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+
+                  {/* Modalidade de Frete */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Tipo de Frete (Incoterm) *</Label>
+                    <Select
+                      value={freightType}
+                      onValueChange={(v) => setFreightType(v as 'CIF' | 'FOB')}
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Selecione o frete" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CIF">CIF (Por conta da CIAFAL)</SelectItem>
+                        <SelectItem value="FOB">FOB (Por conta do Cliente / Retira)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Valor do Frete */}
+                  {freightType === 'CIF' && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Valor do Frete (R$) *</Label>
+                      <Input
+                        type="number"
+                        value={freightValue}
+                        onChange={(e) => setFreightValue(parseFloat(e.target.value) || 0)}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Observações da Cotação */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Observações Comerciais</Label>
+                  <Textarea
+                    placeholder="Informações sobre descarregamento, laudo de qualidade, especificações técnicas..."
+                    value={commercialNotes}
+                    onChange={(e) => setCommercialNotes(e.target.value)}
+                    rows={3}
+                    className="text-xs"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Coluna Direita: Resumo Financeiro & Avaliação de Alçada */}
+          <div className="space-y-4">
+            <Card className="border-slate-200 shadow-xs">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  AVALIAÇÃO DE ALÇADA COMERCIAL
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div
+                  className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+                    approvalEval.approvalStatus === 'NOT_REQUIRED'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                      : 'bg-amber-50 border-amber-200 text-amber-950'
                   }`}
                 >
-                  {quotation?.client_status === 'ACEITA' ? 'Aceite Formalizado' : 'Pendente'}
-                </Badge>
-              </div>
-            </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">Status da Alçada:</span>
+                    <Badge
+                      className={
+                        approvalEval.approvalStatus === 'NOT_REQUIRED'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-amber-600 text-white'
+                      }
+                    >
+                      {approvalEval.approvalStatus === 'NOT_REQUIRED'
+                        ? 'Dentro da Alçada'
+                        : `Requer ${approvalEval.approvalLevel}`}
+                    </Badge>
+                  </div>
+                  {approvalEval.ruleTriggered && (
+                    <p className="text-[11px] leading-relaxed text-amber-800">
+                      {approvalEval.ruleTriggered}
+                    </p>
+                  )}
+                </div>
 
-            {/* AÇÕES DINÂMICAS DO VENDEDOR */}
-            <div className="space-y-2 pt-2 border-t border-border/40">
-              {/* 1. Solicitar Aprovação Interna */}
-              {approvalCalc.approvalStatus === 'AGUARDANDO_APROVACAO' &&
-                quotation?.approval_status !== 'APROVADA_SUPERVISOR' &&
-                quotation?.approval_status !== 'APROVADA_GERENCIA' &&
-                quotation?.approval_status !== 'APROVADA_DIRETORIA' && (
-                  <Button
-                    type="button"
-                    onClick={() => setInternalApprovalDialogOpen(true)}
-                    className="w-full h-9 text-xs bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl font-bold gap-1.5 shadow-xs"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" /> Aprovar Desconto (Alçada)
-                  </Button>
-                )}
-
-              {/* 2. Enviar WhatsApp / E-mail */}
-              <div className="grid grid-cols-2 gap-2">
+                {/* Resumo dos Valores */}
+                <div className="space-y-2 text-xs pt-2 border-t border-slate-100">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Volume Total:</span>
+                    <span className="font-bold text-slate-900">
+                      {totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} t
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Subtotal Produtos:</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      R$ {subtotalValue.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Frete ({freightType}):</span>
+                    <span className="font-bold text-slate-900 font-mono">
+                      {freightType === 'CIF'
+                        ? `R$ ${freightValue.toLocaleString('pt-BR')}`
+                        : 'FOB (R$ 0)'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-extrabold pt-2 border-t border-slate-200">
+                    <span className="text-blue-900">Total da Cotação:</span>
+                    <span className="text-blue-900 font-mono">
+                      R$ {totalQuotationValue.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col gap-2 pt-0">
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCommDialogOpen(true)}
-                  className="h-9 text-xs bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 rounded-xl font-bold gap-1"
+                  onClick={() => handleSaveQuotation(true)}
+                  disabled={isSubmitting}
+                  className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp
+                  <FileText className="w-4 h-4 mr-1.5" />
+                  {isSubmitting ? 'Gerando...' : 'Gerar Cotação & Visualizar PDF'}
                 </Button>
-
                 <Button
-                  type="button"
                   variant="outline"
-                  onClick={() => setCommDialogOpen(true)}
-                  className="h-9 text-xs bg-blue-50 text-blue-800 border-blue-300 hover:bg-blue-100 rounded-xl font-bold gap-1"
+                  onClick={() => handleSaveQuotation(false)}
+                  disabled={isSubmitting}
+                  className="w-full text-xs"
                 >
-                  <Send className="w-3.5 h-3.5 text-blue-600" /> E-mail
+                  Salvar Rascunho e Voltar
                 </Button>
-              </div>
-
-              {/* 3. Registrar Aceite do Cliente */}
-              {quotation?.client_status !== 'ACEITA' && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setClientAcceptDialogOpen(true)}
-                  className="w-full h-9 text-xs border-emerald-400 bg-emerald-50/50 text-emerald-800 hover:bg-emerald-100 rounded-xl font-bold gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Registrar Aceite do
-                  Cliente
-                </Button>
-              )}
-
-              {/* 4. SOLICITAR IMPLANTAÇÃO NO SAP ECC */}
-              <Button
-                type="button"
-                onClick={() => setSapRequestDialogOpen(true)}
-                disabled={
-                  hasPendingStockConfirmation ||
-                  (quotation?.approval_status === 'AGUARDANDO_APROVACAO' &&
-                    approvalCalc.approvalStatus === 'AGUARDANDO_APROVACAO')
-                }
-                className="w-full h-10 text-xs bg-[#003A70] hover:bg-[#002850] text-white rounded-xl font-bold shadow-md gap-1.5"
-              >
-                <Server className="w-4 h-4 text-white" /> Solicitar Implantação no SAP ECC
-              </Button>
-
-              {hasPendingStockConfirmation && (
-                <span className="text-[10px] text-amber-800 text-center block font-medium">
-                  ⚠ Implantação bloqueada: Confirme a disponibilidade de estoque (&lt;5t) primeiro.
-                </span>
-              )}
-            </div>
-          </Card>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* DIÁLOGOS E GAVETAS */}
-      <StockConfirmationDialog
-        open={stockConfirmDialogOpen}
-        onOpenChange={setStockConfirmDialogOpen}
-        quotationId={quotation?.id || 'temp'}
-        quotationCode={quotation?.code || 'COT-NOVA'}
-        customerName={selectedCustomer.razaoSocial}
-        item={stockConfirmItem}
-        onSuccess={() => {
-          if (stockConfirmItem) {
-            const idx = items.findIndex((i) => i.id === stockConfirmItem.id)
-            if (idx >= 0) {
-              const updated = [...items]
-              updated[idx].stock_situation = 'AGUARDANDO_CONFIRMACAO'
-              setItems(updated)
-            }
-          }
-        }}
-      />
+      {/* Modal de Solicitação de Confirmação de Estoque WMS/PCP */}
+      {stockConfirmItem && (
+        <StockConfirmationDialog
+          open={!!stockConfirmItem}
+          onOpenChange={(open) => !open && setStockConfirmItem(null)}
+          quotationId={createdQuotation?.id || 'NOVA_COTACAO'}
+          quotationCode={createdQuotation?.code || 'COT-NOVA'}
+          quotationItemId={stockConfirmItem.item.id}
+          materialCode={stockConfirmItem.item.material_code}
+          materialDescription={stockConfirmItem.item.description}
+          requestedQty={stockConfirmItem.item.quantity}
+          unit="t"
+          stockSnapshotQty={stockConfirmItem.item.stock_available}
+          onSuccess={() => {
+            toast({
+              title: 'Solicitação Enviada ao Pátio',
+              description: 'Confirmação física enviada com SLA de 48h. A cotação pode prosseguir.',
+            })
+            setStockConfirmItem(null)
+          }}
+        />
+      )}
 
-      <PricingDetailsDrawer
-        open={pricingDrawerOpen}
-        onOpenChange={setPricingDrawerOpen}
-        item={pricingDrawerItem}
-        pricingSnapshot={quotation?.pricing_snapshot}
-      />
-
-      <PDFPreviewDialog
-        open={pdfDialogOpen}
-        onOpenChange={setPdfDialogOpen}
-        quotation={currentQuotationForPreview}
-      />
-
-      <CommunicationComposer
-        open={commDialogOpen}
-        onOpenChange={setCommDialogOpen}
-        quotation={currentQuotationForPreview}
-        onSuccess={() => {
-          if (quotation) quotation.client_status = 'ENVIADA'
-        }}
-      />
-
-      <ClientAcceptanceDialog
-        open={clientAcceptDialogOpen}
-        onOpenChange={setClientAcceptDialogOpen}
-        quotation={currentQuotationForPreview}
-        onSuccess={() => {
-          if (quotation) {
-            quotation.client_status = 'ACEITA'
-            quotation.status = 'ACEITA'
-          }
-        }}
-      />
-
-      <InternalApprovalDialog
-        open={internalApprovalDialogOpen}
-        onOpenChange={setInternalApprovalDialogOpen}
-        quotation={currentQuotationForPreview}
-        onSuccess={() => {
-          if (quotation) {
-            quotation.approval_status = 'APROVADA_GERENCIA'
-            quotation.status = 'APROVADA_INTERNAMENTE'
-          }
-        }}
-      />
-
-      <SapIntegrationRequestDialog
-        open={sapRequestDialogOpen}
-        onOpenChange={setSapRequestDialogOpen}
-        quotation={currentQuotationForPreview}
-        onSuccess={() => {
-          toast.success('Registro posicionado na fila SAP! Redirecionando para o monitor...')
-          navigate('/crm/integracoes/sap/pedidos')
-        }}
-      />
+      {/* Modal de PDF Preview */}
+      {createdQuotation && (
+        <PDFPreviewDialog
+          open={pdfPreviewOpen}
+          onOpenChange={(open) => {
+            setPdfPreviewOpen(open)
+            if (!open) navigate('/cotacoes')
+          }}
+          quotation={createdQuotation}
+        />
+      )}
     </div>
   )
 }

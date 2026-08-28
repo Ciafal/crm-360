@@ -923,6 +923,7 @@ export interface WhatsappMessage extends RecordModel {
 export type TaskSourceType =
   | 'CRM'
   | 'COTACAO'
+  | 'QUOTE'
   | 'RECLAMACAO'
   | 'TMS'
   | 'WMS'

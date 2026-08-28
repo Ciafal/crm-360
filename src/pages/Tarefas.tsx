@@ -232,10 +232,12 @@ export default function Tarefas() {
             <SelectContent>
               <SelectItem value="todas">Todas origens</SelectItem>
               <SelectItem value="CRM">CRM</SelectItem>
-              <SelectItem value="Cotação">Cotação / Proposta</SelectItem>
+              <SelectItem value="COTACAO">Cotação / Proposta (QUOTE)</SelectItem>
+              <SelectItem value="QUOTE">Cotação (QUOTE)</SelectItem>
               <SelectItem value="Reclamação">Reclamação (Qualidade)</SelectItem>
               <SelectItem value="TMS">TMS (Logística)</SelectItem>
-              <SelectItem value="WMS">WMS (Estoque)</SelectItem>
+              <SelectItem value="WMS">WMS (Estoque / Confirmação)</SelectItem>
+              <SelectItem value="CREDITO">Crédito SAP ECC</SelectItem>
               <SelectItem value="Visita">Visita Comercial</SelectItem>
               <SelectItem value="IA">IA & Recomendações</SelectItem>
               <SelectItem value="Relacionamento">Relacionamento</SelectItem>
