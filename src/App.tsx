@@ -33,6 +33,7 @@ import RelatorioRelease from './pages/RelatorioRelease'
 import CentralIntegracoes from './pages/CentralIntegracoes'
 import SatisfacaoClientes from './pages/SatisfacaoClientes'
 import EstoquePage from './pages/EstoquePage'
+import GestaoClientesPage from './pages/GestaoClientesPage'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -59,6 +60,10 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
                 <Route path="/meu-dia" element={<Home />} />
+                <Route path="/gestao-clientes" element={<GestaoClientesPage />} />
+                <Route path="/clientes" element={<GestaoClientesPage />} />
+                <Route path="/carteira" element={<GestaoClientesPage />} />
+                <Route path="/cobertura" element={<GestaoClientesPage />} />
                 <Route path="/cliente/:id" element={<Cliente360 />} />
                 <Route path="/crm/:id" element={<Cliente360 />} />
                 <Route path="/conversas" element={<Conversas />} />

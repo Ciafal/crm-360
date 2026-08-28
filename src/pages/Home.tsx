@@ -48,7 +48,11 @@ import {
   ExternalLink,
   BarChart3,
   Scale,
+  ShieldAlert,
+  ShieldCheck,
+  FileSpreadsheet,
 } from 'lucide-react'
+import { customerManagementService } from '@/services/customer_management_service'
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
 import { PageLoadingState, PageEmptyState, PageErrorState } from '@/components/shared/StateFeedback'
 import { useNavigate } from 'react-router-dom'
@@ -68,6 +72,12 @@ export default function Home() {
       maximumFractionDigits: 0,
     })
   }
+
+  // Clientes que Precisam de Contato (Regra 19 - Integração Meu Dia + Cobertura da Carteira)
+  const customersNeedingContact = useMemo(() => {
+    const all = customerManagementService.getCustomers()
+    return customerManagementService.getWhoToContactToday(all).slice(0, 4)
+  }, [])
 
   // Identificação do Usuário e RLS
   const userRole = (user?.role || '').toLowerCase()
@@ -486,6 +496,120 @@ export default function Home() {
           </div>
         </Card>
       </div>
+
+      {/* BLOCO REGRA 19: CLIENTES QUE PRECISAM DE CONTATO (COBERTURA VENCIDA & PRIORIDADE) */}
+      <Card className="bg-slate-900/95 border-sky-900/60 text-slate-100 rounded-3xl p-6 shadow-md space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-lg font-bold text-white tracking-tight">
+                  Clientes que Precisam de Contato
+                </h3>
+                <Badge className="bg-amber-500 text-slate-950 text-[10px] font-bold">
+                  Cobertura da Carteira
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Priorização algorítmica: Cobertura vencida, ISC vulnerável, queda de compra e
+                produtos recomendados.
+              </p>
+            </div>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={() => navigate('/gestao-clientes')}
+            className="h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white rounded-xl gap-1"
+          >
+            Ver Cobertura Completa <ArrowRight className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {customersNeedingContact.map((sug) => (
+            <div
+              key={sug.cliente.id}
+              className="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-sky-500/50 transition-all flex flex-col justify-between gap-2.5"
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-slate-900 text-sky-400 border border-slate-800">
+                    {sug.prioridade}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                      sug.cliente.coberturaVencidaDias > 0
+                        ? 'bg-rose-950 text-rose-300 border border-rose-800/50'
+                        : 'bg-emerald-950 text-emerald-300'
+                    }`}
+                  >
+                    {sug.cliente.coberturaVencidaDias > 0
+                      ? `Cobertura vencida há ${sug.cliente.coberturaVencidaDias}d`
+                      : 'Janela próxima'}
+                  </span>
+                </div>
+
+                <div>
+                  <strong
+                    onClick={() => navigate('/gestao-clientes')}
+                    className="text-sm font-bold text-white hover:text-sky-300 cursor-pointer transition-colors block"
+                  >
+                    {sug.cliente.nomeFantasia || sug.cliente.razaoSocial}
+                  </strong>
+                  <span className="text-[11px] text-slate-400">
+                    ISC: <strong className="text-amber-400">{sug.cliente.isc}/100</strong> · Último
+                    pedido: {sug.cliente.diasSemPedido}d atrás
+                  </span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-slate-900/80 border border-slate-800/60 text-[11px] text-slate-300">
+                  <span className="text-[10px] uppercase font-bold text-sky-400 block">
+                    Produto Sugerido:
+                  </span>
+                  <strong className="text-white">{sug.produtoSugerido.descricao}</strong>
+                  <span className="text-slate-400 block text-[10px]">
+                    {sug.produtoSugerido.motivo}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    toast.success(
+                      `Contato via ${sug.acaoRecomendada} iniciado com ${sug.cliente.nomeFantasia}`,
+                    )
+                    navigate('/gestao-clientes')
+                  }}
+                  className="flex-1 h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl gap-1"
+                >
+                  {sug.acaoRecomendada === 'WhatsApp' && <MessageSquare className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'Ligar' && <Phone className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'E-mail' && <Mail className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'Enviar Catálogo' && (
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  )}
+                  <span>{sug.acaoRecomendada}</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate('/gestao-clientes')}
+                  className="h-8 text-xs border-slate-800 bg-slate-900 text-slate-300 hover:text-white rounded-xl"
+                >
+                  Gerar Cotação
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* SEÇÃO PRINCIPAL: AÇÕES DO DIA (5-8 AÇÕES RECOMENDADAS) */}
       <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 shadow-sm space-y-4">

@@ -36,11 +36,12 @@ export default function Layout() {
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
 
-  // Atalhos rápidos no TopNav na ordem exata solicitada (Regra 1):
-  // Meu Dia, Contatos, Cotações, CRM 360, Tarefas, KPI's, Estoque, Satisfação Clientes
+  // Atalhos rápidos no TopNav na ordem exata solicitada (Regra 3 da especificação):
+  // 1. Meu Dia; 2. Contatos; 3. Gestão Clientes; 4. Cotações; 5. CRM 360; 6. Tarefas; 7. KPI's; 8. Estoque; 9. Satisfação Clientes.
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
     { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
+    { name: 'Gestão Clientes', path: '/gestao-clientes' },
     { name: 'Cotações', path: '/crm/cotacoes' },
     { name: 'CRM 360', path: '/crm' },
     { name: 'Tarefas', path: '/tarefas' },
@@ -139,10 +140,19 @@ export default function Layout() {
                 <DropdownMenuSeparator />
                 <div className="grid grid-cols-2 gap-1.5 py-1">
                   <Link
-                    to="/estoque"
+                    to="/gestao-clientes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-primary/5 border border-primary/20"
                   >
-                    <strong className="text-primary font-bold">Gestão de Estoque</strong>
+                    <strong className="text-primary font-bold">Gestão de Clientes</strong>
+                    <span className="text-[10px] text-muted-foreground">
+                      Carteira, Cobertura, IA 360, Catálogo
+                    </span>
+                  </Link>
+                  <Link
+                    to="/estoque"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900 font-bold">Gestão de Estoque</strong>
                     <span className="text-[10px] text-muted-foreground">
                       Aging, Parados, Oportunidades
                     </span>
