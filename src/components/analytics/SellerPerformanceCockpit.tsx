@@ -55,6 +55,8 @@ import {
   DrilldownContextData,
   DrilldownLevel,
 } from './CommercialDrilldownDrawer'
+import { getRealDrilldownData } from '@/services/real_commercial_analytics'
+import { useNavigate } from 'react-router-dom'
 
 // Mock Data para a Série Temporal (YTD e Mensal)
 const MOCK_MONTHLY_CHART_DATA: ExecutiveChartPoint[] = [
@@ -235,6 +237,7 @@ const MOCK_NEGATIVE_CONTRIBUTORS: PositiveNegativeContributor[] = [
 ]
 
 export function SellerPerformanceCockpit() {
+  const navigate = useNavigate()
   const [filters, setFilters] = useState<UnifiedCommercialFiltersState>(INITIAL_COMMERCIAL_FILTERS)
   const [metricMode, setMetricMode] = useState<ExecutiveMetricMode>('VOLUME')
   const [periodMode, setPeriodMode] = useState<PeriodViewMode>('YTD')
@@ -328,48 +331,25 @@ export function SellerPerformanceCockpit() {
     },
   ]
 
-  const handleOpenDrilldown = (entity: any) => {
-    setDrilldownData({
-      level: 'CLIENTE',
-      title: entity.name || 'Detalhes do Cliente',
-      subtitle: `Análise Analítica SAP ECC · CNPJ: ${entity.cnpj || '18.442.981/0001-09'}`,
-      entityId: entity.id || 'cli-01',
-      entityName: entity.name,
-      realizadoTons: entity.volumeTons || entity.volumeRealizadoTons || 145,
-      metaTons: 160,
-      faturamentoBrl: 890000,
-      margemPct: entity.margemPct || 17.5,
-      precoMedioKg: 6.14,
-      itensRelacionados: [
-        {
-          id: 'p-01',
-          title: 'Perfis Laminados W 200x31.3',
-          subtitle: 'Linha Estrutural A572',
-          tons: 85,
-          faturamento: 520000,
-          status: 'Entregue',
-          levelTarget: 'PRODUTO',
-        },
-        {
-          id: 'p-02',
-          title: 'Chapas Grossas 1/2" ASTM A36',
-          subtitle: 'Linha Chaparia Industrial',
-          tons: 40,
-          faturamento: 248000,
-          status: 'Em Trânsito',
-          levelTarget: 'PRODUTO',
-        },
-        {
-          id: 'p-03',
-          title: 'Barras Chatas 2" x 1/4"',
-          subtitle: 'Linha Laminados Comerciais',
-          tons: 20,
-          faturamento: 122000,
-          status: 'Aguardando Liberação',
-          levelTarget: 'PRODUTO',
-        },
-      ],
+  const handleOpenDrilldown = (entity: any, forcedLevel?: DrilldownLevel) => {
+    const drillLevel: DrilldownLevel =
+      forcedLevel ||
+      (entity.cargo
+        ? 'VENDEDOR'
+        : entity.sapCode || entity.cnpj
+          ? 'CLIENTE'
+          : entity.codigo
+            ? 'PRODUTO'
+            : 'CLIENTE')
+
+    const realData = getRealDrilldownData({
+      level: drillLevel,
+      id: entity.id || entity.codigo || entity.code || entity.sapCode,
+      sellerName: entity.name || entity.nome,
+      customerName: entity.razaoSocial || entity.customer_name || entity.name,
     })
+
+    setDrilldownData(realData)
     setDrilldownOpen(true)
   }
 
@@ -652,19 +632,19 @@ export function SellerPerformanceCockpit() {
         onOpenChange={setDrilldownOpen}
         data={drilldownData}
         onDrillNext={(targetLevel, item) => {
-          setDrilldownData({
+          const nextData = getRealDrilldownData({
             level: targetLevel,
-            title: item.title,
-            subtitle: `Detalhamento nível ${targetLevel} · ${item.subtitle}`,
-            realizadoTons: item.tons || 85,
-            faturamentoBrl: item.faturamento || 520000,
-            margemPct: 18.2,
-            precoMedioKg: 6.12,
-            itensRelacionados: [],
+            id: item.id,
+            customerName: item.title,
           })
+          setDrilldownData(nextData)
         }}
         onNavigateToEntity={(level, id) => {
-          toast.success(`Navegando para o registro ${id} no CRM 360º`)
+          if (level === 'CLIENTE') {
+            navigate(`/crm/${id}`)
+          } else {
+            toast.success(`Navegando para o registro ${id} no CRM 360º`)
+          }
         }}
       />
     </div>

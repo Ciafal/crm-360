@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -128,11 +128,18 @@ export const MOCK_RADAR_CLIENTS: ClientRadarItem[] = [
   },
 ]
 
+import { getRealRadarClients } from '@/services/real_commercial_analytics'
+
 export function ClientRadarWidget({
-  clients = MOCK_RADAR_CLIENTS,
+  clients: initialClients,
   onSelectClient,
   className,
 }: ClientRadarWidgetProps) {
+  // Conexão a dados REAIS do CRM/Cotações/SAP/TMS
+  const clients = useMemo(() => {
+    return initialClients || getRealRadarClients()
+  }, [initialClients])
+
   const [selectedQuadrant, setSelectedQuadrant] = useState<ClientRadarQuadrant | 'TODOS'>('TODOS')
   const [search, setSearch] = useState('')
 

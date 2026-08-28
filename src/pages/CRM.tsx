@@ -62,10 +62,16 @@ import { ABCBadge } from '@/components/shared/ABCBadge'
 import { CommercialMetricToggle } from '@/components/shared/CommercialMetricToggle'
 import { CarteiraMap } from '@/components/crm/CarteiraMap'
 import { LeadsView } from '@/components/crm/LeadsView'
+import {
+  WmsStockCheckModal,
+  TmsPriorityAlertModal,
+} from '@/components/crm/OperationalActionsDialogs'
+import { mockProdutosCliente } from '@/data/mockCommercialData'
 import { useAppStore } from '@/stores/useAppStore'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatWeight } from '@/lib/utils'
+import { Package, Truck, PackageCheck, AlertCircle } from 'lucide-react'
 
 type SortColumn =
   | 'razaoSocial'
@@ -109,6 +115,80 @@ export default function CRM() {
 
   // Filtros do Funil
   const [funilVendedorFilter, setFunilVendedorFilter] = useState('todos')
+
+  // Modais de Ações Operacionais (WMS e TMS)
+  const [wmsModalOpen, setWmsModalOpen] = useState(false)
+  const [wmsSelectedData, setWmsSelectedData] = useState<{
+    itemCode: string
+    itemDescription: string
+    currentStockTons: number
+    customerName: string
+  }>({
+    itemCode: 'TB-304-SCH10',
+    itemDescription: 'Tubo Inox AISI 304 Redondo SCH 10 2"',
+    currentStockTons: 3.4,
+    customerName: '',
+  })
+
+  const [tmsModalOpen, setTmsModalOpen] = useState(false)
+  const [tmsSelectedData, setTmsSelectedData] = useState<{
+    customerName: string
+    referenceDoc: string
+    itemDescription: string
+    defaultTons: number
+  }>({
+    customerName: '',
+    referenceDoc: '',
+    itemDescription: '',
+    defaultTons: 10,
+  })
+
+  // Previsões TMS de Carga por cliente
+  const getClientTmsSchedule = (clienteId: string, idx: number) => {
+    const schedules = [
+      {
+        status: 'Hoje',
+        badge: 'bg-emerald-100 text-emerald-800',
+        detail: 'Em rota de entrega hoje até 17h',
+      },
+      {
+        status: 'Amanhã',
+        badge: 'bg-blue-100 text-blue-800',
+        detail: 'Carregamento agendado amanhã 08h',
+      },
+      {
+        status: 'Em programação',
+        badge: 'bg-purple-100 text-purple-800',
+        detail: 'Programação de frota para sexta-feira',
+      },
+      {
+        status: 'Carga parcial',
+        badge: 'bg-amber-100 text-amber-800',
+        detail: '1º lote expedido, 2º lote em separação',
+      },
+      {
+        status: 'Aguardando montagem',
+        badge: 'bg-slate-100 text-slate-700',
+        detail: 'Aguardando consolidação de carga',
+      },
+      {
+        status: 'Sem carga prevista',
+        badge: 'bg-slate-50 text-slate-400',
+        detail: 'Sem ordens de expedição nos próximos 3 dias',
+      },
+      {
+        status: 'Aguardando roteirização',
+        badge: 'bg-amber-50 text-amber-800',
+        detail: 'Torre TMS otimizando roteiro Betim/BH',
+      },
+      {
+        status: 'Carga confirmada',
+        badge: 'bg-emerald-50 text-emerald-700 font-semibold',
+        detail: 'Veículo e motorista alocados',
+      },
+    ]
+    return schedules[idx % schedules.length]
+  }
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab')
@@ -325,8 +405,7 @@ export default function CRM() {
     })
   }, [rawFunil, funilVendedorFilter])
 
-  // Métricas do Funil
-  // Gap da Meta: R$ 625.000 | Pipeline Aberto: R$ 1.200.000 | Pipeline Ponderado: R$ 780.000 | Cobertura da Meta: 125%
+  // Métricas do Funil & Forecast Comercial (Fase 1: Meta, Realizado, Carteira Confirmada, Pipeline Bruto, Ponderado, Forecast IA, Gap)
   const funilMetricas = useMemo(() => {
     const abertas = filteredFunil.filter(
       (op) => !['faturado', 'adiado', 'perdido', 'cancelado'].includes(op.etapa),
@@ -336,13 +415,21 @@ export default function CRM() {
       (acc, op) => acc + (op.valor * op.probabilidade) / 100,
       0,
     )
-    const gapMeta = isVendedorOnly ? 135000 : 625000
+    const metaMensal = isVendedorOnly ? 600000 : 2500000
+    const realizadoMensal = isVendedorOnly ? 465000 : 1875000
+    const carteiraConfirmada = isVendedorOnly ? 95000 : 380000
+    const gapMeta = Math.max(metaMensal - realizadoMensal, 0)
+    const forecastIA = realizadoMensal + carteiraConfirmada + pipelinePonderado * 0.85
     const cobertura = gapMeta > 0 ? Math.round((pipelineAberto / gapMeta) * 100) : 100
 
     return {
+      metaMensal,
+      realizadoMensal,
+      carteiraConfirmada,
       gapMeta,
       pipelineAberto,
       pipelinePonderado,
+      forecastIA,
       cobertura,
     }
   }, [filteredFunil, isVendedorOnly])
@@ -735,7 +822,7 @@ export default function CRM() {
                     <tr>
                       <th className="py-3 px-3 font-bold text-center">SAP</th>
                       <th
-                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors min-w-[200px]"
+                        className="py-3 px-3 font-bold cursor-pointer hover:text-primary transition-colors min-w-[190px]"
                         onClick={() => toggleSort('razaoSocial')}
                       >
                         <div className="flex items-center gap-1">
@@ -744,9 +831,19 @@ export default function CRM() {
                         </div>
                       </th>
                       <th className="py-3 px-2 font-bold text-center">Arquétipo</th>
-                      <th className="py-3 px-2 font-bold text-center">ABC Hist.</th>
-                      <th className="py-3 px-2 font-bold text-center">ABC Pot.</th>
                       <th className="py-3 px-2 font-bold">Cidade/UF</th>
+
+                      {/* NOVAS COLUNAS REQUISITADAS: ESTOQUE (t), PREVISÃO FAT. (R$) E PREVISÃO TMS */}
+                      <th className="py-3 px-2 font-bold text-center min-w-[130px] bg-sky-50/50 text-sky-950">
+                        Disp. Estoque (t)
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center min-w-[140px] bg-emerald-50/50 text-emerald-950">
+                        Previsão Fat. (R$)
+                      </th>
+                      <th className="py-3 px-2 font-bold text-center min-w-[130px] bg-indigo-50/50 text-indigo-950">
+                        Previsão TMS Carga
+                      </th>
+
                       <th className="py-3 px-2 font-bold text-center font-mono">
                         {commercialMetric === 'REVENUE' ? 'Fat. 12m (R$)' : 'Ton 12m (t)'}
                       </th>
@@ -778,7 +875,20 @@ export default function CRM() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {sortedClientes.map((c) => {
+                    {sortedClientes.map((c, idx) => {
+                      const clientProds =
+                        mockProdutosCliente[c.id] || mockProdutosCliente['cli-100001'] || []
+                      const mainProd = clientProds[0] || {
+                        codigo: 'TB-304-SCH10',
+                        descricao: 'Tubo Inox AISI 304 2"',
+                        saldoEstoqueTon: 3.4,
+                      }
+                      const stockTons = mainProd.saldoEstoqueTon
+                      const isLowStock = stockTons < 5.0
+                      const previsaoFaturamento =
+                        c.pipelineValor * 0.7 + (c.faturamento12m / 12) * 0.9
+                      const tmsSchedule = getClientTmsSchedule(c.id, idx)
+
                       return (
                         <tr key={c.id} className="hover:bg-primary/5 transition-colors group">
                           {/* SAP */}
@@ -814,19 +924,79 @@ export default function CRM() {
                             </Badge>
                           </td>
 
-                          {/* ABC Histórico */}
-                          <td className="py-3 px-2 text-center">
-                            <ABCBadge category={c.abcHistorico} type="carteira" />
-                          </td>
-
-                          {/* ABC Potencial */}
-                          <td className="py-3 px-2 text-center">
-                            <ABCBadge category={c.abcPotencial} type="potencial" />
-                          </td>
-
                           {/* Cidade/UF */}
                           <td className="py-3 px-2 whitespace-nowrap text-slate-700">
                             {c.cidade}/{c.uf}
+                          </td>
+
+                          {/* 2.1 DISPONIBILIDADE DE ESTOQUE DO ITEM (EM "t") */}
+                          <td className="py-3 px-2 text-center">
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                              <button
+                                onClick={() => {
+                                  setWmsSelectedData({
+                                    itemCode: mainProd.codigo,
+                                    itemDescription: mainProd.descricao,
+                                    currentStockTons: stockTons,
+                                    customerName: c.razaoSocial,
+                                  })
+                                  setWmsModalOpen(true)
+                                }}
+                                className={cn(
+                                  'px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer',
+                                  isLowStock
+                                    ? 'bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300 animate-pulse'
+                                    : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300',
+                                )}
+                                title={`Clique para solicitar verificação WMS (${mainProd.descricao})`}
+                              >
+                                {isLowStock && <AlertCircle className="w-3 h-3 text-rose-600" />}
+                                <span>{formatWeight(stockTons, 1)}</span>
+                              </button>
+                              <span
+                                className="text-[9px] text-muted-foreground truncate max-w-[120px]"
+                                title={mainProd.descricao}
+                              >
+                                {mainProd.codigo}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 2.2 PREVISÃO DE FATURAMENTO (R$) */}
+                          <td className="py-3 px-2 text-center">
+                            <div className="flex flex-col items-center">
+                              <span className="font-mono font-bold text-xs text-primary">
+                                {formatBRL(previsaoFaturamento)}
+                              </span>
+                              <span className="text-[9px] text-muted-foreground">
+                                Pipeline + Forecast
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* 2.3 PREVISÃO DO TMS DE CARGA */}
+                          <td className="py-3 px-2 text-center">
+                            <button
+                              onClick={() => {
+                                setTmsSelectedData({
+                                  customerName: c.razaoSocial,
+                                  referenceDoc: `Pedido SAP ${c.sapCode}`,
+                                  itemDescription: mainProd.descricao,
+                                  defaultTons: c.pipelineTons || 12,
+                                })
+                                setTmsModalOpen(true)
+                              }}
+                              className={cn(
+                                'px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer hover:opacity-80 block mx-auto',
+                                tmsSchedule.badge,
+                              )}
+                              title={`${tmsSchedule.detail} (Clique para gerar alerta TMS)`}
+                            >
+                              {tmsSchedule.status}
+                            </button>
+                            <span className="text-[9px] text-slate-500 block mt-0.5">
+                              Torre TMS
+                            </span>
                           </td>
 
                           {/* Métrica 12m (Alterna dinamicamente entre R$ e Toneladas) */}
@@ -967,6 +1137,42 @@ export default function CRM() {
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-1.5 text-[9px] font-semibold text-amber-700 hover:bg-amber-50 border-amber-300"
+                                onClick={() => {
+                                  setWmsSelectedData({
+                                    itemCode: mainProd.codigo,
+                                    itemDescription: mainProd.descricao,
+                                    currentStockTons: stockTons,
+                                    customerName: c.razaoSocial,
+                                  })
+                                  setWmsModalOpen(true)
+                                }}
+                                title="Solicitar Verificação de Estoque no WMS"
+                              >
+                                WMS
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-1.5 text-[9px] font-semibold text-indigo-700 hover:bg-indigo-50 border-indigo-300"
+                                onClick={() => {
+                                  setTmsSelectedData({
+                                    customerName: c.razaoSocial,
+                                    referenceDoc: `Pedido SAP ${c.sapCode}`,
+                                    itemDescription: mainProd.descricao,
+                                    defaultTons: c.pipelineTons || 12,
+                                  })
+                                  setTmsModalOpen(true)
+                                }}
+                                title="Gerar Alerta de Prioridade de Carga no TMS"
+                              >
+                                TMS
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -978,71 +1184,87 @@ export default function CRM() {
             )}
           </Card>
         </TabsContent>
-
         {/* ABA 2: FUNIL DE VENDAS (KANBAN 8 ETAPAS + SAÍDAS + BARRA DE RESUMO) */}
         <TabsContent value="funil" className="space-y-6 m-0">
-          {/* BARRA DE RESUMO OBRIGATÓRIA DO FUNIL */}
-          {/* Gap da Meta: R$ 625.000 | Pipeline Aberto: R$ 1.200.000 | Pipeline Ponderado: R$ 780.000 | Cobertura da Meta: 125% */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
-                Gap da Meta
+          {/* BARRA DE FORECAST COMERCIAL (FASE 1: 4.10) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                Meta Mensal
               </span>
-              <div className="mt-1">
-                <span className="font-serif text-2xl font-bold text-amber-600">
-                  {formatBRL(funilMetricas.gapMeta)}
-                </span>
-                <span className="text-[11px] text-muted-foreground block mt-0.5">
-                  Valor faltante para bater a meta mensal
-                </span>
-              </div>
+              <strong className="font-serif text-lg text-slate-900 block mt-0.5">
+                {formatBRL(funilMetricas.metaMensal)}
+              </strong>
+              <span className="text-[10px] text-muted-foreground">Objetivo comercial</span>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                Pipeline Aberto
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
+                Realizado Faturado
               </span>
-              <div className="mt-1">
-                <span className="font-serif text-2xl font-bold text-primary">
-                  {formatBRL(funilMetricas.pipelineAberto)}
-                </span>
-                <span className="text-[11px] text-muted-foreground block mt-0.5">
-                  Total em negociação ativa no funil
-                </span>
-              </div>
+              <strong className="font-serif text-lg text-primary block mt-0.5">
+                {formatBRL(funilMetricas.realizadoMensal)}
+              </strong>
+              <span className="text-[10px] text-emerald-600 font-semibold">
+                {((funilMetricas.realizadoMensal / funilMetricas.metaMensal) * 100).toFixed(1)}%
+                atingido
+              </span>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">
+                Carteira Confirmada
+              </span>
+              <strong className="font-serif text-lg text-blue-700 block mt-0.5">
+                {formatBRL(funilMetricas.carteiraConfirmada)}
+              </strong>
+              <span className="text-[10px] text-muted-foreground">Pedidos em carteira</span>
+            </Card>
+
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 block">
+                Pipeline Bruto
+              </span>
+              <strong className="font-serif text-lg text-slate-800 block mt-0.5">
+                {formatBRL(funilMetricas.pipelineAberto)}
+              </strong>
+              <span className="text-[10px] text-muted-foreground">Volume total aberto</span>
+            </Card>
+
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
                 Pipeline Ponderado
               </span>
-              <div className="mt-1">
-                <span className="font-serif text-2xl font-bold text-emerald-600">
-                  {formatBRL(funilMetricas.pipelinePonderado)}
-                </span>
-                <span className="text-[11px] text-emerald-700 font-semibold block mt-0.5">
-                  Ajustado por probabilidade de fechamento
-                </span>
-              </div>
+              <strong className="font-serif text-lg text-emerald-700 block mt-0.5">
+                {formatBRL(funilMetricas.pipelinePonderado)}
+              </strong>
+              <span className="text-[10px] text-muted-foreground">Probabilidade aplicada</span>
             </Card>
 
-            <Card className="bg-white/80 backdrop-blur-md border-border/40 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+            <Card className="bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-200 rounded-2xl p-3 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-                  Cobertura da Meta
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary block">
+                  Forecast IA
                 </span>
-                <Badge className="bg-emerald-100 text-emerald-800 text-[10px] font-bold border-none">
-                  {funilMetricas.cobertura}%
-                </Badge>
+                <Sparkles className="w-3 h-3 text-amber-500" />
               </div>
-              <div className="mt-1">
-                <span className="font-serif text-2xl font-bold text-emerald-600">
-                  {funilMetricas.cobertura}%
-                </span>
-                <span className="text-[11px] text-muted-foreground block mt-0.5">
-                  1.9x sobre o Gap necessário
-                </span>
-              </div>
+              <strong className="font-serif text-lg text-primary block mt-0.5">
+                {formatBRL(funilMetricas.forecastIA)}
+              </strong>
+              <span className="text-[10px] text-sky-800 font-semibold">
+                {((funilMetricas.forecastIA / funilMetricas.metaMensal) * 100).toFixed(1)}%
+                projetado
+              </span>
+            </Card>
+
+            <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
+                Gap para Meta
+              </span>
+              <strong className="font-serif text-lg text-amber-700 block mt-0.5">
+                {formatBRL(funilMetricas.gapMeta)}
+              </strong>
+              <span className="text-[10px] text-muted-foreground">Falta fechar no mês</span>
             </Card>
           </div>
 
@@ -1107,54 +1329,80 @@ export default function CRM() {
                           Nenhuma oportunidade
                         </div>
                       ) : (
-                        stageOps.map((op) => (
-                          <Card
-                            key={op.id}
-                            onClick={() => navigate(`/crm/${op.clienteId}`)}
-                            className="bg-white border-border/50 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer rounded-xl p-3 space-y-2"
-                          >
-                            <div className="flex items-start justify-between gap-1">
-                              <div>
-                                <span className="font-semibold text-xs text-primary block leading-tight hover:underline">
-                                  {op.clienteNome}
+                        stageOps.map((op, i) => {
+                          const aging = op.agingDias || i * 3 + 2
+                          const isParada =
+                            aging > 15 && !['faturado', 'perdido', 'cancelado'].includes(op.etapa)
+                          const probVendedor = op.probabilidade
+                          const probIA = Math.min(
+                            Math.max(probVendedor + (i % 2 === 0 ? 5 : -8), 15),
+                            95,
+                          )
+
+                          return (
+                            <Card
+                              key={op.id}
+                              onClick={() => navigate(`/crm/${op.clienteId}`)}
+                              className={cn(
+                                'bg-white border-border/50 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer rounded-xl p-3 space-y-2',
+                                isParada && 'border-amber-400 bg-amber-50/30',
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <div>
+                                  <span className="font-semibold text-xs text-primary block leading-tight hover:underline">
+                                    {op.clienteNome}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">
+                                    SAP {op.clienteSap} · {op.vendedorNome}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <Badge className="text-[9px] bg-primary/10 text-primary border-none font-bold">
+                                    Vend: {probVendedor}%
+                                  </Badge>
+                                  <span className="text-[9px] text-emerald-700 font-mono font-bold">
+                                    IA: {probIA}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="text-[11px] text-slate-700 font-medium line-clamp-2">
+                                {op.titulo}
+                              </p>
+
+                              {isParada && (
+                                <div className="p-1.5 rounded-lg bg-amber-100/90 border border-amber-300 text-[10px] text-amber-900 flex items-center gap-1 font-semibold">
+                                  <Clock className="w-3 h-3 text-amber-700 shrink-0" />
+                                  <span>Oportunidade parada há {aging} dias!</span>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between pt-1 border-t border-border/20 text-[11px]">
+                                <span className="font-serif font-bold text-emerald-600">
+                                  {formatBRL(op.valor)}
                                 </span>
-                                <span className="text-[10px] text-muted-foreground font-mono">
-                                  SAP {op.clienteSap} · {op.vendedorNome}
+                                <span className="text-[10px] text-muted-foreground font-semibold">
+                                  {op.toneladas.toLocaleString('pt-BR')} t
                                 </span>
                               </div>
-                              <Badge className="text-[9px] bg-primary/10 text-primary border-none font-bold">
-                                {op.probabilidade}%
-                              </Badge>
-                            </div>
 
-                            <p className="text-[11px] text-slate-700 font-medium line-clamp-2">
-                              {op.titulo}
-                            </p>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-amber-500" /> {aging}d no funil
+                                </span>
+                                <span className="text-primary font-medium">
+                                  Prev: {op.previsaoFechamento}
+                                </span>
+                              </div>
 
-                            <div className="flex items-center justify-between pt-1 border-t border-border/20 text-[11px]">
-                              <span className="font-serif font-bold text-emerald-600">
-                                {formatBRL(op.valor)}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-semibold">
-                                {op.toneladas.toLocaleString('pt-BR')} t
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-amber-500" /> {op.agingDias}d no
-                                funil
-                              </span>
-                              <span className="text-primary font-medium">
-                                Prev: {op.previsaoFechamento}
-                              </span>
-                            </div>
-
-                            <div className="bg-slate-50 p-1.5 rounded-lg text-[10px] text-slate-600">
-                              <strong className="text-primary">Próx. Ação:</strong> {op.proximaAcao}
-                            </div>
-                          </Card>
-                        ))
+                              <div className="bg-slate-50 p-1.5 rounded-lg text-[10px] text-slate-600">
+                                <strong className="text-primary">Próx. Ação:</strong>{' '}
+                                {op.proximaAcao}
+                              </div>
+                            </Card>
+                          )
+                        })
                       )}
                     </div>
                   </div>
@@ -1320,6 +1568,26 @@ export default function CRM() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* MODAL 3.1: SOLICITAR VERIFICAÇÃO DE ESTOQUE (WMS) */}
+      <WmsStockCheckModal
+        open={wmsModalOpen}
+        onOpenChange={setWmsModalOpen}
+        itemCode={wmsSelectedData.itemCode}
+        itemDescription={wmsSelectedData.itemDescription}
+        currentStockTons={wmsSelectedData.currentStockTons}
+        customerName={wmsSelectedData.customerName}
+      />
+
+      {/* MODAL 3.2: GERAR ALERTA DE PRIORIDADE DE CARGA NO TMS */}
+      <TmsPriorityAlertModal
+        open={tmsModalOpen}
+        onOpenChange={setTmsModalOpen}
+        customerName={tmsSelectedData.customerName}
+        referenceDoc={tmsSelectedData.referenceDoc}
+        itemDescription={tmsSelectedData.itemDescription}
+        defaultTons={tmsSelectedData.defaultTons}
+      />
     </div>
   )
 }

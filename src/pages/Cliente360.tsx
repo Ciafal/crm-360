@@ -83,10 +83,15 @@ import {
 import { RFMSegmentBadge } from '@/components/shared/RFMSegmentBadge'
 import { ABCBadge } from '@/components/shared/ABCBadge'
 import { CommercialMetricToggle } from '@/components/shared/CommercialMetricToggle'
+import { ClientDocumentViewerModal, DocumentType } from '@/components/crm/ClientDocumentViewerModal'
+import {
+  WmsStockCheckModal,
+  TmsPriorityAlertModal,
+} from '@/components/crm/OperationalActionsDialogs'
 import { useAppStore } from '@/stores/useAppStore'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency, formatWeight } from '@/lib/utils'
 
 const COLORS = ['#003A70', '#00A3E0', '#10B981', '#F59E0B', '#6366F1', '#EC4899']
 
@@ -106,6 +111,29 @@ export default function Cliente360() {
   // Estado TMS Entregas
   const [tmsLoads, setTmsLoads] = useState<TMSDeliveryLoad[]>([])
   const [loadingTMS, setLoadingTMS] = useState(false)
+
+  // Estado Visualizador de Documentos (Fase 2 / Item 6: NF, Boletos, Certificados)
+  const [docModalOpen, setDocModalOpen] = useState(false)
+  const [selectedDocType, setSelectedDocType] = useState<DocumentType>('NF')
+  const [selectedDocData, setSelectedDocData] = useState<any>({
+    number: '109842',
+    clientName: '',
+  })
+
+  // Ações Operacionais (WMS e Alerta Prioridade TMS)
+  const [wmsModalOpen, setWmsModalOpen] = useState(false)
+  const [tmsAlertModalOpen, setTmsAlertModalOpen] = useState(false)
+  const [selectedItemForWms, setSelectedItemForWms] = useState({
+    code: 'TB-304-SCH10',
+    description: 'Tubo Inox AISI 304 Redondo 2"',
+    stock: 3.4,
+  })
+
+  const handleOpenDocument = (type: DocumentType, data: any) => {
+    setSelectedDocType(type)
+    setSelectedDocData(data)
+    setDocModalOpen(true)
+  }
 
   // Localizar cliente nos mocks
   const cliente = useMemo(() => {
@@ -712,58 +740,75 @@ export default function Cliente360() {
           <TabsList className="bg-transparent p-0 h-auto gap-2 flex-wrap">
             <TabsTrigger
               value="indicadores"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
             >
-              <BarChart3 className="w-3.5 h-3.5" /> 1. Indicadores do Cliente
-            </TabsTrigger>
-            <TabsTrigger
-              value="playbook"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
-            >
-              <BookOpen className="w-3.5 h-3.5" /> 2. Playbook Comercial ({archetype})
-            </TabsTrigger>
-            <TabsTrigger
-              value="tms"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
-            >
-              <Truck className="w-3.5 h-3.5" /> 3. Entregas & TMS ({tmsLoads.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="qualidade"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
-            >
-              <ShieldAlert className="w-3.5 h-3.5" /> 4. Qualidade & Reclamações (
-              {complaints.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="financeiro"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
-            >
-              <CreditCard className="w-3.5 h-3.5" /> 5. Crédito SAP (F.35)
-            </TabsTrigger>
-            <TabsTrigger
-              value="produtos"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
-            >
-              <Package className="w-3.5 h-3.5" /> 6. Produtos & Abandonados ({produtos.length})
+              <BarChart3 className="w-3.5 h-3.5" /> Visão Geral
             </TabsTrigger>
             <TabsTrigger
               value="contatos"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
             >
-              <MessageSquare className="w-3.5 h-3.5" /> 7. Contatos & Omnichannel
+              <Users className="w-3.5 h-3.5" /> Contatos
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
             >
-              <Clock className="w-3.5 h-3.5" /> 8. Timeline Completa ({timeline.length})
+              <Clock className="w-3.5 h-3.5" /> Timeline Comercial
+            </TabsTrigger>
+            <TabsTrigger
+              value="agenda"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <Calendar className="w-3.5 h-3.5" /> Agenda & Ações
             </TabsTrigger>
             <TabsTrigger
               value="oportunidades"
-              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2 text-xs font-semibold gap-1.5"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
             >
-              <TrendingUp className="w-3.5 h-3.5" /> 8. Oportunidades ({oportunidades.length})
+              <TrendingUp className="w-3.5 h-3.5" /> Leads/Opps ({oportunidades.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="cotacoes"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <FileText className="w-3.5 h-3.5" /> Cotações
+            </TabsTrigger>
+            <TabsTrigger
+              value="pedidos"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" /> Pedidos
+            </TabsTrigger>
+            <TabsTrigger
+              value="financeiro"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> Financeiro / Crédito
+            </TabsTrigger>
+            <TabsTrigger
+              value="documentos"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <FileCheck className="w-3.5 h-3.5" /> Documentos (NF/Boleto)
+            </TabsTrigger>
+            <TabsTrigger
+              value="tms"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <Truck className="w-3.5 h-3.5" /> Logística / TMS ({tmsLoads.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="satisfacao"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" /> Satisfação Clientes
+            </TabsTrigger>
+            <TabsTrigger
+              value="ia_insights"
+              className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-3.5 py-2 text-xs font-semibold gap-1.5 bg-sky-50 text-sky-900 border border-sky-200"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> IA & Playbook
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1946,7 +1991,7 @@ export default function Cliente360() {
           </Card>
         </TabsContent>
 
-        {/* ABA 8: OPORTUNIDADES & PROPOSTAS CPQ */}
+        {/* ABA: OPORTUNIDADES & PROPOSTAS CPQ */}
         <TabsContent value="oportunidades" className="space-y-4 m-0">
           <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <div className="flex items-center justify-between border-b pb-4 mb-4">
@@ -1960,10 +2005,10 @@ export default function Cliente360() {
               </div>
               <Button
                 size="sm"
-                onClick={() => toast.info('Nova cotação CPQ aberta para este cliente.')}
+                onClick={() => navigate(`/crm?tab=funil&novo=true&cliente=${cliente.id}`)}
                 className="h-8 gap-1.5 text-xs bg-primary text-white"
               >
-                <Plus className="w-3.5 h-3.5" /> Adicionar Cotação CPQ
+                <Plus className="w-3.5 h-3.5" /> Adicionar Oportunidade
               </Button>
             </div>
 
@@ -2020,7 +2065,517 @@ export default function Cliente360() {
             )}
           </Card>
         </TabsContent>
+
+        {/* ABA: AGENDA COMERCIAL (FASE 2: 5.3) */}
+        <TabsContent value="agenda" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" /> Agenda Comercial & Compromissos
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Visitas técnicas agendadas, follow-ups de cotação e alinhamento de fornecimento
+                  contínuo.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() =>
+                  toast.success('Novo follow-up comercial registrado no Outlook / M365!')
+                }
+                className="h-8 gap-1.5 text-xs bg-primary text-white"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agendar Nova Ação
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-sky-50/80 border border-sky-200 rounded-2xl space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <Badge className="bg-sky-600 text-white text-[10px]">Amanhã 14:00</Badge>
+                  <span className="text-sky-800 font-bold text-[11px]">Visita Técnica</span>
+                </div>
+                <strong className="text-slate-900 block text-xs">
+                  Alinhamento de Consumo de Perfis W
+                </strong>
+                <p className="text-[11px] text-slate-600">
+                  Reunião presencial com Eng. Marcos no canteiro de obras.
+                </p>
+              </div>
+
+              <div className="p-4 bg-purple-50/80 border border-purple-200 rounded-2xl space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <Badge className="bg-purple-600 text-white text-[10px]">Em 3 dias</Badge>
+                  <span className="text-purple-800 font-bold text-[11px]">Follow-up Cotação</span>
+                </div>
+                <strong className="text-slate-900 block text-xs">
+                  Fechamento Cotação COT-98104
+                </strong>
+                <p className="text-[11px] text-slate-600">
+                  Verificar aprovação da diretoria para pedido de 15 t de chapas.
+                </p>
+              </div>
+
+              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <Badge className="bg-emerald-600 text-white text-[10px]">Próxima Semana</Badge>
+                  <span className="text-emerald-800 font-bold text-[11px]">Pós-Venda</span>
+                </div>
+                <strong className="text-slate-900 block text-xs">
+                  Acompanhamento de Descarga TMS
+                </strong>
+                <p className="text-[11px] text-slate-600">
+                  Checagem de recebimento da carga e pesquisa de satisfação.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: COTAÇÕES */}
+        <TabsContent value="cotacoes" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" /> Histórico de Cotações Comerciais
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Propostas geradas com saldo WMS e estimativa de frete TMS.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/crm/cotacoes`)}
+                className="h-8 gap-1.5 text-xs bg-primary text-white"
+              >
+                <Plus className="w-3.5 h-3.5" /> Nova Cotação
+              </Button>
+            </div>
+
+            <div className="p-4 rounded-2xl border bg-slate-50 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <strong className="text-primary text-sm">COT-98104 (v2)</strong>
+                  <Badge className="bg-blue-100 text-blue-800 text-[10px]">EM NEGOCIAÇÃO</Badge>
+                </div>
+                <span className="text-xs text-slate-600 block mt-1">
+                  Vigas W 200x26.6 e Cantoneiras · Volume: 14.5 t · Valor: R$ 89.900,00
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedItemForWms({
+                      code: 'VG-W200-26.6',
+                      description: 'Viga W 200x26.6 Gerdau',
+                      stock: 14.5,
+                    })
+                    setWmsModalOpen(true)
+                  }}
+                  className="h-8 text-xs text-amber-800 border-amber-300"
+                >
+                  Verificar Estoque WMS
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setTmsAlertModalOpen(true)}
+                  className="h-8 text-xs text-indigo-800 border-indigo-300"
+                >
+                  Alerta Prioridade TMS
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    handleOpenDocument('NF', {
+                      number: 'COT-98104',
+                      clientName: cliente.razaoSocial,
+                      cnpj: cliente.cnpj,
+                      sapCode: cliente.sapCode,
+                      value: 89900,
+                      tons: 14.5,
+                      items: ['Vigas W 200x26.6 Gerdau', 'Cantoneiras Laminadas A36'],
+                    })
+                  }
+                  className="h-8 text-xs bg-primary text-white"
+                >
+                  Gerar PDF Proposta
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: PEDIDOS */}
+        <TabsContent value="pedidos" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-primary" /> Pedidos de Venda SAP ECC
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Ordens de venda implantadas e integradas via BAPI_SALESORDER_CREATEFROMDAT2.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 uppercase text-[10px] border-b">
+                  <tr>
+                    <th className="p-3 font-bold">Ordem SAP</th>
+                    <th className="p-3 font-bold">Data</th>
+                    <th className="p-3 font-bold">Itens / Descrição</th>
+                    <th className="p-3 font-bold text-center">Peso</th>
+                    <th className="p-3 font-bold text-right">Valor Total</th>
+                    <th className="p-3 font-bold text-center">Status SAP</th>
+                    <th className="p-3 font-bold text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  <tr className="hover:bg-slate-50/50">
+                    <td className="p-3 font-mono font-bold text-primary">#10049281</td>
+                    <td className="p-3">22/10/2024</td>
+                    <td className="p-3 font-medium text-slate-800">
+                      Perfis Laminados e Tubos Sch40
+                    </td>
+                    <td className="p-3 text-center font-mono font-bold">12.5 t</td>
+                    <td className="p-3 text-right font-mono font-bold text-emerald-700">
+                      R$ 77.500,00
+                    </td>
+                    <td className="p-3 text-center">
+                      <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">
+                        Faturado & Entregue
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-center">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs text-primary hover:underline"
+                        onClick={() =>
+                          handleOpenDocument('NF', {
+                            number: '109842',
+                            date: '22/10/2024',
+                            clientName: cliente.razaoSocial,
+                            cnpj: cliente.cnpj,
+                            sapCode: cliente.sapCode,
+                            value: 77500,
+                            tons: 12.5,
+                            status: 'AUTORIZADO',
+                          })
+                        }
+                      >
+                        Ver DANFE
+                      </Button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: DOCUMENTOS — CONSULTA E GERAÇÃO DE PDF (ITEM 6: NF, BOLETO, CERTIFICADOS) */}
+        <TabsContent value="documentos" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-5">
+            <div>
+              <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-primary" /> Central de Documentos do Cliente
+                (PDFs Oficiais)
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Gere, visualize e baixe Notas Fiscais Eletrônicas (DANFE), Boletos Bancários com
+                código de barras e Certificados de Qualidade Metalúrgica.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* 6.1 PDF DA NOTA FISCAL (NF) */}
+              <Card className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-600" />
+                    <strong className="text-xs text-slate-900">Notas Fiscais (NF-e)</strong>
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">
+                    {nfs.length} NFs
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {nfs.slice(0, 3).map((nf) => (
+                    <div
+                      key={nf.id}
+                      className="p-2.5 rounded-xl bg-slate-50 border text-xs flex justify-between items-center"
+                    >
+                      <div>
+                        <strong className="text-slate-900 block font-mono">
+                          NF-e #{nf.numeroNF}
+                        </strong>
+                        <span className="text-[10px] text-muted-foreground">
+                          {nf.dataEmissao} · {formatWeight(nf.toneladas, 1)}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          handleOpenDocument('NF', {
+                            number: String(nf.numeroNF),
+                            date: nf.dataEmissao,
+                            clientName: cliente.razaoSocial,
+                            cnpj: cliente.cnpj,
+                            sapCode: cliente.sapCode,
+                            value: nf.valorTotal,
+                            tons: nf.toneladas,
+                            items: ['Aço Laminado Comercial Gerdau'],
+                            status: nf.statusEntrega,
+                          })
+                        }
+                        className="h-7 text-xs text-primary border-primary/30"
+                      >
+                        Abrir PDF
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* 6.2 PDF DO BOLETO */}
+              <Card className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    <strong className="text-xs text-slate-900">Boletos Bancários</strong>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800 text-[10px]">Itaú / Bradesco</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border text-xs flex justify-between items-center">
+                    <div>
+                      <strong className="text-slate-900 block font-mono">Boleto #341-98102</strong>
+                      <span className="text-[10px] text-muted-foreground">
+                        Vencimento: 28/10/2024 · R$ 42.800,00
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleOpenDocument('BOLETO', {
+                          number: '341-98102',
+                          date: '28/09/2024',
+                          dueDate: '28/10/2024',
+                          clientName: cliente.razaoSocial,
+                          cnpj: cliente.cnpj,
+                          sapCode: cliente.sapCode,
+                          value: 42800,
+                          status: 'EM ABERTO',
+                        })
+                      }
+                      className="h-7 text-xs text-blue-700 border-blue-300"
+                    >
+                      Boleto PDF
+                    </Button>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-50 border text-xs flex justify-between items-center">
+                    <div>
+                      <strong className="text-slate-900 block font-mono">Boleto #341-97551</strong>
+                      <span className="text-[10px] text-muted-foreground">
+                        Vencimento: 15/10/2024 · Liquidado
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleOpenDocument('BOLETO', {
+                          number: '341-97551',
+                          date: '15/09/2024',
+                          dueDate: '15/10/2024',
+                          clientName: cliente.razaoSocial,
+                          cnpj: cliente.cnpj,
+                          sapCode: cliente.sapCode,
+                          value: 34700,
+                          status: 'LIQUIDADO',
+                        })
+                      }
+                      className="h-7 text-xs text-slate-700"
+                    >
+                      Comprovante
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+
+              {/* 6.3 PDF DOS CERTIFICADOS DE QUALIDADE */}
+              <Card className="p-4 rounded-2xl border border-slate-200 bg-white space-y-3 shadow-xs">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-purple-600" />
+                    <strong className="text-xs text-slate-900">Certificados de Qualidade</strong>
+                  </div>
+                  <Badge className="bg-purple-100 text-purple-800 text-[10px]">
+                    Usinagem & Corrida
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border text-xs flex justify-between items-center">
+                    <div>
+                      <strong className="text-slate-900 block">Certificado NBR 7007</strong>
+                      <span className="text-[10px] text-muted-foreground">
+                        Corrida Gerdau #2024-9182
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        handleOpenDocument('CERTIFICADO', {
+                          number: 'CERT-2024-9182',
+                          clientName: cliente.razaoSocial,
+                          normaTecnica: 'NBR 7007 / ASTM A572 Gr50',
+                          loteUsinagem: 'LOTE-USINA-9182',
+                          status: 'CONFORME',
+                        })
+                      }
+                      className="h-7 text-xs text-purple-700 border-purple-300"
+                    >
+                      Certificado PDF
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: SATISFAÇÃO CLIENTES */}
+        <TabsContent value="satisfacao" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-5">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-emerald-600" /> Satisfação do Cliente (NPS &
+                  CSAT)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Análise 360º de satisfação combinando histórico comercial, entregas TMS, qualidade
+                  e score preditivo da IA.
+                </p>
+              </div>
+              <Badge className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1">
+                Classificação: Satisfeito (NPS 82)
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="p-3 bg-slate-50 rounded-2xl border text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  Score Geral
+                </span>
+                <strong className="font-serif text-2xl text-emerald-600 block">8.8 / 10</strong>
+                <span className="text-[10px] text-emerald-700 font-semibold">
+                  Tendência Positiva
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  Pontualidade TMS
+                </span>
+                <strong className="font-serif text-2xl text-primary block">96.4%</strong>
+                <span className="text-[10px] text-muted-foreground">Entregas no prazo</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  Índice Reclamações
+                </span>
+                <strong className="font-serif text-2xl text-amber-600 block">
+                  {complaints.length}
+                </strong>
+                <span className="text-[10px] text-amber-700 font-semibold">
+                  {openComplaintsCount} em aberto
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-2xl border text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                  Risco de Churn (IA)
+                </span>
+                <strong className="font-serif text-2xl text-emerald-600 block">12%</strong>
+                <span className="text-[10px] text-emerald-700 font-semibold">Risco Baixo</span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-sky-50/80 rounded-2xl border border-sky-200 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-primary font-bold">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                Recomendação da IA CIAFAL para Fidelização:
+              </div>
+              <p className="text-slate-700 leading-relaxed">
+                Cliente com alto volume e boa frequência ({cliente.frequenciaDias} dias). Fatores
+                positivos: velocidade de emissão de NF e suporte técnico. Ponto de atenção: manter
+                lead time das cargas de Betim abaixo de 48h para evitar atrito operacional.
+              </p>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: IA & PLAYBOOK COMERCIAL */}
+        <TabsContent value="ia_insights" className="space-y-4 m-0">
+          <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 space-y-4">
+            <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" /> Inteligência Comercial & Next Best
+              Action
+            </h3>
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 space-y-2 text-xs">
+              <strong className="text-primary text-sm block">
+                Próxima Melhor Ação Recomendada:
+              </strong>
+              <p className="text-slate-800">
+                Apresentar oferta de tubos estruturais com frete unificado na mesma rota das vigas W
+                da cotação ativa. Potencial de acréscimo de 6.5 t no fechamento do mês.
+              </p>
+            </div>
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      {/* MODAL 6: VISUALIZADOR DE DOCUMENTOS (NF, BOLETOS, CERTIFICADOS) */}
+      <ClientDocumentViewerModal
+        open={docModalOpen}
+        onOpenChange={setDocModalOpen}
+        docType={selectedDocType}
+        docData={selectedDocData}
+      />
+
+      {/* MODAL 3.1: SOLICITAR VERIFICAÇÃO DE ESTOQUE WMS */}
+      <WmsStockCheckModal
+        open={wmsModalOpen}
+        onOpenChange={setWmsModalOpen}
+        itemCode={selectedItemForWms.code}
+        itemDescription={selectedItemForWms.description}
+        currentStockTons={selectedItemForWms.stock}
+        customerName={cliente.razaoSocial}
+      />
+
+      {/* MODAL 3.2: GERAR ALERTA DE PRIORIDADE TMS */}
+      <TmsPriorityAlertModal
+        open={tmsAlertModalOpen}
+        onOpenChange={setTmsAlertModalOpen}
+        customerName={cliente.razaoSocial}
+        referenceDoc={`Cliente SAP #${cliente.sapCode}`}
+        itemDescription="Vigas e Perfis Laminados"
+        defaultTons={cliente.pipelineTons || 12}
+      />
     </div>
   )
 }

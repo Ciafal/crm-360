@@ -36,14 +36,15 @@ export default function Layout() {
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
 
-  // Atalhos rápidos no TopNav
+  // Atalhos rápidos no TopNav na ordem exata solicitada:
+  // 1. Meu Dia, 2. Contatos, 3. Cotações, 4. CRM 360º, 5. Tarefas, 6. KPI's
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
     { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
+    { name: 'Cotações', path: '/crm/cotacoes' },
     { name: 'CRM 360º', path: '/crm' },
     { name: 'Tarefas', path: '/tarefas' },
-    { name: 'Equipe', path: '/equipe' },
-    { name: 'KPIs Comerciais', path: '/kpis-comerciais' },
+    { name: 'KPIs', path: '/kpis-comerciais' },
   ]
 
   return (
@@ -136,11 +137,18 @@ export default function Layout() {
                 <DropdownMenuSeparator />
                 <div className="grid grid-cols-2 gap-1.5 py-1">
                   <Link
-                    to="/agentes"
+                    to="/satisfacao-clientes"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-emerald-50/50 border border-emerald-100"
+                  >
+                    <strong className="text-emerald-950 font-bold">Satisfação Clientes</strong>
+                    <span className="text-[10px] text-emerald-800">NPS, CSAT & Risco IA</span>
+                  </Link>
+                  <Link
+                    to="/equipe"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
-                    <strong className="text-slate-900">Agentes de IA</strong>
-                    <span className="text-[10px] text-muted-foreground">Copilotos Comerciais</span>
+                    <strong className="text-slate-900">Equipe</strong>
+                    <span className="text-[10px] text-muted-foreground">Vendedores & Metas</span>
                   </Link>
                   <Link
                     to="/visitas"
@@ -150,6 +158,13 @@ export default function Layout() {
                     <span className="text-[10px] text-muted-foreground">Geolocalização</span>
                   </Link>
                   <Link
+                    to="/agentes"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Agentes de IA</strong>
+                    <span className="text-[10px] text-muted-foreground">Copilotos Comerciais</span>
+                  </Link>
+                  <Link
                     to="/gestao-inativos"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
@@ -157,30 +172,25 @@ export default function Layout() {
                     <span className="text-[10px] text-muted-foreground">Reativação Comercial</span>
                   </Link>
                   <Link
-                    to="/crm/cotacoes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col group"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <strong className="text-slate-900 group-hover:text-primary transition-colors">
-                        Cotações
-                      </strong>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground pl-5">Gestão Comercial</span>
-                  </Link>
-                  <Link
-                    to="/kpis-comerciais"
+                    to="/conversas"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
-                    <strong className="text-slate-900">KPIs Comerciais</strong>
-                    <span className="text-[10px] text-muted-foreground">Catálogo & OIF</span>
+                    <strong className="text-slate-900">Omnichannel</strong>
+                    <span className="text-[10px] text-muted-foreground">WhatsApp & VoIP</span>
                   </Link>
                   <Link
                     to="/central-integracoes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
                     <strong className="text-slate-900">Integrações</strong>
-                    <span className="text-[10px] text-muted-foreground">SAP ECC, Qlik, M365</span>
+                    <span className="text-[10px] text-muted-foreground">SAP ECC, Qlik, TMS</span>
+                  </Link>
+                  <Link
+                    to="/administracao"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                  >
+                    <strong className="text-slate-900">Configurações</strong>
+                    <span className="text-[10px] text-muted-foreground">Parâmetros & Acessos</span>
                   </Link>
                 </div>
               </DropdownMenuContent>
@@ -308,11 +318,18 @@ export default function Layout() {
                 Outros Módulos
               </span>
               <Link
-                to="/agentes"
+                to="/satisfacao-clientes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-emerald-800 bg-emerald-50 font-semibold"
+              >
+                <span>Satisfação Clientes (NPS/CSAT)</span>
+              </Link>
+              <Link
+                to="/equipe"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
               >
-                <span>Agentes de IA</span>
+                <span>Equipe Comercial</span>
               </Link>
               <Link
                 to="/visitas"
@@ -322,21 +339,18 @@ export default function Layout() {
                 <span>Visitas & Rotas</span>
               </Link>
               <Link
+                to="/agentes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
+              >
+                <span>Agentes de IA</span>
+              </Link>
+              <Link
                 to="/gestao-inativos"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
               >
                 <span>Gestão de Inativos</span>
-              </Link>
-              <Link
-                to="/crm/cotacoes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary shrink-0" />
-                  <span>Cotações</span>
-                </div>
               </Link>
               <Link
                 to="/central-integracoes"

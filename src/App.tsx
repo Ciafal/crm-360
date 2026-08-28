@@ -31,6 +31,7 @@ import IndicadoresComerciais from './pages/IndicadoresComerciais'
 import Hypercare from './pages/Hypercare'
 import RelatorioRelease from './pages/RelatorioRelease'
 import CentralIntegracoes from './pages/CentralIntegracoes'
+import SatisfacaoClientes from './pages/SatisfacaoClientes'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -85,6 +86,8 @@ const App = () => (
                 <Route path="/hypercare" element={<Hypercare />} />
                 <Route path="/relatorio-release" element={<RelatorioRelease />} />
                 <Route path="/central-integracoes" element={<CentralIntegracoes />} />
+                <Route path="/satisfacao-clientes" element={<SatisfacaoClientes />} />
+                <Route path="/satisfacao" element={<SatisfacaoClientes />} />
                 <Route path="/setup" element={<Setup />} />
                 <Route path="/kpis" element={<IndicadoresComerciais />} />
                 <Route path="/indicadores" element={<IndicadoresComerciais />} />

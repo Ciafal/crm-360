@@ -76,6 +76,7 @@ import {
 } from '@/services/quotation_service'
 import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
 import type { QuotationItem, Quotation } from '@/types/quotation'
+import { cn } from '@/lib/utils'
 import type { SAPCreditStatus } from '@/providers/SAPCreditProvider'
 import { PDFPreviewDialog } from '@/components/cotacoes/PDFPreviewDialog'
 import { PriceDeviationBadge } from '@/components/cotacoes/PriceDeviationBadge'
@@ -1117,7 +1118,7 @@ export default function NovaCotacao() {
                       <span className="text-[10px] text-muted-foreground block">
                         Atualizado: {selectedMaterial.stockUpdatedAt}
                       </span>
-                      {selectedMaterial.availableStock < stockCheckThreshold && (
+                      <div className="flex flex-col gap-1 mt-1">
                         <Button
                           variant="outline"
                           size="sm"
@@ -1142,11 +1143,16 @@ export default function NovaCotacao() {
                             })
                             setStockCheckDrawerOpen(true)
                           }}
-                          className="w-full text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300 text-[10px] font-bold h-6 mt-1"
+                          className={cn(
+                            'w-full text-[10px] font-bold h-6',
+                            selectedMaterial.availableStock < stockCheckThreshold
+                              ? 'text-rose-800 bg-rose-50 hover:bg-rose-100 border-rose-300 animate-pulse'
+                              : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border-amber-300',
+                          )}
                         >
-                          Solicitar checagem
+                          Solicitar verificação de estoque (WMS)
                         </Button>
-                      )}
+                      </div>
                     </div>
 
                     {/* Bloco 2: PCP Robotizado */}
@@ -1201,9 +1207,18 @@ export default function NovaCotacao() {
                           <strong className="text-blue-700">04/09/2026 (1 dia)</strong>
                         </div>
                       </div>
-                      <span className="text-[9px] text-muted-foreground block">
-                        Estimativa atual · Frete rodoviário dedicado
-                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          toast.success(
+                            `Alerta de prioridade gerado no TMS para a cotação ${quoteCode} (${selectedMaterial.description})!`,
+                          )
+                        }}
+                        className="w-full text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300 text-[10px] font-bold h-6 mt-1"
+                      >
+                        ⚡ Gerar alerta de prioridade no TMS
+                      </Button>
                     </div>
                   </div>
 

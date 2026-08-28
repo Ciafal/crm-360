@@ -31,6 +31,25 @@ export interface MetaCoverageRiskWidgetProps {
   className?: string
 }
 
+import {
+  calculateWeightedRiskScore,
+  getRiskWeights,
+  saveRiskWeights,
+  RiskScoreWeights,
+} from '@/services/real_commercial_analytics'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Settings, Sliders } from 'lucide-react'
+import { toast } from 'sonner'
+
 export function MetaCoverageRiskWidget({
   gapRestanteTons,
   gapRestanteBrl,
@@ -42,33 +61,34 @@ export function MetaCoverageRiskWidget({
   onDrilldownPipeline,
   className,
 }: MetaCoverageRiskWidgetProps) {
+  const [weightsModalOpen, setWeightsModalOpen] = useState(false)
+  const [currentWeights, setCurrentWeights] = useState<RiskScoreWeights>(getRiskWeights())
+
   // Cálculo de Cobertura da Meta: Pipeline Qualificado / Gap Restante
   const coverageRatio = gapRestanteTons > 0 ? pipelineQualificadoTons / gapRestanteTons : 2.5
   const coveragePercent = coverageRatio * 100
 
-  // Faixas de Cobertura:
-  // < 1.0x -> Insuficiente (Crítico)
-  // 1.0x a 1.5x -> Atenção
-  // > 1.5x -> Confortável
   const isComfortable = coverageRatio >= 1.5
   const isAttention = coverageRatio >= 1.0 && coverageRatio < 1.5
   const isInsufficient = coverageRatio < 1.0
 
-  // Score de Risco da Meta (0 a 100 onde quanto menor melhor)
-  // Fatores: gap restante, dias úteis, ratio de cobertura, conversão
-  const riskScore = Math.round(
-    Math.min(
-      Math.max(
-        (1 - Math.min(coverageRatio / 2, 1)) * 50 +
-          (gapRestanteTons > 300 ? 25 : 10) +
-          (diasUteisRestantes < 6 ? 25 : 10),
-        10,
-      ),
-      95,
-    ),
+  // Score de Risco Ponderado Real CIAFAL
+  const calculatedRisk = calculateWeightedRiskScore(
+    gapRestanteTons,
+    pipelinePonderadoTons || pipelineQualificadoTons,
+    45.5,
+    26.6,
+    1,
+    currentWeights,
   )
+  const riskScore = calculatedRisk.score
+  const riskCategory = calculatedRisk.category
 
-  const riskCategory = riskScore < 35 ? 'Baixo' : riskScore < 65 ? 'Moderado' : 'Alto'
+  const handleSaveWeights = () => {
+    saveRiskWeights(currentWeights)
+    toast.success('Pesos do Score de Risco da Meta parametrizados com sucesso!')
+    setWeightsModalOpen(false)
+  }
 
   return (
     <Card
@@ -121,6 +141,17 @@ export function MetaCoverageRiskWidget({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeightsModalOpen(true)}
+            className="h-8 px-2.5 text-xs text-slate-700 hover:text-primary gap-1 rounded-xl"
+            title="Parametrizar Pesos do Score de Risco"
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Parametrizar Pesos</span>
+          </Button>
+
           <Badge
             className={cn(
               'text-xs font-bold px-3 py-1 border-none',
@@ -227,6 +258,150 @@ export function MetaCoverageRiskWidget({
           </div>
         </div>
       </div>
+
+      {/* DIALOG DE PARAMETRIZAÇÃO DOS PESOS DO SCORE DE RISCO */}
+      <Dialog open={weightsModalOpen} onOpenChange={setWeightsModalOpen}>
+        <DialogContent className="max-w-lg rounded-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-lg text-primary flex items-center gap-2">
+              <Sliders className="w-5 h-5 text-primary" /> Parametrização do Score de Risco da Meta
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Ajuste os pesos dos critérios corporativos CIAFAL para cálculo do risco da meta
+              comercial.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Cobertura do Pipeline (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.coberturaRatioWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      coberturaRatioWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Ritmo Atual de Vendas (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.ritmoVendasWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      ritmoVendasWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Concentração de Clientes (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.concentracaoClientesWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      concentracaoClientesWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Risco de Crédito SAP ECC (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.riscoCreditoWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      riscoCreditoWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Risco Logístico TMS (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.riscoLogisticoTMSWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      riscoLogisticoTMSWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Oportunidades Paradas (%):</Label>
+                <Input
+                  type="number"
+                  value={currentWeights.oportunidadesParadasWeight}
+                  onChange={(e) =>
+                    setCurrentWeights({
+                      ...currentWeights,
+                      oportunidadesParadasWeight: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-100 text-[11px] text-blue-900">
+              Soma total dos pesos:{' '}
+              <strong>
+                {currentWeights.coberturaRatioWeight +
+                  currentWeights.ritmoVendasWeight +
+                  currentWeights.concentracaoClientesWeight +
+                  currentWeights.riscoCreditoWeight +
+                  currentWeights.riscoLogisticoTMSWeight +
+                  currentWeights.oportunidadesParadasWeight}
+                %
+              </strong>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setWeightsModalOpen(false)}
+              className="h-8 text-xs"
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveWeights}
+              className="h-8 text-xs bg-primary text-white"
+            >
+              Salvar Parâmetros
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* MATRIZ DE FATORES EXPLICATIVOS DO RISCO (ESTOQUE, CRÉDITO, TMS, CONVERSÃO) */}
       <div className="space-y-2">
