@@ -8,6 +8,7 @@ import {
   EtapaFunil,
   mockLeads,
 } from '@/data/mockCommercialData'
+import { quotationService } from '@/services/quotation_service'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -239,20 +240,67 @@ export default function CRM() {
     }
   }
 
-  // Oportunidades do Funil
+  // Oportunidades do Funil sincronizadas com as Cotações Reais
   const rawFunil = useMemo(() => {
-    if (isVendedorOnly) {
-      return mockFunilOportunidades.filter(
-        (op) =>
-          op.vendedorId === user?.id ||
-          (userEmail.includes('vendedor2')
-            ? op.vendedorId === 'qas-vendedor2_teste'
-            : userEmail.includes('representante')
-              ? op.vendedorId === 'qas-representante_teste'
-              : op.vendedorId === 'qas-vendedor_teste'),
+    const baseList = isVendedorOnly
+      ? mockFunilOportunidades.filter(
+          (op) =>
+            op.vendedorId === user?.id ||
+            (userEmail.includes('vendedor2')
+              ? op.vendedorId === 'qas-vendedor2_teste'
+              : userEmail.includes('representante')
+                ? op.vendedorId === 'qas-representante_teste'
+                : op.vendedorId === 'qas-vendedor_teste'),
+        )
+      : mockFunilOportunidades
+
+    // Mapear cotações armazenadas por customer_id, customer_sap_code e customer_name
+    const storedQuotes = quotationService.getStoredQuotations()
+
+    return baseList.map((op) => {
+      // Procurar se existe cotação para o cliente da oportunidade
+      const matchedQuote = storedQuotes.find(
+        (q) =>
+          (q.customer_id && q.customer_id.toLowerCase() === op.clienteId.toLowerCase()) ||
+          (q.customer_sap_code &&
+            op.clienteSap &&
+            (q.customer_sap_code.endsWith(op.clienteSap) ||
+              op.clienteSap.endsWith(q.customer_sap_code))) ||
+          (q.customer_name &&
+            op.clienteNome &&
+            (q.customer_name.toLowerCase().includes(op.clienteNome.toLowerCase()) ||
+              op.clienteNome.toLowerCase().includes(q.customer_name.toLowerCase()))),
       )
-    }
-    return mockFunilOportunidades
+
+      if (!matchedQuote) {
+        return op
+      }
+
+      let mappedEtapa: EtapaFunil = op.etapa
+      const qStatus = matchedQuote.status
+
+      if (qStatus === 'ACEITA') {
+        mappedEtapa = 'pedido'
+      } else if (qStatus === 'PEDIDO_IMPLANTADO' || qStatus === 'PEDIDO_SAP_IMPLANTADO') {
+        mappedEtapa = 'pedido'
+      } else if (qStatus === 'CONVERSAO_SAP' || qStatus === 'AGUARDANDO_IMPLANTACAO_SAP') {
+        mappedEtapa = 'pedido'
+      } else if (qStatus === 'PERDIDA') {
+        mappedEtapa = 'perdido'
+      } else if (qStatus === 'CANCELADA') {
+        mappedEtapa = 'cancelado'
+      } else if (qStatus === 'ENVIADA_AO_CLIENTE' || qStatus === 'AGUARDANDO_RETORNO') {
+        mappedEtapa = 'cotacao'
+      } else if (qStatus === 'NEGOCIACAO' || qStatus === 'EM_NEGOCIACAO') {
+        mappedEtapa = 'negociacao'
+      }
+
+      return {
+        ...op,
+        etapa: mappedEtapa,
+        quotation_status: qStatus,
+      }
+    })
   }, [isVendedorOnly, userEmail, user?.id])
 
   const filteredFunil = useMemo(() => {
@@ -423,11 +471,24 @@ export default function CRM() {
           </Button>
           <Button
             size="sm"
-            onClick={() => toast.info('Abertura de nova cotação integrada ao SAP.')}
-            className="h-9 gap-1.5 text-xs bg-[#003A70] text-white"
+            variant="outline"
+            onClick={() => {
+              // Mantém Nova Oportunidade
+              toast({
+                title: 'Nova Oportunidade',
+                description: 'Abertura rápida de oportunidade no Funil de Vendas.',
+              })
+            }}
+            className="h-9 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-semibold"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Nova Oportunidade
+            <Plus className="w-3.5 h-3.5" />+ Nova Oportunidade
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => navigate('/crm/cotacoes/nova')}
+            className="h-9 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />+ Nova Cotação
           </Button>
         </div>
       </div>
@@ -471,7 +532,7 @@ export default function CRM() {
               value="cotacoes"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
             >
-              <FileText className="w-4 h-4" /> Cotações SAP
+              <FileText className="w-4 h-4" /> Cotações
             </TabsTrigger>
             <TabsTrigger
               value="pipeline"

@@ -21,6 +21,39 @@ class SAPCreditService {
     // Simulação de chamada RFC SAP ECC (BAPI_CREDIT_ACCOUNT_GET_STATUS)
     await new Promise((resolve) => setTimeout(resolve, 350))
 
+    // Caso de referência específico para AGRICORTE (ou código 0001094050)
+    if (sapCode.includes('1094050') || customerId === 'CLI-AGRICORTE') {
+      const creditData: SAPCreditData = {
+        customerId,
+        sapCode,
+        creditLimit: 150000,
+        creditExposure: 93979.97,
+        creditAvailable: 56020.03,
+        utilizationPercent: 62.65,
+        receivablesTotal: 93979.97,
+        receivablesOpenNotDue: 93979.97,
+        receivablesOverdue: 0,
+        maxDelayDays: 0,
+        creditStatus: 'REGULAR',
+        paymentTerms: '30/60 DDL via Boleto Bancário (Tabela Padrão)',
+        lastCheckedAt: '28/08/2026 10:00',
+        isCached: false,
+        systemSource: 'SAP ECC',
+        rawF35Data: {
+          knkli: sapCode,
+          klime: 150000,
+          klims: 93979.97,
+          skx: 56020.03,
+          waers: 'BRL',
+          riskClass: 'B (Médio Risco)',
+          creditGroup: '0001 - Indústria Nacional',
+          lastReviewDate: '15/07/2026',
+        },
+      }
+      this.cache.set(cacheKey, { data: creditData, timestamp: Date.now() })
+      return creditData
+    }
+
     // Variação determinística com base no código SAP para testes
     const hash = sapCode.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
     const baseLimit = ((hash % 8) + 2) * 100000 // 200k a 900k

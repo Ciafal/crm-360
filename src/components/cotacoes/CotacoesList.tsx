@@ -245,44 +245,114 @@ export default function CotacoesList() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Alternador de Visão */}
-          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+          {/* Alternador de Visão & Filtros Rápidos */}
+          <div className="flex flex-wrap bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
             <Button
               size="sm"
-              variant={viewMode === 'DASHBOARD' ? 'secondary' : 'ghost'}
-              onClick={() => setViewMode('DASHBOARD')}
-              className={`h-8 text-xs font-semibold ${
-                viewMode === 'DASHBOARD' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600'
+              variant={
+                viewMode === 'LIST' && selectedStatus === 'ALL' && selectedStockFilter === 'ALL'
+                  ? 'secondary'
+                  : 'ghost'
+              }
+              onClick={() => {
+                setViewMode('LIST')
+                setSelectedStatus('ALL')
+                setSelectedStockFilter('ALL')
+              }}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                viewMode === 'LIST' && selectedStatus === 'ALL' && selectedStockFilter === 'ALL'
+                  ? 'bg-white text-primary shadow-xs'
+                  : 'text-slate-600'
               }`}
             >
-              <LayoutGrid className="w-3.5 h-3.5 mr-1 text-blue-600" /> Dashboard
+              <ListIcon className="w-3.5 h-3.5 mr-1 text-primary" /> Lista
             </Button>
             <Button
               size="sm"
               variant={viewMode === 'KANBAN' ? 'secondary' : 'ghost'}
               onClick={() => setViewMode('KANBAN')}
-              className={`h-8 text-xs font-semibold ${
-                viewMode === 'KANBAN' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600'
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                viewMode === 'KANBAN' ? 'bg-white text-primary shadow-xs' : 'text-slate-600'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 mr-1 text-blue-600" /> Kanban
+              <Layers className="w-3.5 h-3.5 mr-1 text-primary" /> Kanban
             </Button>
             <Button
               size="sm"
-              variant={viewMode === 'LIST' ? 'secondary' : 'ghost'}
-              onClick={() => setViewMode('LIST')}
-              className={`h-8 text-xs font-semibold ${
-                viewMode === 'LIST' ? 'bg-white text-blue-900 shadow-xs' : 'text-slate-600'
+              variant="ghost"
+              onClick={() => {
+                setViewMode('LIST')
+                setSelectedStatus('AGUARDANDO_APROVACAO')
+              }}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                selectedStatus === 'AGUARDANDO_APROVACAO'
+                  ? 'bg-purple-100 text-purple-900 font-bold'
+                  : 'text-slate-600'
               }`}
             >
-              <ListIcon className="w-3.5 h-3.5 mr-1 text-blue-600" /> Tabela
+              Aguardando Aprovação
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setViewMode('LIST')
+                setSelectedStockFilter('SEM_ESTOQUE')
+              }}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                selectedStockFilter === 'SEM_ESTOQUE'
+                  ? 'bg-amber-100 text-amber-900 font-bold'
+                  : 'text-slate-600'
+              }`}
+            >
+              Aguardando Checagem
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setViewMode('LIST')
+                setSelectedStatus('PRONTA_PARA_ENVIO')
+              }}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                selectedStatus === 'PRONTA_PARA_ENVIO'
+                  ? 'bg-emerald-100 text-emerald-900 font-bold'
+                  : 'text-slate-600'
+              }`}
+            >
+              Aprovadas
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setViewMode('LIST')
+                setSelectedStatus('PEDIDO_IMPLANTADO')
+              }}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                selectedStatus === 'PEDIDO_IMPLANTADO'
+                  ? 'bg-blue-100 text-blue-900 font-bold'
+                  : 'text-slate-600'
+              }`}
+            >
+              Convertidas em Pedido
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'DASHBOARD' ? 'secondary' : 'ghost'}
+              onClick={() => setViewMode('DASHBOARD')}
+              className={`h-8 text-xs font-semibold rounded-lg ${
+                viewMode === 'DASHBOARD' ? 'bg-white text-primary shadow-xs' : 'text-slate-600'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5 mr-1 text-primary" /> Dashboard
             </Button>
           </div>
 
           <Button
             size="sm"
-            onClick={() => navigate('/cotacoes/nova')}
-            className="bg-blue-700 hover:bg-blue-800 text-white font-semibold shadow-xs"
+            onClick={() => navigate('/crm/cotacoes/nova')}
+            className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-xs rounded-xl h-9 text-xs"
           >
             <Plus className="w-4 h-4 mr-1" /> Nova Cotação
           </Button>

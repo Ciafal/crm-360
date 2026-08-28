@@ -99,7 +99,7 @@ describe('Ciclo Completo de Gestão de Cotações CRM 360º CIAFAL', () => {
       'Lote complementar 1.3t liberado no pátio.',
       'Supervisor WMS Contagem',
     )
-    expect(responded.confirmation_status).toBe('CONFIRMAR' ? 'CONFIRMADO' : 'CONFIRMADO')
+    expect(responded.confirmation_status).toBe('CONFIRMADO')
     expect(responded.confirmed_qty).toBe(4.5)
   })
 

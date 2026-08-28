@@ -33,6 +33,7 @@ export interface QuotationAdminSettings {
   defaultValidityDays: number
   followUpSlaHours: number
   stockConfirmationSlaHours: number
+  stockCheckThresholdTons: number // Limite de checagem de estoque (default 5.0 t)
   approvalThresholds: {
     sellerMaxDiscount: number // ex: 3%
     supervisorMaxDiscount: number // ex: 7%
@@ -46,6 +47,7 @@ export const DEFAULT_ADMIN_SETTINGS: QuotationAdminSettings = {
   defaultValidityDays: 10,
   followUpSlaHours: 48,
   stockConfirmationSlaHours: 48,
+  stockCheckThresholdTons: 5.0,
   approvalThresholds: {
     sellerMaxDiscount: 3.0,
     supervisorMaxDiscount: 7.0,
@@ -73,6 +75,39 @@ export interface CatalogMaterial {
 
 export const CATALOG_MATERIALS: CatalogMaterial[] = [
   {
+    code: 'V20200360600',
+    description: 'CANT. 2 X 1/4 - 6,00 M - 1015/1022',
+    family: 'Cantoneiras Laminadas',
+    dimension: '2" x 1/4" - 6,00 M',
+    unit: 't',
+    sapPrice: 5882.79,
+    availableStock: 3.4, // < 5t => triggers checagem de estoque
+    plant: '1000 - Contagem Matriz',
+    storageLocation: '0001 - Pátio Perfis & Cantoneiras',
+    stockUpdatedAt: '28/08/2026 10:30',
+    stockDetails: {
+      availableStockTons: 3.4,
+      batchCount: 2,
+      averageBatchWeightTons: 1.7,
+      modeBatchWeightTons: 1.7,
+      plant: '1000 - Contagem Matriz',
+      storageLocation: '0001 - Pátio Perfis & Cantoneiras',
+      lastUpdatedAt: '28/08/2026 10:30',
+      batches: [
+        { batchNumber: 'LOTE-CNT-01', quantity: 1, weightTons: 1.7, storageLocation: '0001' },
+        { batchNumber: 'LOTE-CNT-02', quantity: 1, weightTons: 1.7, storageLocation: '0001' },
+      ],
+    },
+    plannedProduction: {
+      hasPlannedProduction: true,
+      plannedDate: '2026-09-02',
+      plannedQuantityTons: 25.0,
+      productionLineCenter: 'Linha L2 - Laminação Perfis Leves',
+      lastUpdatedAt: '28/08/2026 10:25',
+      sourceSystem: 'SAP ECC PP / Planejamento Oficial',
+    },
+  },
+  {
     code: 'TB-304-SCH10',
     description: 'Tubo Inox AISI 304 Redondo SCH 10 2"',
     family: 'Tubos e Perfis Inox',
@@ -82,7 +117,7 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     availableStock: 12.5,
     plant: '1000 - Contagem Matriz',
     storageLocation: '0001 - Depósito Tubos Inox',
-    stockUpdatedAt: '2024-10-24 16:30',
+    stockUpdatedAt: '28/08/2026 10:30',
     stockDetails: {
       availableStockTons: 12.5,
       batchCount: 6,
@@ -90,7 +125,7 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
       modeBatchWeightTons: 2.1,
       plant: '1000 - Contagem Matriz',
       storageLocation: '0001 - Depósito Tubos Inox',
-      lastUpdatedAt: '2024-10-24 16:30',
+      lastUpdatedAt: '28/08/2026 10:30',
       batches: [
         { batchNumber: 'LOTE-304-01', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
         { batchNumber: 'LOTE-304-02', quantity: 1, weightTons: 2.1, storageLocation: '0001' },
@@ -102,10 +137,10 @@ export const CATALOG_MATERIALS: CatalogMaterial[] = [
     },
     plannedProduction: {
       hasPlannedProduction: true,
-      plannedDate: '2024-11-12',
+      plannedDate: '2026-09-12',
       plannedQuantityTons: 18.0,
       productionLineCenter: 'Linha de Conformação e Solda TIG 02',
-      lastUpdatedAt: '2024-10-24 08:00',
+      lastUpdatedAt: '28/08/2026 08:00',
       sourceSystem: 'SAP ECC PP / Planejamento Oficial',
     },
   },
@@ -284,6 +319,49 @@ export interface PreloadedCustomer {
 }
 
 export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
+  {
+    id: 'CLI-AGRICORTE',
+    sapCode: '0001094050',
+    razaoSocial: 'AGRICORTE IMPLEMENTOS AGRICOLAS S.A.',
+    nomeFantasia: 'AGRICORTE',
+    cnpj: '04.891.233/0001-90',
+    cidade: 'Uberlândia',
+    uf: 'MG',
+    vendedor: 'Carlos Mendonça',
+    archetype: 'INDÚSTRIA',
+    abcHistorico: 'A',
+    contatos: [
+      {
+        nome: 'Marcos Antônio Oliveira',
+        cargo: 'Gerente de Suprimentos',
+        telefone: '(34) 99882-1100',
+        email: 'marcos.oliveira@agricorte.com.br',
+      },
+      {
+        nome: 'Aline Ferreira',
+        cargo: 'Compradora Técnica',
+        telefone: '(34) 99765-4321',
+        email: 'suprimentos@agricorte.com.br',
+      },
+    ],
+    shipToAddresses: [
+      {
+        code: '0001094050-01',
+        label: 'Planta Industrial Matriz - Uberlândia',
+        address: 'Av. Industrial das Palmeiras, 3400 - Distrito Industrial - Uberlândia/MG',
+      },
+      {
+        code: '0001094050-02',
+        label: 'Centro de Montagem - Linha Agrícola',
+        address: 'Rodovia BR-050, Km 74 - Uberlândia/MG',
+      },
+    ],
+    condicoesPagamento: ['30/60 DDL (Boleto)', '28 DDL', '45 DDL', 'À Vista (TED/PIX)'],
+    salesOrg: '1000',
+    distributionChannel: '10',
+    division: '20',
+    limiteCreditoDisponivel: 56020.03,
+  },
   {
     id: 'CLI-8041',
     sapCode: '0001088041',

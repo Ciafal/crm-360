@@ -157,11 +157,11 @@ export default function Layout() {
                     <span className="text-[10px] text-muted-foreground">Reativação Comercial</span>
                   </Link>
                   <Link
-                    to="/cotacoes"
+                    to="/crm/cotacoes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >
                     <strong className="text-slate-900">Cotações</strong>
-                    <span className="text-[10px] text-muted-foreground">Fila SAP ECC</span>
+                    <span className="text-[10px] text-muted-foreground">Gestão Comercial</span>
                   </Link>
                   <Link
                     to="/kpis-comerciais"
@@ -324,11 +324,11 @@ export default function Layout() {
                 <span>Gestão de Inativos</span>
               </Link>
               <Link
-                to="/cotacoes"
+                to="/crm/cotacoes"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
               >
-                <span>Cotações & Fila SAP</span>
+                <span>Cotações</span>
               </Link>
               <Link
                 to="/central-integracoes"
