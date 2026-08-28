@@ -357,6 +357,15 @@ export default function SatisfacaoClientes() {
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               size="sm"
+              onClick={() => navigate('/central-acoes')}
+              className="h-9 bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
+            >
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Central de Ações</span>
+            </Button>
+
+            <Button
+              size="sm"
               onClick={() => handleOpenCriarPlano()}
               className="h-9 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
             >

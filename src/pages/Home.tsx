@@ -616,19 +616,29 @@ export default function Home() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-amber-500" />
+              <Sparkles className="w-5 h-5 text-amber-500" />
               <h3 className="font-serif text-xl font-bold text-primary">
                 Ações Recomendadas do Dia
               </h3>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Oportunidades e contatos priorizados com maior probabilidade de impacto imediato na
-              meta.
+              Oportunidades, campanhas de reativação, clientes sem cobertura e estoque parado com
+              maior impacto comercial.
             </p>
           </div>
-          <Badge className="bg-primary text-white text-xs">
-            {mockAcoesDoDia.length} Ações Prioritárias
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => navigate('/central-acoes')}
+              className="h-8 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl gap-1.5 shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Central de Ações</span>
+            </Button>
+            <Badge className="bg-primary text-white text-xs">
+              {mockAcoesDoDia.length} Ações Prioritárias
+            </Badge>
+          </div>{' '}
         </div>
 
         <div className="space-y-3">

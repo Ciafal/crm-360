@@ -288,10 +288,12 @@ class CustomerManagementService {
       }
 
       return {
+        id: `wtc-${c.id}`,
         cliente: c,
         prioridade,
         score,
         motivoOrdem: reasons.join(' • '),
+        motivo: reasons.join(' • '),
         produtoSugerido: prodSugerido,
         ultimoContatoStr: `${c.ultimoContatoData || 'Sem registro'} (${c.ultimoContatoCanal || 'Nenhum'})`,
         diasSemContato: c.diasSemContato,

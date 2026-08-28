@@ -359,14 +359,17 @@ export interface RegionalGeoMetric {
 }
 
 export interface AIWhoToContactSuggestion {
+  id?: string
   cliente: CustomerManagementItem
-  prioridade: PriorityLevel
+  prioridade: PriorityLevel | 'URGENTE' | 'ALTA' | 'MEDIA' | 'BAIXA'
+  score?: number
   motivoOrdem: string
+  motivo?: string
   produtoSugerido: SuggestedProduct
   ultimoContatoStr: string
+  isc: number
+  statusRelacionamento: string
+  acaoRecomendada: 'WhatsApp' | 'Ligar' | 'E-mail' | 'Enviar Catálogo' | 'Visita'
   diasSemContato: number
-  ultimaCompraStr: string
   diasSemCompra: number
-  oportunidadeTitulo: string
-  acaoRecomendada: 'Ligar' | 'WhatsApp' | 'E-mail' | 'Visitar' | 'Enviar Catálogo' | 'Criar Cotação'
 }

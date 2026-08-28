@@ -366,7 +366,6 @@ export default function EstoquePage() {
             />
             <span>{isSyncingSap ? 'Consultando SAP...' : 'Atualizar via SAP RFC'}</span>
           </Button>
-
           <Button
             variant="outline"
             size="sm"
@@ -376,21 +375,28 @@ export default function EstoquePage() {
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>Exportar Excel</span>
           </Button>
-
+          <Button
+            size="sm"
+            onClick={() => navigate('/central-acoes')}
+            className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-2xl gap-1.5 shadow-sm"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Central de Ações</span>
+          </Button>
           <Button
             size="sm"
             onClick={() => {
-              if (filteredItems.length > 0) {
-                handleOpenRequestCheck(filteredItems[0])
+              if (selectedItem) {
+                setIsRequestModalOpen(true)
               } else {
-                toast({ title: 'Nenhum item disponível para checagem' })
+                toast.info('Selecione um item na tabela antes de solicitar a checagem física.')
               }
             }}
             className="h-9 text-xs rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold gap-1.5 shadow-xs"
           >
             <Warehouse className="w-3.5 h-3.5" />
             <span>Solicitar Checagem Física</span>
-          </Button>
+          </Button>{' '}
         </div>
       </div>
 

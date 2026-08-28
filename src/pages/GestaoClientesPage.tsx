@@ -209,6 +209,15 @@ export default function GestaoClientesPage() {
 
           <Button
             size="sm"
+            onClick={() => navigate('/central-acoes')}
+            className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-2xl gap-1.5 shadow-sm"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Central de Ações</span>
+          </Button>
+
+          <Button
+            size="sm"
             onClick={() => setActiveTab('quem_contatar')}
             className="h-9 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl gap-1.5 shadow-sm"
           >

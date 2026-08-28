@@ -33,6 +33,7 @@ import RelatorioRelease from './pages/RelatorioRelease'
 import CentralIntegracoes from './pages/CentralIntegracoes'
 import SatisfacaoClientes from './pages/SatisfacaoClientes'
 import EstoquePage from './pages/EstoquePage'
+import CentralAcoesPage from './pages/CentralAcoesPage'
 import GestaoClientesPage from './pages/GestaoClientesPage'
 import NotFound from './pages/NotFound'
 
@@ -60,6 +61,9 @@ const App = () => (
               <Route element={<Layout />}>
                 <Route path="/home" element={<Home />} />
                 <Route path="/meu-dia" element={<Home />} />
+                <Route path="/central-acoes" element={<CentralAcoesPage />} />
+                <Route path="/acoes" element={<CentralAcoesPage />} />
+                <Route path="/campanhas" element={<CentralAcoesPage />} />
                 <Route path="/gestao-clientes" element={<GestaoClientesPage />} />
                 <Route path="/clientes" element={<GestaoClientesPage />} />
                 <Route path="/carteira" element={<GestaoClientesPage />} />

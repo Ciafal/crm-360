@@ -1,5 +1,5 @@
 // src/components/gestao-clientes/WhoToContactPanel.tsx
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,8 +13,14 @@ import {
   Clock,
   Building2,
   AlertTriangle,
+  CheckSquare,
+  Square,
+  ListTodo,
+  ExternalLink,
 } from 'lucide-react'
 import type { AIWhoToContactSuggestion, CustomerManagementItem } from '@/types/customer_management'
+import { CreateBulkTasksModal } from '@/components/central-acoes/CreateBulkTasksModal'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 interface WhoToContactPanelProps {
@@ -28,6 +34,12 @@ export function WhoToContactPanel({
   onSelectClient,
   onQuickAction,
 }: WhoToContactPanelProps) {
+  const navigate = useNavigate()
+
+  // Seleção em Lote (Critério 4 do usuário: Selecionar Top 10, Selecionar Todos, Criar Tarefas em Lote)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkModalOpen, setBulkModalOpen] = useState(false)
+
   const handleAction = (sug: AIWhoToContactSuggestion) => {
     if (onQuickAction) {
       onQuickAction(sug.cliente, sug.acaoRecomendada)
@@ -38,9 +50,34 @@ export function WhoToContactPanel({
     }
   }
 
+  const handleSelectTop10 = () => {
+    const top10 = suggestions.slice(0, 10).map((s) => s.id)
+    setSelectedIds(top10)
+    toast.info('Top 10 clientes prioritários selecionados!')
+  }
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === suggestions.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(suggestions.map((s) => s.id))
+    }
+  }
+
+  const handleToggleSingle = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
+
+  const selectedCustomers = useMemo(() => {
+    return suggestions.filter((s) => selectedIds.includes(s.id)).map((s) => s.cliente)
+  }, [suggestions, selectedIds])
+
   return (
     <div className="space-y-4">
-      <div className="p-4 rounded-3xl bg-gradient-to-r from-sky-950 via-slate-900 to-slate-950 border border-sky-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Header com Integração para a Central de Ações */}
+      <div className="p-4 rounded-3xl bg-gradient-to-r from-sky-950 via-slate-900 to-slate-950 border border-sky-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-2xl bg-sky-500/20 border border-sky-500/30 text-amber-300">
             <Sparkles className="w-6 h-6" />
@@ -48,135 +85,182 @@ export function WhoToContactPanel({
           <div>
             <h3 className="font-serif text-lg font-bold text-white tracking-tight flex items-center gap-2">
               Quem Devo Contatar Hoje?
-              <Badge className="bg-amber-500 text-slate-950 text-[10px] font-bold">
-                Motor IA CIAFAL
+              <Badge className="bg-amber-500 text-slate-950 text-[10px] font-mono font-bold">
+                IA Priorizada ({suggestions.length})
               </Badge>
             </h3>
             <p className="text-xs text-slate-300">
-              Priorização inteligente cruzando Cobertura Vencida, Classificação, ISC, Queda de
-              Volume, Cotações e Estoque Disponível.
+              Recomendações diárias com motivo, produto sugerido e abordagem comercial pronta.
             </p>
           </div>
         </div>
 
-        <div className="text-xs text-slate-400 font-mono">
-          {suggestions.length} clientes priorizados para hoje
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => navigate('/central-acoes')}
+            className="h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5 shadow-sm"
+          >
+            <span>Abrir Central de Ações</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {suggestions.map((sug, idx) => (
-          <Card
-            key={sug.cliente.id}
-            className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 transition-all flex flex-col justify-between gap-3 shadow-xs"
+      {/* Barra de Seleção em Lote (Critério 4: Selecionar Top 10 / Selecionar Todos / Criar Tarefas em Lote) */}
+      <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 font-semibold">Seleção Rápida:</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSelectTop10}
+            className="h-7 text-xs border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 rounded-xl gap-1"
           >
-            <div className="space-y-2">
-              {/* Topo do Card */}
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-sky-400">
-                  #{idx + 1} • {sug.prioridade}
-                </span>
-                <Badge
-                  variant="outline"
-                  className={`text-[9px] font-mono ${
-                    sug.cliente.classificacao === 'ESTRATEGICO'
-                      ? 'border-purple-500 text-purple-300'
-                      : sug.cliente.classificacao === 'EM_RISCO'
-                        ? 'border-rose-500 text-rose-300'
-                        : 'border-slate-600 text-slate-300'
-                  }`}
-                >
-                  {sug.cliente.classificacao.replace('_', ' ')}
-                </Badge>
-              </div>
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Selecionar Top 10</span>
+          </Button>
 
-              {/* Nome do Cliente */}
-              <div>
-                <strong
-                  onClick={() => onSelectClient(sug.cliente)}
-                  className="text-sm font-bold text-white hover:text-sky-300 cursor-pointer transition-colors block leading-snug"
-                >
-                  {sug.cliente.razaoSocial}
-                </strong>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
-                  {sug.cliente.cidade} - {sug.cliente.uf} · {sug.cliente.segmento}
-                </span>
-              </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleSelectAll}
+            className="h-7 text-xs border-slate-700 bg-slate-950 text-slate-300 hover:text-white rounded-xl gap-1"
+          >
+            {selectedIds.length === suggestions.length && suggestions.length > 0 ? (
+              <CheckSquare className="w-3 h-3 text-sky-400" />
+            ) : (
+              <Square className="w-3 h-3 text-slate-500" />
+            )}
+            <span>
+              {selectedIds.length === suggestions.length && suggestions.length > 0
+                ? 'Desmarcar Todos'
+                : 'Selecionar Todos'}
+            </span>
+          </Button>
+        </div>
 
-              {/* Motivo do Algoritmo */}
-              <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80 text-[11px] text-amber-200/90 leading-tight">
-                <span className="font-bold block text-[10px] uppercase text-amber-400">
-                  Motivo de Priorização
-                </span>
-                {sug.motivoOrdem}
-              </div>
-
-              {/* Indicadores do Cliente */}
-              <div className="grid grid-cols-3 gap-1 p-2 bg-slate-950/60 rounded-xl text-center text-[10px] border border-slate-800/50">
-                <div>
-                  <span className="text-slate-500 block">Sem Contato</span>
-                  <strong className={sug.diasSemContato > 30 ? 'text-rose-400' : 'text-slate-200'}>
-                    {sug.diasSemContato} dias
-                  </strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">ISC</span>
-                  <strong className={sug.cliente.isc >= 75 ? 'text-sky-400' : 'text-amber-400'}>
-                    {sug.cliente.isc}/100
-                  </strong>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">OTIF</span>
-                  <strong
-                    className={sug.cliente.otif >= 90 ? 'text-emerald-400' : 'text-orange-400'}
-                  >
-                    {sug.cliente.otif}%
-                  </strong>
-                </div>
-              </div>
-
-              {/* Produto Sugerido */}
-              <div className="text-xs pt-1 border-t border-slate-800">
-                <span className="text-[10px] text-slate-400 block uppercase font-bold">
-                  Produto Recomendado
-                </span>
-                <strong className="text-sky-300 text-[11px] block">
-                  {sug.produtoSugerido.descricao}
-                </strong>
-                <span className="text-[10px] text-slate-500 block">
-                  {sug.produtoSugerido.motivo}
-                </span>
-              </div>
-            </div>
-
-            {/* Ações Inferiores */}
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
-              <Button
-                size="sm"
-                onClick={() => handleAction(sug)}
-                className="flex-1 h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1"
-              >
-                {sug.acaoRecomendada === 'WhatsApp' && <MessageSquare className="w-3.5 h-3.5" />}
-                {sug.acaoRecomendada === 'Ligar' && <PhoneCall className="w-3.5 h-3.5" />}
-                {sug.acaoRecomendada === 'E-mail' && <Mail className="w-3.5 h-3.5" />}
-                {sug.acaoRecomendada === 'Enviar Catálogo' && (
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                )}
-                <span>{sug.acaoRecomendada}</span>
-              </Button>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onSelectClient(sug.cliente)}
-                className="h-8 text-xs border-slate-700 text-slate-300 hover:text-white rounded-xl"
-              >
-                Ficha 360
-              </Button>
-            </div>
-          </Card>
-        ))}
+        {selectedIds.length > 0 && (
+          <Button
+            size="sm"
+            onClick={() => setBulkModalOpen(true)}
+            className="h-7 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl gap-1.5 shadow-sm animate-fade-in"
+          >
+            <ListTodo className="w-3.5 h-3.5" />
+            <span>Criar Tarefas em Lote ({selectedIds.length})</span>
+          </Button>
+        )}
       </div>
+
+      {/* Grid de Recomendações */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {suggestions.map((sug) => {
+          const isSelected = selectedIds.includes(sug.id)
+
+          return (
+            <Card
+              key={sug.id}
+              className={`p-4 bg-slate-900/90 border-slate-800 rounded-3xl space-y-3 flex flex-col justify-between hover:border-sky-700/60 transition-all ${
+                isSelected ? 'border-sky-500/60 bg-sky-950/20' : ''
+              }`}
+            >
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleToggleSingle(sug.id)}
+                      className="rounded border-slate-700 bg-slate-950 text-sky-500 focus:ring-sky-500 cursor-pointer w-4 h-4"
+                    />
+                    <Badge
+                      className={`text-[9px] font-bold border-none ${
+                        sug.prioridade === 'URGENTE'
+                          ? 'bg-rose-500 text-white'
+                          : sug.prioridade === 'ALTA'
+                            ? 'bg-amber-500 text-slate-950'
+                            : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {sug.prioridade}
+                    </Badge>
+                  </div>
+                  <span className="font-mono text-[10px] text-sky-400 font-bold">
+                    Score {sug.score}
+                  </span>
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => onSelectClient(sug.cliente)}
+                    className="text-left font-serif font-bold text-sm text-white hover:text-sky-300 transition-colors block"
+                  >
+                    {sug.cliente.nomeFantasia || sug.cliente.razaoSocial}
+                  </button>
+                  <span className="text-[10px] text-slate-400 block">
+                    {sug.cliente.cidade} - {sug.cliente.uf} · {sug.cliente.segmento}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-300 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-amber-400 block">
+                    Motivo IA:
+                  </span>
+                  <p className="text-[11px] leading-snug">{sug.motivo}</p>
+                </div>
+
+                <div className="p-2.5 rounded-2xl bg-sky-950/40 border border-sky-800/30 text-xs space-y-0.5">
+                  <span className="text-[10px] uppercase font-bold text-sky-400 block">
+                    Produto Recomendado:
+                  </span>
+                  <strong className="text-white text-[11px] block">
+                    {sug.produtoSugerido.descricao}
+                  </strong>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    {sug.produtoSugerido.motivo}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => handleAction(sug)}
+                  className="flex-1 h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1 shadow-xs"
+                >
+                  {sug.acaoRecomendada === 'Ligar' && <PhoneCall className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'WhatsApp' && <MessageSquare className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'E-mail' && <Mail className="w-3.5 h-3.5" />}
+                  {sug.acaoRecomendada === 'Enviar Catálogo' && (
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                  )}
+                  <span>{sug.acaoRecomendada}</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onSelectClient(sug.cliente)}
+                  className="h-8 text-xs border-slate-700 bg-slate-950 text-slate-300 hover:text-white rounded-xl"
+                >
+                  Ver 360º
+                </Button>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+
+      {/* Modal de Criação de Tarefas em Lote */}
+      <CreateBulkTasksModal
+        open={bulkModalOpen}
+        onOpenChange={setBulkModalOpen}
+        clientes={selectedCustomers}
+        origemPadrao="quem_devo_contatar"
+        onTasksCreated={() => {
+          setSelectedIds([])
+        }}
+      />
     </div>
   )
 }

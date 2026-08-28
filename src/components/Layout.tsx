@@ -40,6 +40,7 @@ export default function Layout() {
   // 1. Meu Dia; 2. Contatos; 3. Gestão Clientes; 4. Cotações; 5. CRM 360; 6. Tarefas; 7. KPI's; 8. Estoque; 9. Satisfação Clientes.
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
+    { name: 'Central de Ações', path: '/central-acoes', badge: 'IA Ação' },
     { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
     { name: 'Gestão Clientes', path: '/gestao-clientes' },
     { name: 'Cotações', path: '/crm/cotacoes' },
