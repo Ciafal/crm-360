@@ -13,18 +13,20 @@ import type { SapOrderMessage } from '@/types/quotation'
 interface SapMessageDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  integrationId: string
-  messages: SapOrderMessage[]
+  integrationId?: string
+  messages?: SapOrderMessage[]
+  quotation?: any
 }
 
 export function SapMessageDrawer({
   open,
   onOpenChange,
-  integrationId,
-  messages,
+  integrationId = 'ALL',
+  messages = [],
 }: SapMessageDrawerProps) {
-  const filtered = messages.filter(
-    (m) => m.integration_id === integrationId || integrationId === 'ALL',
+  const safeMessages = Array.isArray(messages) ? messages : []
+  const filtered = safeMessages.filter(
+    (m) => Boolean(m) && (m.integration_id === integrationId || integrationId === 'ALL'),
   )
 
   return (
