@@ -932,7 +932,7 @@ export default function NovaCotacao() {
                 <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
                   <Button
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     onClick={() => setTitulosDrawerOpen(true)}
                     className="text-primary hover:bg-primary/5 text-[11px] font-semibold h-7 px-2"
                   >
@@ -981,7 +981,7 @@ export default function NovaCotacao() {
                 <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
                   <Button
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     onClick={() => setComprasDrawerOpen(true)}
                     className="text-primary hover:bg-primary/5 text-[11px] font-semibold h-7 px-2"
                   >
@@ -989,7 +989,7 @@ export default function NovaCotacao() {
                   </Button>
                   <Button
                     variant="ghost"
-                    size="xs"
+                    size="sm"
                     onClick={() => setPedidosDrawerOpen(true)}
                     className="text-primary hover:bg-primary/5 text-[11px] font-semibold h-7 px-2"
                   >
@@ -1120,7 +1120,7 @@ export default function NovaCotacao() {
                       {selectedMaterial.availableStock < stockCheckThreshold && (
                         <Button
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           onClick={() => {
                             setStockCheckItemTarget({
                               id: `temp-${Date.now()}`,
@@ -1327,7 +1327,7 @@ export default function NovaCotacao() {
                               {it.stock_available < stockCheckThreshold ? (
                                 <Button
                                   variant="ghost"
-                                  size="xs"
+                                  size="sm"
                                   onClick={() => {
                                     setStockCheckItemTarget(it)
                                     setStockCheckDrawerOpen(true)
@@ -1372,7 +1372,7 @@ export default function NovaCotacao() {
                               <div className="flex items-center justify-center gap-1">
                                 <Button
                                   variant="ghost"
-                                  size="xs"
+                                  size="sm"
                                   onClick={() => setPricingBreakdownItem(it)}
                                   title="Ver formação do preço"
                                   className="h-6 w-6 p-0 text-slate-500 hover:text-primary"
@@ -1381,7 +1381,7 @@ export default function NovaCotacao() {
                                 </Button>
                                 <Button
                                   variant="ghost"
-                                  size="xs"
+                                  size="sm"
                                   onClick={() => handleRemoveItem(it.id)}
                                   className="h-6 w-6 p-0 text-rose-600 hover:bg-rose-50"
                                 >

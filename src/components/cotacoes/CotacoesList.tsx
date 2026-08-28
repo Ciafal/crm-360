@@ -594,36 +594,36 @@ export default function CotacoesList() {
                           <div className="flex items-center justify-center gap-1">
                             <Button
                               variant="ghost"
-                              size="xs"
+                              size="sm"
                               onClick={() => {
                                 setSelectedQuote(q)
                                 setPricingDrawerOpen(true)
                               }}
-                              className="text-blue-700 hover:bg-blue-50"
+                              className="h-7 w-7 p-0 text-blue-700 hover:bg-blue-50"
                               title="Ver Detalhes"
                             >
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="xs"
+                              size="sm"
                               onClick={() => {
                                 setSelectedQuote(q)
                                 setPdfDialogOpen(true)
                               }}
-                              className="text-slate-700 hover:bg-slate-100"
+                              className="h-7 w-7 p-0 text-slate-700 hover:bg-slate-100"
                               title="Gerar PDF"
                             >
                               <FileText className="w-3.5 h-3.5" />
                             </Button>
                             <Button
                               variant="ghost"
-                              size="xs"
+                              size="sm"
                               onClick={() => {
                                 setSelectedQuote(q)
                                 setCommDialogOpen(true)
                               }}
-                              className="text-emerald-700 hover:bg-emerald-50"
+                              className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
                               title="Enviar ao Cliente"
                             >
                               <Send className="w-3.5 h-3.5" />

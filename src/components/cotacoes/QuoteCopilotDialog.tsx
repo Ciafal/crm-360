@@ -159,9 +159,9 @@ export function QuoteCopilotDialog({
               </strong>
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={handleCopyArgument}
-                className="h-6 text-[10px] text-purple-700 hover:bg-purple-100 gap-1"
+                className="h-6 px-2 text-[10px] text-purple-700 hover:bg-purple-100 gap-1"
               >
                 <Copy className="w-3 h-3" />
                 Copiar

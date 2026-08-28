@@ -208,7 +208,16 @@ export default function GestaoDoDia() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => navigate('/kpis')}
+            className="h-9 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl shadow-xs"
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Ver Cockpit Executivo</span>
+          </Button>
+
           <Select value={periodo} onValueChange={setPeriodo}>
             <SelectTrigger className="h-9 w-36 text-xs rounded-xl">
               <SelectValue placeholder="Período" />
@@ -224,6 +233,7 @@ export default function GestaoDoDia() {
 
           <Button
             size="sm"
+            variant="outline"
             onClick={() => {
               setLoading(true)
               setTimeout(() => {
@@ -231,7 +241,7 @@ export default function GestaoDoDia() {
                 toast.success('Métricas atualizadas com o SAP ECC!')
               }, 300)
             }}
-            className="h-9 gap-1.5 text-xs bg-primary text-white font-semibold"
+            className="h-9 gap-1.5 text-xs font-semibold"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar Dados
           </Button>

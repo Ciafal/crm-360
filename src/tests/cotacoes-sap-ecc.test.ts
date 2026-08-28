@@ -127,7 +127,7 @@ describe('Módulo de Cotações & Integração SAP ECC — 9 Critérios de Aceit
     const queueItem = await quotationService.requestSapOrderQueue(quote.id, 'Carlos Mendonça')
     expect(queueItem).toBeDefined()
     expect(queueItem.request_status).toBe('READY_FOR_SAP')
-    expect(queueItem.customer_sap_code).toBe('0001088041')
+    expect(queueItem.sap_customer_code).toBe('0001088041')
 
     const updatedQuote = await quotationService.getQuotationById(quote.id)
     expect(updatedQuote?.status).toBe('AGUARDANDO_IMPLANTACAO_SAP')

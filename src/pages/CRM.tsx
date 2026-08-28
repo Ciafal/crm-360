@@ -488,11 +488,7 @@ export default function CRM() {
             size="sm"
             variant="outline"
             onClick={() => {
-              // Mantém Nova Oportunidade
-              toast({
-                title: 'Nova Oportunidade',
-                description: 'Abertura rápida de oportunidade no Funil de Vendas.',
-              })
+              toast.info('Abertura rápida de oportunidade no Funil de Vendas.')
             }}
             className="h-9 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-semibold"
           >

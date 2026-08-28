@@ -534,6 +534,16 @@ export default function Equipe() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Acesso rápido aos Cockpits Analíticos */}
+          <Button
+            size="sm"
+            onClick={() => navigate('/kpis')}
+            className="h-9 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl shadow-xs"
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            <span>Cockpit Executivo & Metas</span>
+          </Button>
+
           {/* Toggle Principal: Toneladas vs R$ Faturamento */}
           <div className="flex items-center bg-slate-200/70 p-1 rounded-xl border border-slate-300 text-xs shadow-xs">
             <button

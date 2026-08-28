@@ -363,7 +363,11 @@ export default function Home() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => navigate('/crm?tab=funil')}
+              onClick={() => {
+                if (typeof navigate === 'function') {
+                  navigate('/crm?tab=funil')
+                }
+              }}
               className="h-7 text-xs text-primary gap-1"
             >
               Ver Funil <ChevronRight className="w-3.5 h-3.5" />

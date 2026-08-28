@@ -36,10 +36,16 @@ export function InternalApprovalDialog({
   const handleApprove = async () => {
     try {
       setLoading(true)
+      const level =
+        quotation.approval_level_required === 'SUPERVISOR' ||
+        quotation.approval_level_required === 'GERENCIA' ||
+        quotation.approval_level_required === 'DIRETORIA'
+          ? quotation.approval_level_required
+          : 'GERENCIA'
       await quotationService.approveQuotation(
         quotation.id,
         'Marcos Vinícius (Gerente Regional)',
-        quotation.approval_level_required || 'GERENCIA',
+        level,
         notes,
       )
       toast.success(`Cotação ${quotation.code} aprovada internamente com sucesso!`)

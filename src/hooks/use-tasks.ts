@@ -8,6 +8,9 @@ import pb from '@/lib/pocketbase/client'
 const FALLBACK_TASKS: Task[] = [
   {
     id: 'mock-quote-task-01',
+    user_id: 'usr-admin',
+    collectionId: 'tasks_col',
+    collectionName: 'tasks',
     title: 'Follow-up de Cotação COT-98104 (6.0t Tubos Inox)',
     description:
       'Cotação enviada via WhatsApp para Roberto Antunes (Metalúrgica Santa Rita). Aguarda PO formal para integração SAP.',
@@ -23,6 +26,9 @@ const FALLBACK_TASKS: Task[] = [
   },
   {
     id: 'mock-quote-task-02',
+    user_id: 'usr-admin',
+    collectionId: 'tasks_col',
+    collectionName: 'tasks',
     title: 'Aprovação Comercial Gerencial COT-98105 (Desvio -10.06%)',
     description:
       'Proposta para Caldeiraria & Tanques Paulista excede limite de vendedor. Requer liberação gerencial de preço.',
@@ -38,6 +44,9 @@ const FALLBACK_TASKS: Task[] = [
   },
   {
     id: 'mock-quote-task-03',
+    user_id: 'usr-admin',
+    collectionId: 'tasks_col',
+    collectionName: 'tasks',
     title: 'Confirmação de Saldo Físico WMS/Pátio (CH-304-3MM)',
     description:
       'Saldo sistêmico abaixo de 5t (3.2t disponível). PCP e Pátio Contagem devem confirmar disponibilidade física de 4.5t.',

@@ -80,8 +80,9 @@ export function SapIntegrationRequestDialog({
     {
       label: 'Aprovação Comercial Interna concluída',
       valid:
-        quotation.approval_status !== 'AGUARDANDO_APROVACAO' &&
-        quotation.approval_status !== 'REJEITADA',
+        (quotation.approval_status as string) !== 'AGUARDANDO_APROVACAO' &&
+        (quotation.approval_status as string) !== 'REJEITADA' &&
+        quotation.approval_status !== 'REJECTED',
       detail: quotation.approval_status,
     },
     {

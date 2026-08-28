@@ -337,7 +337,7 @@ export default function SapOrdersMonitor() {
                         {item.customer_name || 'Cliente'}
                       </strong>
                       <span className="text-[11px] text-muted-foreground font-mono">
-                        SAP: {item.customer_sap_code} · Ship-To: {item.ship_to_code}
+                        SAP: {item.sap_customer_code} · Ship-To: {item.ship_to_code}
                       </span>
                     </td>
 

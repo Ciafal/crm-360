@@ -144,10 +144,10 @@ export function CommunicationComposer({
 
             <Button
               variant="outline"
-              size="xs"
+              size="sm"
               onClick={handleIaSuggest}
               disabled={generatingIa}
-              className="text-xs text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
+              className="h-7 text-xs text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
             >
               <Sparkles className="w-3.5 h-3.5 mr-1 text-indigo-600" />
               IA Sugerir
