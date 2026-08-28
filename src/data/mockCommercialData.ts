@@ -1692,6 +1692,8 @@ export const mockClientes: ClienteCarteira[] = [
 ]
 
 // 3. MOCK FUNIL DE VENDAS (20 oportunidades distribuídas nas 8 etapas + saídas)
+export const mockCommercialClients = mockClientes
+
 export const mockFunilOportunidades: OportunidadeFunil[] = [
   // 1. Prospecção
   {

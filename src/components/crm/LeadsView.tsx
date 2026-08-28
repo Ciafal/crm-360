@@ -147,7 +147,7 @@ export function LeadsView({ onConvertLead }: LeadsViewProps) {
       score: Number(formData.qualificationScore) || 75,
       assignedSellerId: 'qas-vendedor_teste',
       createdAt: new Date().toISOString().split('T')[0],
-      lastContactAt: 'Hoje',
+      lastContact: 'Hoje',
       cnpj: formData.cnpj || '',
       email: formData.email || '',
       phone: formData.phone || '',
@@ -167,6 +167,12 @@ export function LeadsView({ onConvertLead }: LeadsViewProps) {
             : 'Frio',
       assignedSeller: formData.assignedSeller || 'Carlos Mendonça',
       stage: 'Novo',
+      urgency:
+        (Number(formData.qualificationScore) || 75) >= 75
+          ? 'Alta'
+          : (Number(formData.qualificationScore) || 75) >= 55
+            ? 'Média'
+            : 'Baixa',
       nextAction: formData.nextAction || 'Qualificação técnica inicial',
       aiSuggestedProbability: (Number(formData.qualificationScore) || 75) >= 75 ? 75 : 50,
     }

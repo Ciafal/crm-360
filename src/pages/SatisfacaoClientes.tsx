@@ -64,7 +64,7 @@ export interface ClientSatisfactionItem {
 export function generateSatisfactionData(): ClientSatisfactionItem[] {
   return mockClientes.map((c, i) => {
     const complaints = mockComplaints[c.id] || []
-    const openComplaints = complaints.filter((co) => co.status !== 'ENCERRADA').length
+    const openComplaints = complaints.filter((co) => co.status !== 'CONCLUIDA').length
 
     let scoreNps = 85
     let scoreCsat = 9.0

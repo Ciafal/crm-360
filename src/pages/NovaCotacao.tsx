@@ -1210,10 +1210,12 @@ export default function NovaCotacao() {
                       <Button
                         variant="outline"
                         size="sm"
+                        type="button"
                         onClick={() => {
-                          toast.success(
-                            `Alerta de prioridade gerado no TMS para a cotação ${quoteCode} (${selectedMaterial.description})!`,
-                          )
+                          toast({
+                            title: 'Alerta de Prioridade TMS Gerado',
+                            description: `Cotação ${quoteCode} (${selectedMaterial.description}) sinalizada com prioridade máxima.`,
+                          })
                         }}
                         className="w-full text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border-indigo-300 text-[10px] font-bold h-6 mt-1"
                       >

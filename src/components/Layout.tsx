@@ -36,15 +36,17 @@ export default function Layout() {
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
 
-  // Atalhos rápidos no TopNav na ordem exata solicitada:
-  // 1. Meu Dia, 2. Contatos, 3. Cotações, 4. CRM 360º, 5. Tarefas, 6. KPI's
+  // Atalhos rápidos no TopNav na ordem exata solicitada (Regra 1):
+  // Meu Dia, Contatos, Cotações, CRM 360, Tarefas, KPI's, Estoque, Satisfação Clientes
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
     { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
     { name: 'Cotações', path: '/crm/cotacoes' },
-    { name: 'CRM 360º', path: '/crm' },
+    { name: 'CRM 360', path: '/crm' },
     { name: 'Tarefas', path: '/tarefas' },
-    { name: 'KPIs', path: '/kpis-comerciais' },
+    { name: "KPI's", path: '/kpis-comerciais' },
+    { name: 'Estoque', path: '/estoque' },
+    { name: 'Satisfação Clientes', path: '/satisfacao-clientes' },
   ]
 
   return (
@@ -137,11 +139,13 @@ export default function Layout() {
                 <DropdownMenuSeparator />
                 <div className="grid grid-cols-2 gap-1.5 py-1">
                   <Link
-                    to="/satisfacao-clientes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-emerald-50/50 border border-emerald-100"
+                    to="/estoque"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-primary/5 border border-primary/20"
                   >
-                    <strong className="text-emerald-950 font-bold">Satisfação Clientes</strong>
-                    <span className="text-[10px] text-emerald-800">NPS, CSAT & Risco IA</span>
+                    <strong className="text-primary font-bold">Gestão de Estoque</strong>
+                    <span className="text-[10px] text-muted-foreground">
+                      Aging, Parados, Oportunidades
+                    </span>
                   </Link>
                   <Link
                     to="/equipe"
@@ -318,11 +322,11 @@ export default function Layout() {
                 Outros Módulos
               </span>
               <Link
-                to="/satisfacao-clientes"
+                to="/estoque"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-emerald-800 bg-emerald-50 font-semibold"
+                className="flex items-center justify-between p-3 rounded-xl text-sm text-primary bg-primary/10 font-semibold"
               >
-                <span>Satisfação Clientes (NPS/CSAT)</span>
+                <span>Gestão Comercial de Estoque</span>
               </Link>
               <Link
                 to="/equipe"

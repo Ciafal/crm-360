@@ -11,6 +11,38 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function exportToCsv(filename: string, rows: Record<string, any>[]): void {
+  if (!rows || !rows.length) return
+  const separator = ';'
+  const keys = Object.keys(rows[0])
+  const csvContent =
+    '\uFEFF' +
+    keys.join(separator) +
+    '\n' +
+    rows
+      .map((row) =>
+        keys
+          .map((k) => {
+            let cell = row[k] === null || row[k] === undefined ? '' : String(row[k])
+            cell = cell.replace(/"/g, '""')
+            if (cell.search(/([",\n;])/g) >= 0) {
+              cell = `"${cell}"`
+            }
+            return cell
+          })
+          .join(separator),
+      )
+      .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.setAttribute('download', `${filename}.csv`)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
 export function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
