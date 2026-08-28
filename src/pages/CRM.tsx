@@ -63,7 +63,7 @@ import { CommercialMetricToggle } from '@/components/shared/CommercialMetricTogg
 import { CarteiraMap } from '@/components/crm/CarteiraMap'
 import { LeadsView } from '@/components/crm/LeadsView'
 import { useAppStore } from '@/stores/useAppStore'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -79,10 +79,16 @@ type SortColumn =
 export default function CRM() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { commercialMetric } = useAppStore()
-  const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'carteira')
+
+  // Se a rota for /crm/cotacoes ou /cotacoes, a aba padrão inicial é "cotacoes"
+  const isCotacoesRoute = location.pathname === '/crm/cotacoes' || location.pathname === '/cotacoes'
+  const initialTab = searchParams.get('tab') || (isCotacoesRoute ? 'cotacoes' : 'carteira')
+
+  const [activeTab, setActiveTab] = useState<string>(initialTab)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -108,12 +114,21 @@ export default function CRM() {
     const tabFromUrl = searchParams.get('tab')
     if (tabFromUrl && tabFromUrl !== activeTab) {
       setActiveTab(tabFromUrl)
+    } else if (
+      !tabFromUrl &&
+      (location.pathname === '/crm/cotacoes' || location.pathname === '/cotacoes')
+    ) {
+      setActiveTab('cotacoes')
     }
-  }, [searchParams])
+  }, [searchParams, location.pathname])
 
   const handleTabChange = (val: string) => {
     setActiveTab(val)
-    setSearchParams({ tab: val })
+    if (location.pathname === '/crm/cotacoes' || location.pathname === '/cotacoes') {
+      navigate(`/crm?tab=${val}`)
+    } else {
+      setSearchParams({ tab: val })
+    }
   }
 
   const formatBRL = (val: number) => {

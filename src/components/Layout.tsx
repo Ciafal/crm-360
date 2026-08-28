@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Building2, Menu, X, LogOut, ChevronDown } from 'lucide-react'
+import { Building2, Menu, X, LogOut, ChevronDown, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
 import { GlobalAssistant } from '@/components/shared/GlobalAssistant'
@@ -158,10 +158,15 @@ export default function Layout() {
                   </Link>
                   <Link
                     to="/crm/cotacoes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col group"
                   >
-                    <strong className="text-slate-900">Cotações</strong>
-                    <span className="text-[10px] text-muted-foreground">Gestão Comercial</span>
+                    <div className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <strong className="text-slate-900 group-hover:text-primary transition-colors">
+                        Cotações
+                      </strong>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground pl-5">Gestão Comercial</span>
                   </Link>
                   <Link
                     to="/kpis-comerciais"
@@ -328,7 +333,10 @@ export default function Layout() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
               >
-                <span>Cotações</span>
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <span>Cotações</span>
+                </div>
               </Link>
               <Link
                 to="/central-integracoes"

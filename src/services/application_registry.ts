@@ -174,7 +174,7 @@ export const HUB_APPLICATION_REGISTRY: HubModule[] = [
     status: 'ATIVO',
     subItems: [
       { id: 'crm-pipeline', name: 'Pipeline & Funil', path: '/crm' },
-      { id: 'crm-cotacoes', name: 'Cotações & Estoque SAP', path: '/crm?tab=cotacoes' },
+      { id: 'crm-cotacoes', name: 'Cotações', path: '/crm/cotacoes' },
       { id: 'crm-nova-cotacao', name: '+ Nova Cotação', path: '/crm/cotacoes/nova' },
       { id: 'crm-sap-queue', name: 'Fila de Pedidos SAP', path: '/crm/integracoes/sap/pedidos' },
       { id: 'crm-meu-dia', name: 'Meu Dia / Ações', path: '/home' },
