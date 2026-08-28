@@ -430,11 +430,33 @@ export function SellerAIDialog({
                   variant="outline"
                   onClick={() => {
                     onOpenChange(false)
+                    navigate('/contatos')
+                  }}
+                  className="h-7 text-xs rounded-lg"
+                >
+                  Ver Contatos
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onOpenChange(false)
+                    navigate('/crm?tab=pipeline')
+                  }}
+                  className="h-7 text-xs rounded-lg text-primary font-semibold"
+                >
+                  Ver Funil
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    onOpenChange(false)
                     navigate('/tarefas')
                   }}
                   className="h-7 text-xs rounded-lg"
                 >
-                  Ver Ações & Tarefas
+                  Ver Tarefas
                 </Button>
               </div>
             </div>

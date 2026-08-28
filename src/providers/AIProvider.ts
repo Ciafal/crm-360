@@ -75,10 +75,48 @@ export interface ProductSuggestion {
   expectedMarginPercent: number
 }
 
+export interface QuoteCopilotInsight {
+  priority: 'ALTA' | 'MEDIA' | 'BAIXA'
+  priorityReason: string
+  commercialArgument: string
+  riskAssessment: {
+    level: 'BAIXO' | 'MEDIO' | 'ALTO' | 'CRITICO'
+    factors: string[]
+  }
+  nextRecommendedAction: string
+  suggestedFollowUpHours: 24 | 48 | 72
+  contextSummary: {
+    archetype: string
+    abcCategory: string
+    creditAvailableBRL: number
+    creditStatus: string
+    stockCoverageStatus: string
+    lastPurchaseIntervalDays?: number
+    competitionNoted?: string
+    authorizedPriceTons: number
+    priceSource: string
+  }
+}
+
 export interface SellerCopilotAgent {
   generateDailyBriefing(sellerId: string): Promise<DailyBriefing>
   prioritizeActions(actions: DailyCommercialAction[]): Promise<DailyCommercialAction[]>
   explainPrioritization(actionId: string): Promise<string>
+  analyzeQuoteOpportunity(context: {
+    customerId: string
+    customerName: string
+    customerSapCode?: string
+    archetype?: string
+    abcCategory?: 'A' | 'B' | 'C'
+    materialCodes: string[]
+    totalTons: number
+    authorizedPriceTons: number
+    creditAvailable: number
+    creditStatus: 'REGULAR' | 'RESTRITO' | 'BLOQUEADO'
+    stockAvailableTons: number
+    hasPlannedProduction: boolean
+    competitionNotes?: string
+  }): Promise<QuoteCopilotInsight>
 }
 
 export interface ReactivationAgent {

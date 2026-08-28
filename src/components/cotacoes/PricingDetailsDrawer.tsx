@@ -10,20 +10,39 @@ import { Badge } from '@/components/ui/badge'
 import { DollarSign, Percent, ShieldCheck, Scale, ArrowDownRight, CheckCircle2 } from 'lucide-react'
 import type { QuotationItem, QuotationPricingSnapshot } from '@/types/quotation'
 
-interface PricingDetailsDrawerProps {
+import type { Quotation } from '@/types/quotation'
+
+export interface PricingDetailsDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  item: QuotationItem | null
+  item?: QuotationItem | null
+  quotation?: Quotation | null
   pricingSnapshot?: QuotationPricingSnapshot
+  onApprove?: () => void
+  onRequestStockConfirmation?: (item: QuotationItem) => void
+  onGeneratePDF?: () => void
+  onSendCommunication?: () => void
+  onRegisterAcceptance?: () => void
+  onRequestSapQueue?: () => void
+  onViewSapMessages?: () => void
 }
 
 export function PricingDetailsDrawer({
   open,
   onOpenChange,
-  item,
+  item: itemProp,
+  quotation,
   pricingSnapshot,
+  onApprove,
+  onRequestStockConfirmation,
+  onGeneratePDF,
+  onSendCommunication,
+  onRegisterAcceptance,
+  onRequestSapQueue,
+  onViewSapMessages,
 }: PricingDetailsDrawerProps) {
-  if (!item) return null
+  const item = itemProp || (quotation && quotation.items.length > 0 ? quotation.items[0] : null)
+  if (!item && !quotation) return null
 
   const formatBRL = (val: number) =>
     val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })

@@ -60,6 +60,9 @@ import { SapMessageDrawer } from './SapMessageDrawer'
 import { QuotationDashboard } from './QuotationDashboard'
 import { QuotationKanban } from './QuotationKanban'
 import { RegisterLossDialog } from './RegisterLossDialog'
+import { QuoteCopilotDialog } from './QuoteCopilotDialog'
+import { LocalSellerCopilotAgent } from '@/providers/LocalAIAdapter'
+import type { QuoteCopilotInsight } from '@/providers/AIProvider'
 
 export default function CotacoesList() {
   const navigate = useNavigate()
@@ -95,6 +98,8 @@ export default function CotacoesList() {
   const [sapRequestDialogOpen, setSapRequestDialogOpen] = useState(false)
   const [sapMessagesDrawerOpen, setSapMessagesDrawerOpen] = useState(false)
   const [lossDialogOpen, setLossDialogOpen] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
+  const [copilotInsight, setCopilotInsight] = useState<QuoteCopilotInsight | null>(null)
   const [stockConfirmItem, setStockConfirmItem] = useState<{
     item: Quotation['items'][0]
     quote: Quotation
@@ -634,6 +639,17 @@ export default function CotacoesList() {
         quotation={selectedQuote}
         onConfirm={handleConfirmLoss}
       />
+
+      {/* MODAL QUOTE COPILOT (IA) */}
+      {selectedQuote && (
+        <QuoteCopilotDialog
+          open={copilotOpen}
+          onOpenChange={setCopilotOpen}
+          insight={copilotInsight}
+          customerName={selectedQuote.customer_name}
+          quoteCode={selectedQuote.code}
+        />
+      )}
     </div>
   )
 }

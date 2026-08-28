@@ -42,6 +42,117 @@ export class LocalSellerCopilotAgent implements SellerCopilotAgent {
   async explainPrioritization(actionId: string): Promise<string> {
     return `Ação priorizada com base no modelo preditivo BG/NBD + Gamma-Gamma. Considera dias de inatividade vs. ciclo histórico, cobertura imediata de estoque CIAFAL e margem da família de produtos.`
   }
+
+  async analyzeQuoteOpportunity(context: {
+    customerId: string
+    customerName: string
+    customerSapCode?: string
+    archetype?: string
+    abcCategory?: 'A' | 'B' | 'C'
+    materialCodes: string[]
+    totalTons: number
+    authorizedPriceTons: number
+    creditAvailable: number
+    creditStatus: 'REGULAR' | 'RESTRITO' | 'BLOQUEADO'
+    stockAvailableTons: number
+    hasPlannedProduction: boolean
+    competitionNotes?: string
+  }): Promise<import('./AIProvider').QuoteCopilotInsight> {
+    const isABC_A = context.abcCategory === 'A'
+    const isCreditOk =
+      context.creditStatus === 'REGULAR' &&
+      context.creditAvailable >= context.totalTons * context.authorizedPriceTons
+    const isStockSufficient = context.stockAvailableTons >= context.totalTons
+
+    // NUNCA inventar preço: preserva o preço autorizado informado
+    const authPrice = context.authorizedPriceTons
+
+    let priority: 'ALTA' | 'MEDIA' | 'BAIXA' = 'MEDIA'
+    if (isABC_A && isStockSufficient && isCreditOk) {
+      priority = 'ALTA'
+    } else if (
+      context.creditStatus === 'BLOQUEADO' ||
+      (!isStockSufficient && !context.hasPlannedProduction)
+    ) {
+      priority = 'BAIXA'
+    } else if (isABC_A || context.totalTons >= 10) {
+      priority = 'ALTA'
+    }
+
+    const riskFactors: string[] = []
+    if (context.creditStatus === 'BLOQUEADO') {
+      riskFactors.push('Crédito Bloqueado no SAP ECC F.35 — Trava automática de faturamento')
+    } else if (context.creditStatus === 'RESTRITO') {
+      riskFactors.push('Exposição de crédito elevada (> 85% do limite F.35)')
+    }
+
+    if (!isStockSufficient) {
+      if (context.hasPlannedProduction) {
+        riskFactors.push('Saldo imediato < volume cotado, porém há lote programado no SAP PP')
+      } else {
+        riskFactors.push('Risco de ruptura de estoque imediato sem programação ativa')
+      }
+    }
+
+    if (context.competitionNotes) {
+      riskFactors.push(`Pressão de concorrência reportada: ${context.competitionNotes}`)
+    }
+
+    const riskLevel: 'BAIXO' | 'MEDIO' | 'ALTO' | 'CRITICO' =
+      context.creditStatus === 'BLOQUEADO'
+        ? 'CRITICO'
+        : riskFactors.length >= 2
+          ? 'ALTO'
+          : riskFactors.length === 1
+            ? 'MEDIO'
+            : 'BAIXO'
+
+    let argument = `Cliente perfil ${context.archetype || 'INDÚSTRIA'} (Curva ${context.abcCategory || 'A'}). `
+    if (isStockSufficient) {
+      argument += `Disponibilidade física confirmada em pátio com carregamento imediato em até 48h. `
+    } else if (context.hasPlannedProduction) {
+      argument += `Lote com corrida já programada no SAP PP, garantindo entrega no prazo acordado. `
+    }
+    argument += `Preço de tabela oficial SAP mantido em R$ ${authPrice.toLocaleString('pt-BR')}/t com frete CIF regionalizado.`
+
+    const nextAction =
+      context.creditStatus === 'BLOQUEADO'
+        ? 'Encaminhar ao setor de Crédito para reavaliação de títulos antes do fechamento'
+        : !isStockSufficient && !context.hasPlannedProduction
+          ? 'Solicitar confirmação física ao pátio/WMS ou encaixe no PCP'
+          : 'Enviar proposta formal em PDF via WhatsApp e agendar follow-up'
+
+    const suggestedFollowUpHours: 24 | 48 | 72 = isABC_A ? 24 : context.totalTons > 8 ? 48 : 72
+
+    return {
+      priority,
+      priorityReason: `Classificação ${priority} definida por: Cliente ABC ${context.abcCategory || 'A'}, Volume de ${context.totalTons} t e Posição Financeira SAP (${context.creditStatus}).`,
+      commercialArgument: argument,
+      riskAssessment: {
+        level: riskLevel,
+        factors:
+          riskFactors.length > 0
+            ? riskFactors
+            : ['Operação regular dentro dos parâmetros de alçada e estoque'],
+      },
+      nextRecommendedAction: nextAction,
+      suggestedFollowUpHours,
+      contextSummary: {
+        archetype: context.archetype || 'INDÚSTRIA',
+        abcCategory: context.abcCategory || 'A',
+        creditAvailableBRL: context.creditAvailable,
+        creditStatus: context.creditStatus,
+        stockCoverageStatus: isStockSufficient
+          ? 'Cobertura Total'
+          : context.hasPlannedProduction
+            ? 'Produção Programada'
+            : 'Abaixo do Volume',
+        competitionNoted: context.competitionNotes || 'Sem concorrência agressiva registrada',
+        authorizedPriceTons: authPrice,
+        priceSource: 'Tabela Oficial SAP ECC / PR00 Autorizada',
+      },
+    }
+  }
 }
 
 export class LocalReactivationAgent implements ReactivationAgent {

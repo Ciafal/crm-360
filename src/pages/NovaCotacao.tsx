@@ -60,6 +60,9 @@ import { PDFPreviewDialog } from '@/components/cotacoes/PDFPreviewDialog'
 import { StockConfirmationDialog } from '@/components/cotacoes/StockConfirmationDialog'
 import { PriceDeviationBadge } from '@/components/cotacoes/PriceDeviationBadge'
 import { StockBadge } from '@/components/cotacoes/StockBadge'
+import { QuoteCopilotDialog } from '@/components/cotacoes/QuoteCopilotDialog'
+import { LocalSellerCopilotAgent } from '@/providers/LocalAIAdapter'
+import type { QuoteCopilotInsight } from '@/providers/AIProvider'
 
 export default function NovaCotacao() {
   const navigate = useNavigate()
@@ -110,6 +113,9 @@ export default function NovaCotacao() {
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false)
   const [createdQuotation, setCreatedQuotation] = useState<Quotation | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
+  const [copilotInsight, setCopilotInsight] = useState<QuoteCopilotInsight | null>(null)
+  const [copilotLoading, setCopilotLoading] = useState(false)
 
   // Clientes filtrados
   const filteredCustomers = PRELOADED_CUSTOMERS.filter(
@@ -355,6 +361,42 @@ export default function NovaCotacao() {
               → Alçada
             </p>
           </div>
+        </div>
+
+        {/* Quote Copilot CTA */}
+        <div className="flex items-center gap-2">
+          {selectedCustomer && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                setCopilotLoading(true)
+                setCopilotOpen(true)
+                const copilot = new LocalSellerCopilotAgent()
+                const insight = await copilot.analyzeQuoteOpportunity({
+                  customerId: selectedCustomer.id,
+                  customerName: selectedCustomer.razaoSocial,
+                  customerSapCode: selectedCustomer.sapCode,
+                  archetype: selectedCustomer.archetype,
+                  abcCategory: selectedCustomer.abcHistorico,
+                  materialCodes: items.map((it) => it.material_code),
+                  totalTons: totalTons || 5.0,
+                  authorizedPriceTons: items[0]?.sap_price || 34500,
+                  creditAvailable: creditStatus?.creditAvailable || 95000,
+                  creditStatus: (creditStatus?.creditStatus as any) || 'REGULAR',
+                  stockAvailableTons:
+                    items.reduce((acc, it) => acc + (it.stock_available || 0), 0) || 12.5,
+                  hasPlannedProduction: true,
+                })
+                setCopilotInsight(insight)
+                setCopilotLoading(false)
+              }}
+              className="border-purple-300 text-purple-700 bg-purple-50/50 hover:bg-purple-100 font-semibold text-xs gap-1.5"
+            >
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              Quote Copilot (IA)
+            </Button>
+          )}
         </div>
 
         {/* Wizard Steps */}
@@ -1185,6 +1227,20 @@ export default function NovaCotacao() {
           }}
         />
       )}
+
+      {/* Modal do Quote Copilot (IA) */}
+      <QuoteCopilotDialog
+        open={copilotOpen}
+        onOpenChange={setCopilotOpen}
+        insight={copilotInsight}
+        customerName={selectedCustomer?.razaoSocial || 'Cliente'}
+        quoteCode={createdQuotation?.code}
+        onApplyArgument={(arg) => {
+          setCommercialNotes((prev) =>
+            prev ? `${prev}\n\n[Recomendação Copilot]: ${arg}` : `[Recomendação Copilot]: ${arg}`,
+          )
+        }}
+      />
 
       {/* Modal de PDF Preview */}
       {createdQuotation && (

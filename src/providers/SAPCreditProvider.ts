@@ -72,4 +72,60 @@ class SAPCreditService {
   }
 }
 
+export interface SAPCreditStatus {
+  customerId: string
+  sapCustomerCode: string
+  creditLimit: number
+  creditUsed: number
+  creditAvailable: number
+  usedPercentage: number
+  openOrdersValue: number
+  overdueInvoicesValue: number
+  longestDelayDays: number
+  creditCheckResult: 'LIBERADO' | 'ATENCAO' | 'BLOQUEADO'
+  creditStatus: 'REGULAR' | 'RESTRITO' | 'BLOQUEADO'
+  creditBlockReason?: string
+  paymentTerms: string
+  lastUpdated: string
+  dataSource: string
+  rawF35Data?: Record<string, any>
+}
+
+export class DefaultSAPCreditProvider {
+  async checkCustomerCredit(
+    sapCustomerCode: string,
+    customerId = 'cust-default',
+  ): Promise<SAPCreditStatus> {
+    const data = await sapCreditProvider.getCreditPosition(customerId, sapCustomerCode)
+    return {
+      customerId: data.customerId,
+      sapCustomerCode: data.sapCode,
+      creditLimit: data.creditLimit,
+      creditUsed: data.creditExposure,
+      creditAvailable: data.creditAvailable,
+      usedPercentage: data.utilizationPercent,
+      openOrdersValue: data.receivablesOpenNotDue,
+      overdueInvoicesValue: data.receivablesOverdue,
+      longestDelayDays: data.maxDelayDays,
+      creditCheckResult:
+        data.creditStatus === 'BLOQUEADO'
+          ? 'BLOQUEADO'
+          : data.creditStatus === 'RESTRITO'
+            ? 'ATENCAO'
+            : 'LIBERADO',
+      creditStatus: data.creditStatus,
+      creditBlockReason: data.creditBlockReason,
+      paymentTerms: data.paymentTerms,
+      lastUpdated: new Date().toISOString(),
+      dataSource: `${data.systemSource} F.35`,
+      rawF35Data: data.rawF35Data,
+    }
+  }
+
+  async getCreditPosition(customerId: string, sapCode: string): Promise<SAPCreditData> {
+    return sapCreditProvider.getCreditPosition(customerId, sapCode)
+  }
+}
+
+export const defaultSAPCreditProvider = new DefaultSAPCreditProvider()
 export const sapCreditProvider = new SAPCreditService()

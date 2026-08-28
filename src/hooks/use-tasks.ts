@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Task } from '@/types/models'
 import { getTasks } from '@/services/tasks'
 import { useAuth } from './use-auth'
+import { useRealtime } from './use-realtime'
 import pb from '@/lib/pocketbase/client'
 
 const FALLBACK_TASKS: Task[] = [
