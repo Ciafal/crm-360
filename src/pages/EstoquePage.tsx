@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   UserCheck,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import { stockService } from '@/services/stock_service'
@@ -56,6 +57,7 @@ export type StockViewTab =
   | 'admin_governanca'
 
 export default function EstoquePage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
 
@@ -386,17 +388,23 @@ export default function EstoquePage() {
           <Button
             size="sm"
             onClick={() => {
-              if (selectedItem) {
-                setIsRequestModalOpen(true)
+              if (selectedStockItemForCheck) {
+                setRequestModalOpen(true)
+              } else if (filteredItems.length > 0) {
+                setSelectedStockItemForCheck(filteredItems[0])
+                setRequestModalOpen(true)
               } else {
-                toast.info('Selecione um item na tabela antes de solicitar a checagem física.')
+                toast({
+                  title: 'Atenção',
+                  description: 'Nenhum item disponível para solicitar a checagem física.',
+                })
               }
             }}
             className="h-9 text-xs rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold gap-1.5 shadow-xs"
           >
             <Warehouse className="w-3.5 h-3.5" />
             <span>Solicitar Checagem Física</span>
-          </Button>{' '}
+          </Button>
         </div>
       </div>
 

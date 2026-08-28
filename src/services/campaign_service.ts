@@ -10,9 +10,9 @@ import type {
   CommercialCampaign,
   CampaignDispatchQueueItem,
   LGPDConsentRecord,
-  CustomerManagementItem,
   OptOutChannel,
 } from '@/types/commercial_execution'
+import type { CustomerManagementItem } from '@/types/customer_management'
 import { bulkTaskService } from '@/services/bulk_task_service'
 
 const STORAGE_KEY_CAMPAIGNS = 'ciafal_crm_commercial_campaigns_v2'

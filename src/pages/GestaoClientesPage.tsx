@@ -21,6 +21,7 @@ import {
   RefreshCw,
   PlusCircle,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { customerManagementService } from '@/services/customer_management_service'
 import type {
@@ -54,6 +55,7 @@ export type GestaoClientesTab =
   | 'especulacoes'
 
 export default function GestaoClientesPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   // Estado da aba principal

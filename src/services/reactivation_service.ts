@@ -229,7 +229,7 @@ class ReactivationService {
           scoreAderencia: fitScore,
           motivo,
           potencialTons: potencial,
-          consumo12mTons: c.volumeHistoricoTons || 45.0,
+          consumo12mTons: c.toneladas12m || 45.0,
           creditoLivre: Math.round(c.faturamento12m * 0.25),
         }
       })

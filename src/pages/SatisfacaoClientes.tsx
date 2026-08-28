@@ -46,6 +46,7 @@ import {
   RespostaPesquisaCliente,
   ISCPesoHistoryEntry,
 } from '@/types/satisfaction'
+import { useNavigate } from 'react-router-dom'
 import {
   mockClientesSatisfacao,
   mockCampanhasPesquisa,
@@ -82,6 +83,7 @@ type ActiveSection =
   | 'configuracoes'
 
 export default function SatisfacaoClientes() {
+  const navigate = useNavigate()
   // Estado principal de dados
   const [clientes, setClientes] = useState<ClienteSatisfacao360[]>(mockClientesSatisfacao)
   const [planos, setPlanos] = useState<PlanoRecuperacao[]>(mockPlanosRecuperacao)

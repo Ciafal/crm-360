@@ -45,11 +45,8 @@ import {
   Eye,
   Info,
 } from 'lucide-react'
-import type {
-  CampaignType,
-  CampaignChannel,
-  CustomerManagementItem,
-} from '@/types/commercial_execution'
+import type { CampaignType, CampaignChannel } from '@/types/commercial_execution'
+import type { CustomerManagementItem } from '@/types/customer_management'
 import { campaignService } from '@/services/campaign_service'
 import { toast } from 'sonner'
 

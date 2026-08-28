@@ -303,10 +303,12 @@ class CustomerManagementService {
         diasSemCompra: c.diasSemCompra,
         oportunidadeTitulo: c.proximaAcao,
         acaoRecomendada,
+        isc: c.isc,
+        statusRelacionamento: c.coberto ? 'Ativo & Coberto' : 'Atenção / Descoberto',
       }
     })
 
-    return scoredList.sort((a, b) => b.score - a.score).map(({ score, ...rest }) => rest)
+    return scoredList.sort((a, b) => (b.score || 0) - (a.score || 0))
   }
 
   // IA: Diagnóstico 360 do Cliente (Regra 25)
