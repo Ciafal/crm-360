@@ -37,6 +37,7 @@ import SatisfacaoClientes from './pages/SatisfacaoClientes'
 import EstoquePage from './pages/EstoquePage'
 import CentralAcoesPage from './pages/CentralAcoesPage'
 import GestaoClientesPage from './pages/GestaoClientesPage'
+import PlanejamentoSop from './pages/PlanejamentoSop'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -112,6 +113,9 @@ const App = () => (
                   path="/planejamento-estrategico"
                   element={<ImportacaoPlanejamentoEstrategico />}
                 />
+                <Route path="/planejamento-sop" element={<PlanejamentoSop />} />
+                <Route path="/sop" element={<PlanejamentoSop />} />
+                <Route path="/forecast" element={<PlanejamentoSop />} />
                 <Route path="/compliance" element={<HCMCompliance />} />
               </Route>
             </Route>

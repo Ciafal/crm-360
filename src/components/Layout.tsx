@@ -48,6 +48,7 @@ export default function Layout() {
     { name: 'Tarefas', path: '/tarefas' },
     { name: "KPI's", path: '/kpis-comerciais' },
     { name: 'Estoque', path: '/estoque' },
+    { name: 'S&OP / Forecast', path: '/planejamento-sop', badge: 'S&OP' },
     { name: 'Satisfação Clientes', path: '/satisfacao-clientes' },
   ]
 
@@ -149,6 +150,17 @@ export default function Layout() {
                     </strong>
                     <span className="text-[10px] text-amber-800/80">
                       Propostas, Aprovações & Cross Sell
+                    </span>
+                  </Link>
+                  <Link
+                    to="/planejamento-sop"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-emerald-50/60 border border-emerald-300/60"
+                  >
+                    <strong className="text-emerald-900 font-bold flex items-center gap-1">
+                      S&OP / FORECAST
+                    </strong>
+                    <span className="text-[10px] text-emerald-800/80">
+                      Demanda F0-F4, FVA & Waterfall
                     </span>
                   </Link>
                   <Link
