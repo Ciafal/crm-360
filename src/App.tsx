@@ -31,6 +31,7 @@ import IndicadoresComerciais from './pages/IndicadoresComerciais'
 import Hypercare from './pages/Hypercare'
 import RelatorioRelease from './pages/RelatorioRelease'
 import CentralIntegracoes from './pages/CentralIntegracoes'
+import AgenteFredPage from './pages/AgenteFredPage'
 import SatisfacaoClientes from './pages/SatisfacaoClientes'
 import EstoquePage from './pages/EstoquePage'
 import CentralAcoesPage from './pages/CentralAcoesPage'
@@ -98,6 +99,8 @@ const App = () => (
                 <Route path="/estoque" element={<EstoquePage />} />
                 <Route path="/gestao-estoque" element={<EstoquePage />} />
                 <Route path="/central-integracoes" element={<CentralIntegracoes />} />
+                <Route path="/agente-fred" element={<AgenteFredPage />} />
+                <Route path="/fred" element={<AgenteFredPage />} />
                 <Route path="/satisfacao-clientes" element={<SatisfacaoClientes />} />
                 <Route path="/satisfacao" element={<SatisfacaoClientes />} />
                 <Route path="/setup" element={<Setup />} />

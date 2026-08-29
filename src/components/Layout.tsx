@@ -194,6 +194,15 @@ export default function Layout() {
                     <span className="text-[10px] text-muted-foreground">WhatsApp & VoIP</span>
                   </Link>
                   <Link
+                    to="/agente-fred"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-blue-50/40 border border-blue-200/50"
+                  >
+                    <strong className="text-blue-900 font-bold">Agente Fred (TMS)</strong>
+                    <span className="text-[10px] text-muted-foreground">
+                      Rastreamento & Logística
+                    </span>
+                  </Link>
+                  <Link
                     to="/central-integracoes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
                   >

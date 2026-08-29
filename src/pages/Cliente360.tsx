@@ -64,6 +64,7 @@ import {
   AlertCircle,
   FileCheck,
   Compass,
+  Bot,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -1340,14 +1341,31 @@ export default function Cliente360() {
                 </p>
               </div>
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toast.info('Link externo do portal TMS aberto em nova guia.')}
-                className="h-8 gap-1.5 text-xs text-primary"
-              >
-                <ExternalLink className="w-3.5 h-3.5" /> Abrir no TMS
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    navigate(
+                      `/agente-fred?sap=${cliente.sapCode}&cliente=${encodeURIComponent(
+                        cliente.razaoSocial,
+                      )}`,
+                    )
+                  }}
+                  className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs"
+                >
+                  <Bot className="w-3.5 h-3.5" /> Acompanhar Entrega com Fred
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    window.open(`https://tms.ciafal.local/clientes/${cliente.sapCode}`, '_blank')
+                  }
+                  className="h-8 gap-1.5 text-xs text-primary rounded-xl"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Abrir no TMS
+                </Button>
+              </div>
             </div>
 
             {/* CARDS DE RESUMO TMS */}

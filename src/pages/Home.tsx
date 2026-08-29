@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -24,7 +24,9 @@ import { PaceComparisonWidget } from '@/components/analytics/PaceComparisonWidge
 import { PortfolioHealthConcentrationCard } from '@/components/analytics/PortfolioHealthConcentrationCard'
 import { OitfCockpitCard } from '@/components/analytics/OitfCockpitCard'
 import { MinhaAgendaWidget } from '@/components/analytics/MinhaAgendaWidget'
+import { LogisticsAttentionBlock } from '@/components/analytics/LogisticsAttentionBlock'
 import { PriorityCommercialActionsBlock } from '@/components/analytics/PriorityCommercialActionsBlock'
+import { fredTmsService, type FredDeliveryException } from '@/services/fred_tms_service'
 import { PriorityQuotationsCarousel } from '@/components/analytics/PriorityQuotationsCarousel'
 import { CommercialOpportunitiesCarousel } from '@/components/analytics/CommercialOpportunitiesCarousel'
 import { ExecutiveAIBriefingBlock } from '@/components/analytics/ExecutiveAIBriefingBlock'
@@ -70,6 +72,14 @@ export default function Home() {
 
   const appointments = useMemo(() => {
     return cockpitCommercialService.getCorporateAgenda()
+  }, [])
+
+  const [tmsExceptions, setTmsExceptions] = useState<FredDeliveryException[]>([])
+
+  useEffect(() => {
+    fredTmsService.getDeliveryExceptions().then((res) => {
+      setTmsExceptions(res)
+    })
   }, [])
 
   const [aiActions, setAiActions] = useState(() => {
@@ -279,6 +289,9 @@ export default function Home() {
 
       {/* 6. BLOCO: OITF (ON-TIME IN-FULL) COM AUDITORIA DE ENTREGAS CRUZADA */}
       <OitfCockpitCard oitfMetrics={oitfMetrics} />
+
+      {/* 6.1 BLOCO: ENTREGAS & LOGÍSTICA COM ATENÇÃO (TMS / AGENTE FRED) */}
+      <LogisticsAttentionBlock exceptions={tmsExceptions} />
 
       {/* 7. BLOCO: MINHA AGENDA DE HOJE (INTEGRADA À AGENDA CORPORATIVA DO HUB) */}
       <MinhaAgendaWidget appointments={appointments} onOpenNewModal={() => navigate('/crm')} />
