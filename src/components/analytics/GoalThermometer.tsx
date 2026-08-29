@@ -1,150 +1,211 @@
 import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Target, CheckCircle2, AlertTriangle, Sparkles, TrendingUp } from 'lucide-react'
-import { cn, formatNumberBR } from '@/lib/utils'
+import { Progress } from '@/components/ui/progress'
+import { Target, TrendingUp, Sparkles, Clock, Calendar, AlertTriangle } from 'lucide-react'
+import type { GoalPaceMetrics } from '@/types/cockpit'
 
-export interface GoalThermometerProps {
-  percent: number // Ex: 84.5
-  metaLabel?: string
-  realizadoLabel?: string
-  excessLabel?: string
-  showScale?: boolean
-  className?: string
-  compact?: boolean
-  customTitle?: string
+interface GoalThermometerProps {
+  goalMetrics: GoalPaceMetrics
+  unit: 'REVENUE' | 'TONS'
 }
 
-export function GoalThermometer({
-  percent,
-  metaLabel = 'Meta (100%)',
-  realizadoLabel,
-  excessLabel,
-  showScale = true,
-  className,
-  compact = false,
-  customTitle = 'Termômetro da Meta',
-}: GoalThermometerProps) {
-  // Clamped for progress bar (scale 0% to 120% mapped to 0-100% width)
-  // Scale markers: 0%, 50%, 80%, 100%, 120%
-  const maxScale = 120
-  const normalizedWidth = Math.min(Math.max((percent / maxScale) * 100, 0), 100)
-  const isAbove100 = percent >= 100
-  const isCritical = percent < 80
-  const isWarning = percent >= 80 && percent < 100
-  const excess = isAbove100 ? percent - 100 : 0
+export function GoalThermometer({ goalMetrics, unit }: GoalThermometerProps) {
+  const isTons = unit === 'TONS'
 
-  const statusColor = isAbove100
-    ? 'text-emerald-700 bg-emerald-50 border-emerald-300'
-    : isWarning
-      ? 'text-amber-700 bg-amber-50 border-amber-300'
-      : 'text-rose-700 bg-rose-50 border-rose-300'
+  const metaValue = isTons ? goalMetrics.metaTons : goalMetrics.metaReais
+  const realizadoValue = isTons ? goalMetrics.realizadoTons : goalMetrics.realizadoReais
+  const gapValue = isTons ? goalMetrics.gapTons : goalMetrics.gapReais
+  const atingimento = isTons ? goalMetrics.atingimentoTonsPct : goalMetrics.atingimentoReaisPct
+
+  const formatUnit = (val: number) => {
+    if (isTons) {
+      return `${val.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`
+    }
+    return val.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0,
+    })
+  }
+
+  const formatAltUnit = (valTons: number, valReais: number) => {
+    if (isTons) {
+      return valReais.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        maximumFractionDigits: 0,
+      })
+    }
+    return `${valTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} t`
+  }
+
+  const isAboveExpected = goalMetrics.gapRitmoPp >= 0
 
   return (
-    <Card
-      className={cn(
-        'p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3',
-        className,
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-            <Target className="w-4 h-4" />
-          </div>
-          <div>
-            <h4 className="font-serif font-bold text-xs uppercase tracking-wider text-slate-800">
-              {customTitle}
-            </h4>
-            {!compact && (
-              <p className="text-[11px] text-muted-foreground">
-                Escala executiva 0% → 50% → 80% → 100% → 120%
+    <Card className="bg-white/95 backdrop-blur-md border-border/40 rounded-3xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+      <div>
+        {/* Cabeçalho do Card */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-xl">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-lg text-primary">
+                Termômetro de Atingimento da Meta
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Acompanhamento contínuo vs posição esperada por dias úteis
               </p>
-            )}
+            </div>
           </div>
-        </div>
 
-        <Badge
-          variant="outline"
-          className={cn('text-xs font-bold font-mono px-2 py-0.5', statusColor)}
-        >
-          {formatNumberBR(percent, 1)}% atingido
-        </Badge>
-      </div>
-
-      {/* Thermometer Bar */}
-      <div className="space-y-1.5 pt-1">
-        <div className="relative w-full h-5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-          {/* Shaded zone markers */}
-          {/* Critical zone: 0 to 80% -> (80/120)*100 = 66.6% */}
-          <div className="absolute left-0 top-0 bottom-0 w-[66.6%] bg-rose-500/10" />
-          {/* Warning zone: 80 to 100% -> (20/120)*100 = 16.6% */}
-          <div className="absolute left-[66.6%] top-0 bottom-0 w-[16.6%] bg-amber-500/15" />
-          {/* Above goal zone: 100 to 120% -> (20/120)*100 = 16.6% */}
-          <div className="absolute left-[83.3%] top-0 bottom-0 right-0 bg-emerald-500/15" />
-
-          {/* 100% Target Mark line */}
-          <div
-            className="absolute top-0 bottom-0 w-1 bg-slate-900 z-20 shadow-xs"
-            style={{ left: '83.33%' }}
-            title="Posição da Meta (100%)"
-          />
-
-          {/* Progress fill */}
-          <div
-            className={cn(
-              'h-full transition-all duration-700 rounded-full',
-              isAbove100
-                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500'
-                : isWarning
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                  : 'bg-gradient-to-r from-rose-500 to-rose-600',
-            )}
-            style={{ width: `${normalizedWidth}%` }}
-          />
-        </div>
-
-        {/* Scale labels */}
-        {showScale && (
-          <div className="relative w-full text-[10px] font-mono text-muted-foreground flex justify-between px-0.5">
-            <span>0%</span>
-            <span style={{ left: '41.6%', position: 'absolute', transform: 'translateX(-50%)' }}>
-              50%
-            </span>
-            <span style={{ left: '66.6%', position: 'absolute', transform: 'translateX(-50%)' }}>
-              80%
-            </span>
-            <span
-              className="font-bold text-slate-900"
-              style={{ left: '83.3%', position: 'absolute', transform: 'translateX(-50%)' }}
+          <div className="flex items-center gap-2">
+            <Badge
+              className={`text-xs font-bold border-none px-2.5 py-1 ${
+                atingimento >= 100
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : atingimento >= 70
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-amber-100 text-amber-800'
+              }`}
             >
-              100% (Meta)
-            </span>
-            <span>120%+</span>
+              {atingimento.toFixed(1)}% Atingido
+            </Badge>
+
+            <Badge
+              variant="outline"
+              className={`text-xs font-semibold ${
+                isAboveExpected
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  : 'bg-rose-50 text-rose-700 border-rose-300'
+              }`}
+            >
+              {isAboveExpected
+                ? `+${goalMetrics.gapRitmoPp.toFixed(1)} p.p. acima do ritmo esperado`
+                : `${goalMetrics.gapRitmoPp.toFixed(1)} p.p. abaixo do esperado`}
+            </Badge>
           </div>
-        )}
+        </div>
+
+        {/* Grade de 3 Blocos: Meta / Realizado / Gap */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Meta Mensal ({isTons ? 't' : 'R$'})
+            </span>
+            <span className="font-serif text-xl font-bold text-slate-900 block">
+              {formatUnit(metaValue)}
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              Equivalente: {formatAltUnit(goalMetrics.metaTons, goalMetrics.metaReais)}
+            </span>
+          </div>
+
+          <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">
+              Realizado MTD
+            </span>
+            <span className="font-serif text-xl font-bold text-emerald-700 block">
+              {formatUnit(realizadoValue)}
+            </span>
+            <span className="text-[10px] text-emerald-800 font-medium block">
+              Equivalente: {formatAltUnit(goalMetrics.realizadoTons, goalMetrics.realizadoReais)}
+            </span>
+          </div>
+
+          <div className="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 block">
+              Gap Faltante
+            </span>
+            <span className="font-serif text-xl font-bold text-amber-600 block">
+              {formatUnit(gapValue)}
+            </span>
+            <span className="text-[10px] text-amber-800 font-medium block">
+              Equivalente: {formatAltUnit(goalMetrics.gapTons, goalMetrics.gapReais)}
+            </span>
+          </div>
+        </div>
+
+        {/* Barra de Progresso do Termômetro com Marcador Esperado */}
+        <div className="space-y-2 relative pt-2">
+          <div className="flex justify-between text-xs text-muted-foreground font-medium">
+            <span>0%</span>
+            <span className="text-primary font-semibold">
+              Esperado hoje: {goalMetrics.metaEsperadaNaDataPct.toFixed(1)}% (Dia{' '}
+              {goalMetrics.diasUteisTranscorridos}/{goalMetrics.diasUteisTotais})
+            </span>
+            <span>100% Meta</span>
+          </div>
+
+          <div className="relative">
+            <Progress
+              value={Math.min(atingimento, 100)}
+              className="h-4 bg-slate-100 rounded-full"
+            />
+            {/* Marcador da Linha Esperada */}
+            <div
+              className="absolute top-0 bottom-0 w-1 bg-slate-900 rounded-full shadow-xs"
+              style={{ left: `${Math.min(goalMetrics.metaEsperadaNaDataPct, 100)}%` }}
+              title={`Posição esperada na data: ${goalMetrics.metaEsperadaNaDataPct.toFixed(1)}%`}
+            />
+          </div>
+
+          <div className="flex justify-between text-xs text-muted-foreground pt-1">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              {goalMetrics.diasUteisTranscorridos} dias úteis transcorridos
+            </span>
+            <span className="font-semibold text-primary flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-primary" />
+              {goalMetrics.diasUteisRestantes} dias úteis restantes
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Summary message */}
-      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-        {isAbove100 ? (
-          <span className="text-emerald-700 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            Superávit de +{formatNumberBR(excess, 1)}% acima da meta estabelecida
+      {/* Projeção de Fechamento: Linear vs Previsão IA */}
+      <div className="p-3.5 bg-gradient-to-r from-slate-50 to-primary/5 rounded-2xl border border-primary/20 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            Projeção de Fechamento (Linear vs IA)
           </span>
-        ) : isWarning ? (
-          <span className="text-amber-700 font-semibold flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            Trajetória de fechamento — faltam {formatNumberBR(100 - percent, 1)}% para a meta
-          </span>
-        ) : (
-          <span className="text-rose-700 font-semibold flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            Déficit crítico — faltam {formatNumberBR(100 - percent, 1)}% para a meta
-          </span>
-        )}
+          <Badge className="bg-primary text-white text-[10px]">
+            {goalMetrics.projecaoIaAtingimentoPct.toFixed(1)}% Previsto
+          </Badge>
+        </div>
 
-        {realizadoLabel && <span className="text-muted-foreground">{realizadoLabel}</span>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="p-2.5 bg-white rounded-xl border border-border/40">
+            <span className="text-[10px] text-muted-foreground uppercase font-bold block">
+              Projeção Linear (Ritmo Atual)
+            </span>
+            <strong className="text-slate-800 font-mono text-sm block mt-0.5">
+              {isTons
+                ? formatUnit(goalMetrics.projecaoLinearTons)
+                : formatUnit(goalMetrics.projecaoLinearReais)}
+            </strong>
+            <span className="text-[10px] text-muted-foreground">
+              Extrapolação matemática direta
+            </span>
+          </div>
+
+          <div className="p-2.5 bg-sky-50/70 rounded-xl border border-sky-200">
+            <span className="text-[10px] text-sky-800 uppercase font-bold block">
+              Previsão com IA (Histórico + Sazonalidade)
+            </span>
+            <strong className="text-sky-950 font-mono text-sm block mt-0.5">
+              {isTons
+                ? formatUnit(goalMetrics.previsaoIaTons)
+                : formatUnit(goalMetrics.previsaoIaReais)}
+            </strong>
+            <span className="text-[10px] text-sky-700 font-medium">
+              Considera pipeline ponderado e fechamentos de fim de mês
+            </span>
+          </div>
+        </div>
       </div>
     </Card>
   )

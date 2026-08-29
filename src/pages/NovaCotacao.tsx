@@ -77,6 +77,7 @@ import {
 import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
 import type { QuotationItem, Quotation } from '@/types/quotation'
 import { customerManagementService } from '@/services/customer_management_service'
+import { CrossSellCarousel } from '@/components/cotacoes/CrossSellCarousel'
 import { cn } from '@/lib/utils'
 import type { SAPCreditStatus } from '@/providers/SAPCreditProvider'
 import { PDFPreviewDialog } from '@/components/cotacoes/PDFPreviewDialog'
@@ -1014,69 +1015,26 @@ export default function NovaCotacao() {
             </div>
           )}
 
-          {/* BLOCO REGRA 28: SUGESTÕES INTELIGENTES DE CROSS-SELL PARA ESTE CLIENTE */}
+          {/* CARROSSEL INTEGRAL DE CROSS-SELL & MIX INTELIGENTE */}
           {selectedCustomer && crossSellSuggestions.length > 0 && (
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-sky-950 via-slate-900 to-slate-950 text-slate-100 border border-sky-800/40 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
-                    Sugestões de Cross-Sell & Mix Inteligente para {selectedCustomer.nomeFantasia}
-                  </span>
-                </div>
-                <Badge className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[9px] font-mono">
-                  Regras 26-28 CIAFAL
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {crossSellSuggestions.slice(0, 3).map((sug) => (
-                  <div
-                    key={sug.id}
-                    className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 transition-all flex flex-col justify-between gap-1.5"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-[9px] text-sky-400 font-bold">
-                          {sug.codigo}
-                        </span>
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {sug.saldoEstoqueTons !== undefined && sug.saldoEstoqueTons > 0
-                            ? `${sug.saldoEstoqueTons}t pronta entrega`
-                            : 'PCP Programado'}
-                        </span>
-                      </div>
-                      <strong className="text-xs text-white block truncate">{sug.descricao}</strong>
-                      <p className="text-[10px] text-slate-400 leading-tight mt-0.5 line-clamp-2">
-                        {sug.motivo}
-                      </p>
-                    </div>
-
-                    <Button
-                      size="sm"
-                      type="button"
-                      onClick={() => {
-                        const found = CATALOG_MATERIALS.find(
-                          (m) =>
-                            m.code.includes(sug.codigo) ||
-                            sug.codigo.includes(m.code) ||
-                            m.family.toLowerCase().includes(sug.familia.toLowerCase()),
-                        )
-                        const matchingCatalog = found || CATALOG_MATERIALS[0]
-                        handleSelectMaterial(matchingCatalog)
-                        toast({
-                          title: 'Item Sugerido Selecionado',
-                          description: `${sug.descricao} pronto para inclusão com validação de estoque imediato.`,
-                        })
-                      }}
-                      className="w-full h-6 text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-lg"
-                    >
-                      + Adicionar à Proposta
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <CrossSellCarousel
+              customerName={selectedCustomer.nomeFantasia}
+              suggestions={crossSellSuggestions}
+              onAddMaterial={(sug) => {
+                const found = CATALOG_MATERIALS.find(
+                  (m) =>
+                    m.code.includes(sug.codigo) ||
+                    sug.codigo.includes(m.code) ||
+                    m.family.toLowerCase().includes(sug.familia.toLowerCase()),
+                )
+                const matchingCatalog = found || CATALOG_MATERIALS[0]
+                handleSelectMaterial(matchingCatalog)
+                toast({
+                  title: 'Item Sugerido Adicionado',
+                  description: `${sug.descricao} carregado no formulário com estoque e preços oficiais.`,
+                })
+              }}
+            />
           )}
 
           {/* PASSO 2: ITENS DA COTAÇÃO & GRID COMERCIAL */}

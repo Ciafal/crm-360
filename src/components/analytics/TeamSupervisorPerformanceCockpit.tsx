@@ -21,6 +21,7 @@ import { cn, formatNumberBR, formatCurrency, formatWeight } from '@/lib/utils'
 import { ExecutiveKpiCard } from './ExecutiveKpiCard'
 import { GoalThermometer } from './GoalThermometer'
 import { PaceComparisonWidget } from './PaceComparisonWidget'
+import { cockpitCommercialService } from '@/services/cockpit_commercial_service'
 import {
   ExecutiveMainChart,
   ExecutiveChartPoint,
@@ -333,22 +334,26 @@ export function TeamSupervisorPerformanceCockpit() {
       {/* 3. SEÇÃO DO TERMÔMETRO DA META & RITMO DA EQUIPE */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <GoalThermometer
-          percent={atingimentoPctEquipe}
-          customTitle="Termômetro da Meta da Equipe"
-          metaLabel="Meta Equipe: 4.000 t"
-          realizadoLabel={`Realizado: ${formatWeight(realizadoAtualEquipe, 0)} | Gap Equipe: ${formatWeight(gapRestanteEquipe, 0)}`}
+          goalMetrics={{
+            ...cockpitCommercialService.getGoalPaceMetrics(),
+            metaTons: metaTotalEquipe,
+            realizadoTons: realizadoAtualEquipe,
+            gapTons: gapRestanteEquipe,
+            atingimentoTonsPct: atingimentoPctEquipe,
+          }}
+          unit={metricMode === 'VOLUME' ? 'TONS' : 'REVENUE'}
         />
 
         <PaceComparisonWidget
-          ritmoAtual={ritmoAtualEquipe}
-          ritmoNecessario={ritmoNecessarioEquipe}
-          mediaHistorica={195.0}
-          unidade="t/dia"
-          diasUteisPassados={diasPassados}
-          diasUteisRestantes={diasRestantes}
-          metaTotal={metaTotalEquipe}
-          realizadoTotal={realizadoAtualEquipe}
-          gapTotal={gapRestanteEquipe}
+          goalMetrics={{
+            ...cockpitCommercialService.getGoalPaceMetrics(),
+            metaTons: metaTotalEquipe,
+            realizadoTons: realizadoAtualEquipe,
+            gapTons: gapRestanteEquipe,
+            ritmoAtualTonsDia: ritmoAtualEquipe,
+            ritmoNecessarioTonsDia: ritmoNecessarioEquipe,
+          }}
+          unit={metricMode === 'VOLUME' ? 'TONS' : 'REVENUE'}
         />
       </div>
 

@@ -49,7 +49,8 @@ import {
   TrackedQuotationItem,
 } from './QuotationIntegrationTracker'
 import { ProactiveAlertsSection, MOCK_PROACTIVE_ALERTS } from './ProactiveAlertsSection'
-import { SellerDailyCockpitHeader, MOCK_DAILY_PRIORITIES } from './SellerDailyCockpitHeader'
+import { SellerDailyCockpitHeader } from './SellerDailyCockpitHeader'
+import { cockpitCommercialService } from '@/services/cockpit_commercial_service'
 import {
   CommercialDrilldownDrawer,
   DrilldownContextData,
@@ -357,9 +358,15 @@ export function SellerPerformanceCockpit() {
     <div className="space-y-6 pb-12 animate-fade-in">
       {/* 1. SEÇÃO FIXA MATINAL: O QUE FAZER HOJE */}
       <SellerDailyCockpitHeader
-        onActionClick={(item) => {
-          toast.success(`Iniciando ação: ${item.title}`)
-        }}
+        coverageMetrics={cockpitCommercialService.getPortfolioCoverage(
+          cockpitCommercialService.getPortfolioCustomers(),
+        )}
+        goalMetrics={cockpitCommercialService.getGoalPaceMetrics()}
+        oitfPct={94.2}
+        unit={metricMode === 'VOLUME' ? 'TONS' : 'REVENUE'}
+        onDrilldownClick={(type) =>
+          handleOpenDrilldown({ id: 'kpi-01', name: `Detalhamento ${type}` })
+        }
       />
 
       {/* 2. BARRA GLOBAL UNIFICADA DE FILTROS & SEGMENTAÇÃO */}
@@ -494,21 +501,13 @@ export function SellerPerformanceCockpit() {
       {/* 4. SEÇÃO DO TERMÔMETRO DA META & RITMO ATUAL × NECESSÁRIO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <GoalThermometer
-          percent={atingimentoPct}
-          metaLabel="Meta: 1.000 t"
-          realizadoLabel={`Realizado: ${formatWeight(realizadoAtual, 0)} | Falta: ${formatWeight(gapRestante, 0)}`}
+          goalMetrics={cockpitCommercialService.getGoalPaceMetrics()}
+          unit={metricMode === 'VOLUME' ? 'TONS' : 'REVENUE'}
         />
 
         <PaceComparisonWidget
-          ritmoAtual={ritmoAtual}
-          ritmoNecessario={ritmoNecessario}
-          mediaHistorica={48.2}
-          unidade="t/dia"
-          diasUteisPassados={diasPassados}
-          diasUteisRestantes={diasRestantes}
-          metaTotal={metaTotal}
-          realizadoTotal={realizadoAtual}
-          gapTotal={gapRestante}
+          goalMetrics={cockpitCommercialService.getGoalPaceMetrics()}
+          unit={metricMode === 'VOLUME' ? 'TONS' : 'REVENUE'}
         />
       </div>
 
