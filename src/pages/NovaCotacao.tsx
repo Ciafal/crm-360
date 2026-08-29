@@ -549,12 +549,56 @@ export default function NovaCotacao() {
     [subtotalValue, freightType, freightValue],
   )
 
-  // Motor Inteligente de Cross Sell & Recorrência (P3)
-  const crossSellSuggestions = useMemo(() => {
-    if (!selectedCustomer) return []
-    const existingCodes = items.map((i) => i.material_code)
-    return smartCrossSellEngine.getSuggestionsForCustomer(selectedCustomer.sapCode, existingCodes)
-  }, [selectedCustomer, items])
+  // Estado e dados do Cross Sell inteligente
+  const [crossSellDataMode, setCrossSellDataMode] = useState<'REAL' | 'FIXTURE'>(
+    smartCrossSellEngine.getDataMode(),
+  )
+  const [isCrossSellLoading, setIsCrossSellLoading] = useState(false)
+  const [crossSellError, setCrossSellError] = useState<string | null>(null)
+  const [crossSellSuggestionsList, setCrossSellSuggestionsList] = useState<
+    SmartCrossSellSuggestion[]
+  >([])
+
+  // Função disparada imediatamente na seleção do cliente e na mudança dos itens da cotação
+  const loadCrossSellRecommendations = (
+    customerSapCode: string | null | undefined,
+    currentItems = items,
+  ) => {
+    if (!customerSapCode) {
+      setCrossSellSuggestionsList([])
+      setIsCrossSellLoading(false)
+      setCrossSellError(null)
+      return
+    }
+
+    setIsCrossSellLoading(true)
+    setCrossSellError(null)
+
+    // Simulação assíncrona ultra rápida de cruzamento do motor de recomendações
+    const timer = setTimeout(() => {
+      try {
+        const existingCodes = currentItems.map((i) => i.material_code)
+        const sugs = smartCrossSellEngine.getSuggestionsForCustomer(customerSapCode, existingCodes)
+        setCrossSellSuggestionsList(sugs)
+        setIsCrossSellLoading(false)
+      } catch (err: any) {
+        setCrossSellError(err?.message || 'Histórico comercial temporariamente indisponível.')
+        setIsCrossSellLoading(false)
+      }
+    }, 180)
+
+    return () => clearTimeout(timer)
+  }
+
+  // Gatilho 1: Assim que customerId / selectedCustomer mudar, recalcula automaticamente
+  // Gatilho 2: Quando quotationItems mudar (adicionar/remover/alterar), recalcula
+  useEffect(() => {
+    if (selectedCustomer?.sapCode) {
+      loadCrossSellRecommendations(selectedCustomer.sapCode, items)
+    } else {
+      setCrossSellSuggestionsList([])
+    }
+  }, [selectedCustomer?.sapCode, items, crossSellDataMode])
 
   // Alçada de Aprovação Dinâmica
   const approvalEval = useMemo(() => quotationService.calculateApprovalStatus(items), [items])
@@ -1136,125 +1180,6 @@ export default function NovaCotacao() {
             </div>
           )}
 
-          {/* PAINEL DE OPORTUNIDADES & CROSS-SELL INTELIGENTE (P3) */}
-          {selectedCustomer && crossSellSuggestions.length > 0 && (
-            <SmartCrossSellPanel
-              customerName={selectedCustomer.nomeFantasia}
-              suggestions={crossSellSuggestions}
-              onAddSuggestion={(sug) => {
-                // Registro de Aprendizado da IA
-                smartCrossSellEngine.recordFeedback(
-                  quoteCode,
-                  selectedCustomer.sapCode,
-                  sug.codigo,
-                  sug.tipo,
-                  'ADICIONADA',
-                  {
-                    sellerId: 'qas-vendedor_teste',
-                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
-                    customerName: selectedCustomer.nomeFantasia,
-                    materialDescription: sug.descricao,
-                    materialFamily: sug.familia,
-                    valueBrl:
-                      sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
-                    tons: sug.baseRastreabilidade.volumeMedioTons || 2.0,
-                    scoreIa: sug.scoreOportunidade,
-                    motivoIa: sug.motivoIA,
-                  },
-                )
-
-                // Adicionar diretamente aos itens da cotação com 1 clique
-                const matFound =
-                  CATALOG_MATERIALS.find(
-                    (m) => m.code.toLowerCase() === sug.codigo.toLowerCase(),
-                  ) || CATALOG_MATERIALS[0]
-
-                const isLow = matFound.availableStock < stockCheckThreshold
-                const newItem: QuotationItem = {
-                  id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                  item_sequence: (items.length + 1) * 10,
-                  material_code: sug.codigo,
-                  description: sug.descricao,
-                  family: sug.familia,
-                  dimension: sug.dimensao,
-                  quantity: sug.baseRastreabilidade.volumeMedioTons || 2.0,
-                  unit: 't',
-                  requested_date: itemDeliveryDate,
-                  sap_price: sug.precoReferenciaTon,
-                  proposed_price: sug.precoReferenciaTon,
-                  deviation_pct: 0,
-                  final_price: sug.precoReferenciaTon,
-                  total: sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
-                  stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
-                  stock_situation: isLow ? 'ESTOQUE_BAIXO' : 'ESTOQUE_SUFICIENTE',
-                  stock_updated_at: matFound.stockUpdatedAt,
-                  stock_confirmation_required: isLow,
-                  stock_confirmed: !isLow,
-                  plant: sug.baseRastreabilidade.planta,
-                  storage_location: sug.baseRastreabilidade.deposito,
-                  origem_item: sug.origemItem,
-                  score_ia: sug.scoreOportunidade,
-                  motivo_ia: sug.motivoIA,
-                }
-
-                setItems((prev) => [...prev, newItem])
-                triggerAutosave()
-
-                toast({
-                  title: '✨ Oportunidade IA Adicionada com Sucesso!',
-                  description: `${sug.descricao} (${sug.tipoLabel}) incluído na cotação.`,
-                  className: 'bg-purple-950 text-white border-purple-800',
-                })
-              }}
-              onRequestStockCheck={(sug) => {
-                setStockCheckItemTarget({
-                  id: `temp-cs-${Date.now()}`,
-                  item_sequence: (items.length + 1) * 10,
-                  material_code: sug.codigo,
-                  description: sug.descricao,
-                  family: sug.familia,
-                  dimension: sug.dimensao,
-                  quantity: sug.baseRastreabilidade.volumeMedioTons || 2.0,
-                  unit: 't',
-                  requested_date: itemDeliveryDate,
-                  sap_price: sug.precoReferenciaTon,
-                  proposed_price: sug.precoReferenciaTon,
-                  deviation_pct: 0,
-                  final_price: sug.precoReferenciaTon,
-                  total: sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
-                  stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
-                  stock_situation: 'ESTOQUE_BAIXO',
-                  stock_updated_at: 'Hoje 07:15',
-                  stock_confirmation_required: true,
-                })
-                setStockCheckDrawerOpen(true)
-              }}
-              onDismissSuggestion={(sug) => {
-                smartCrossSellEngine.recordFeedback(
-                  quoteCode,
-                  selectedCustomer.sapCode,
-                  sug.codigo,
-                  sug.tipo,
-                  'DISPENSADA',
-                  {
-                    sellerId: 'qas-vendedor_teste',
-                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
-                    customerName: selectedCustomer.nomeFantasia,
-                    materialDescription: sug.descricao,
-                    materialFamily: sug.familia,
-                    scoreIa: sug.scoreOportunidade,
-                    motivoIa: sug.motivoIA,
-                  },
-                )
-                toast({
-                  title: 'Sugestão Dispensada',
-                  description:
-                    'A IA registrou sua preferência para refinar as recomendações deste cliente.',
-                })
-              }}
-            />
-          )}
-
           {/* PASSO 2: ITENS DA COTAÇÃO & GRID COMERCIAL */}
           <Card className="bg-white border-border/60 shadow-xs rounded-2xl overflow-hidden">
             {' '}
@@ -1580,17 +1505,14 @@ export default function NovaCotacao() {
                           <tr key={it.id} className="hover:bg-primary/5 transition-colors group">
                             <td className="p-3 font-mono font-bold text-primary">
                               <div>{it.material_code}</div>
-                              {it.origem_item === 'CROSS_SELL_IA' && (
-                                <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[9px] px-1.5 py-0 mt-0.5">
-                                  ✨ Cross-Sell IA ({it.score_ia}/100)
+                              {it.origem_item && it.origem_item !== 'MANUAL' ? (
+                                <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[9px] px-1.5 py-0 mt-0.5 inline-flex items-center gap-1 font-semibold">
+                                  <span>✨ Recomendado pela IA</span>
+                                  {it.score_ia ? (
+                                    <span className="font-mono">({it.score_ia}/100)</span>
+                                  ) : null}
                                 </Badge>
-                              )}
-                              {it.origem_item === 'RECOMPRA_IA' && (
-                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] px-1.5 py-0 mt-0.5">
-                                  🔄 Recompra IA ({it.score_ia}/100)
-                                </Badge>
-                              )}
-                              {it.origem_item === 'MANUAL' && (
+                              ) : (
                                 <span className="text-[9px] text-muted-foreground block mt-0.5 font-sans font-normal">
                                   Manual
                                 </span>
@@ -1692,6 +1614,144 @@ export default function NovaCotacao() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ✨ OPORTUNIDADES DE VENDA — BLOCO PERMANENTE IMEDIATAMENTE ABAIXO DO PASSO 2 */}
+          <SmartCrossSellPanel
+            customerId={selectedCustomer?.id || selectedCustomer?.sapCode || null}
+            customerName={selectedCustomer?.nomeFantasia || selectedCustomer?.razaoSocial || null}
+            suggestions={crossSellSuggestionsList}
+            isLoading={isCrossSellLoading}
+            error={crossSellError}
+            dataMode={crossSellDataMode}
+            onToggleDataMode={(newMode) => {
+              smartCrossSellEngine.setDataMode(newMode)
+              setCrossSellDataMode(newMode)
+              if (selectedCustomer?.sapCode) {
+                loadCrossSellRecommendations(selectedCustomer.sapCode, items)
+              }
+            }}
+            onRetry={() => {
+              if (selectedCustomer?.sapCode) {
+                loadCrossSellRecommendations(selectedCustomer.sapCode, items)
+              }
+            }}
+            onAddSuggestion={(sug) => {
+              // Registro de Aprendizado da IA
+              if (selectedCustomer) {
+                smartCrossSellEngine.recordFeedback(
+                  quoteCode,
+                  selectedCustomer.sapCode,
+                  sug.codigo,
+                  sug.tipo,
+                  'ADICIONADA',
+                  {
+                    sellerId: 'qas-vendedor_teste',
+                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
+                    customerName: selectedCustomer.nomeFantasia,
+                    materialDescription: sug.descricao,
+                    materialFamily: sug.familia,
+                    valueBrl:
+                      sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
+                    tons: sug.baseRastreabilidade.volumeMedioTons || 2.0,
+                    scoreIa: sug.scoreOportunidade,
+                    motivoIa: sug.motivoIA,
+                  },
+                )
+              }
+
+              // Adicionar diretamente aos itens da cotação com 1 clique (sem modal, sem recarregar)
+              const matFound =
+                CATALOG_MATERIALS.find((m) => m.code.toLowerCase() === sug.codigo.toLowerCase()) ||
+                CATALOG_MATERIALS[0]
+
+              const isLow = matFound.availableStock < stockCheckThreshold
+              const qtyToAdd = sug.baseRastreabilidade.volumeMedioTons || 2.0
+              const newItem: QuotationItem = {
+                id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                item_sequence: (items.length + 1) * 10,
+                material_code: sug.codigo,
+                description: sug.descricao,
+                family: sug.familia,
+                dimension: sug.dimensao,
+                quantity: qtyToAdd,
+                unit: 't',
+                requested_date: itemDeliveryDate,
+                sap_price: sug.precoReferenciaTon,
+                proposed_price: sug.precoReferenciaTon,
+                deviation_pct: 0,
+                final_price: sug.precoReferenciaTon,
+                total: sug.precoReferenciaTon * qtyToAdd,
+                stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
+                stock_situation: isLow ? 'ESTOQUE_BAIXO' : 'ESTOQUE_SUFICIENTE',
+                stock_updated_at: matFound.stockUpdatedAt,
+                stock_confirmation_required: isLow,
+                stock_confirmed: !isLow,
+                plant: sug.baseRastreabilidade.planta,
+                storage_location: sug.baseRastreabilidade.deposito,
+                origem_item: sug.origemItem,
+                score_ia: sug.scoreOportunidade,
+                motivo_ia: sug.motivoIA,
+              }
+
+              const nextItems = [...items, newItem]
+              setItems(nextItems)
+              triggerAutosave()
+
+              toast({
+                title: '✨ Oportunidade IA Adicionada com Sucesso!',
+                description: `${sug.descricao} (${sug.tipoLabel}) foi inserido no Passo 2 da cotação.`,
+                className: 'bg-purple-950 text-white border-purple-800',
+              })
+            }}
+            onRequestStockCheck={(sug) => {
+              setStockCheckItemTarget({
+                id: `temp-cs-${Date.now()}`,
+                item_sequence: (items.length + 1) * 10,
+                material_code: sug.codigo,
+                description: sug.descricao,
+                family: sug.familia,
+                dimension: sug.dimensao,
+                quantity: sug.baseRastreabilidade.volumeMedioTons || 2.0,
+                unit: 't',
+                requested_date: itemDeliveryDate,
+                sap_price: sug.precoReferenciaTon,
+                proposed_price: sug.precoReferenciaTon,
+                deviation_pct: 0,
+                final_price: sug.precoReferenciaTon,
+                total: sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
+                stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
+                stock_situation: 'ESTOQUE_BAIXO',
+                stock_updated_at: 'Hoje 07:15',
+                stock_confirmation_required: true,
+              })
+              setStockCheckDrawerOpen(true)
+            }}
+            onDismissSuggestion={(sug) => {
+              if (selectedCustomer) {
+                smartCrossSellEngine.recordFeedback(
+                  quoteCode,
+                  selectedCustomer.sapCode,
+                  sug.codigo,
+                  sug.tipo,
+                  'DISPENSADA',
+                  {
+                    sellerId: 'qas-vendedor_teste',
+                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
+                    customerName: selectedCustomer.nomeFantasia,
+                    materialDescription: sug.descricao,
+                    materialFamily: sug.familia,
+                    scoreIa: sug.scoreOportunidade,
+                    motivoIa: sug.motivoIA,
+                  },
+                )
+              }
+              toast({
+                title: 'Sugestão Dispensada',
+                description:
+                  'A IA registrou sua preferência para refinar as recomendações deste cliente.',
+              })
+            }}
+          />
 
           {/* CONDIÇÕES COMERCIAIS & OBSERVAÇÕES */}
           <Card className="bg-white border-border/60 shadow-xs rounded-2xl p-4">

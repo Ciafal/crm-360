@@ -320,6 +320,44 @@ export interface PreloadedCustomer {
 
 export const PRELOADED_CUSTOMERS: PreloadedCustomer[] = [
   {
+    id: 'CLI-TESTE-CROSS-SELL',
+    sapCode: '000999888',
+    razaoSocial: 'CLIENTE CROSS SELL TESTE S/A',
+    nomeFantasia: 'CLIENTE CROSS SELL TESTE (HOMOLOGAÇÃO)',
+    cnpj: '99.888.777/0001-00',
+    cidade: 'Betim',
+    uf: 'MG',
+    vendedor: 'Carlos Mendonça',
+    archetype: 'INDÚSTRIA',
+    abcHistorico: 'A',
+    contatos: [
+      {
+        nome: 'Eng. Ricardo Silveira (Teste)',
+        cargo: 'Gerente de Engenharia & Compras',
+        telefone: '(31) 98765-4321',
+        email: 'ricardo.silveira@clientecrosssell.com.br',
+      },
+      {
+        nome: 'Tatiane Mendes',
+        cargo: 'Compradora Pleno',
+        telefone: '(31) 98765-1122',
+        email: 'suprimentos@clientecrosssell.com.br',
+      },
+    ],
+    shipToAddresses: [
+      {
+        code: '000999888-01',
+        label: 'Unidade Fabril Industrial Betim',
+        address: 'Av. das Indústrias Metálicas, 1500 - Distrito Industrial - Betim/MG',
+      },
+    ],
+    condicoesPagamento: ['30/60 DDL (Boleto)', '28 DDL', '45 DDL', 'À Vista (TED/PIX)'],
+    salesOrg: '1000',
+    distributionChannel: '10',
+    division: '20',
+    limiteCreditoDisponivel: 450000,
+  },
+  {
     id: 'CLI-AGRICORTE',
     sapCode: '0001094050',
     razaoSocial: 'AGRICORTE IMPLEMENTOS AGRICOLAS S.A.',
