@@ -1818,14 +1818,16 @@ export default function NovaCotacao() {
         {/* COLUNA DIREITA (STICKY): PAINEL LATERAL "RESUMO COMERCIAL" */}
         <div className="lg:col-span-4 sticky top-24 space-y-4">
           <Card className="bg-white border-primary/20 shadow-md rounded-3xl overflow-hidden">
-            <CardHeader className="bg-primary text-white p-4 pb-3">
+            <CardHeader className="bg-primary text-primary-foreground p-4 pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold tracking-tight">RESUMO COMERCIAL</CardTitle>
+                <CardTitle className="text-sm font-bold tracking-tight text-white">
+                  RESUMO COMERCIAL
+                </CardTitle>
                 <Badge className="bg-white/20 text-white font-mono text-[10px] border-none">
                   {quoteCode}
                 </Badge>
               </div>
-              <p className="text-[11px] text-white/80 mt-0.5">
+              <p className="text-[11px] text-white/90 mt-0.5">
                 {selectedCustomer ? selectedCustomer.nomeFantasia : 'Nenhum cliente selecionado'}
               </p>
             </CardHeader>

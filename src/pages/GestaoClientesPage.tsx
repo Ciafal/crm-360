@@ -178,26 +178,26 @@ export default function GestaoClientesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+    <div className="min-h-screen bg-background text-foreground font-sans pb-16">
       {/* 1. TOPO EXECUTIVO CIAFAL & AÇÕES CENTRAIS (Regra 31) */}
-      <div className="border-b border-slate-800 bg-slate-900/90 sticky top-0 z-30 backdrop-blur-md">
+      <div className="border-b border-border/60 bg-white/95 sticky top-0 z-30 backdrop-blur-md shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             {/* Título & Badge de Origem Mestre */}
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-sky-500/20 text-sky-400 rounded-2xl border border-sky-500/30 shadow-inner">
+              <div className="p-2.5 bg-primary/10 text-primary rounded-2xl border border-primary/20 shadow-xs">
                 <Compass className="w-6 h-6" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-serif font-bold text-white tracking-tight">
+                  <h1 className="text-xl font-serif font-bold text-primary tracking-tight">
                     GESTÃO DE CLIENTES & COBERTURA DA CARTEIRA
                   </h1>
-                  <Badge className="bg-sky-950 text-sky-300 border-sky-800 text-[10px] font-mono">
+                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-mono">
                     CRM 360º CIAFAL
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Registro Comercial Único · Jornada Lead → Prospect → Cliente SAP · Sem Cadastros
                   Paralelos
                 </p>
@@ -209,7 +209,7 @@ export default function GestaoClientesPage() {
               <Button
                 size="sm"
                 onClick={() => setIsCadastroLeadOpen(true)}
-                className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5 shadow-md hover:shadow-sky-600/20 transition-all"
+                className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5 shadow-sm transition-all"
               >
                 <UserPlus className="w-4 h-4" /> [ + CADASTRAR LEAD ]
               </Button>
@@ -220,11 +220,11 @@ export default function GestaoClientesPage() {
                 onClick={() => setActiveSection('cadastros')}
                 className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'cadastros'
-                    ? 'bg-purple-950 text-purple-300 border-purple-700'
-                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                    ? 'bg-purple-100 text-purple-900 border-purple-300 font-bold'
+                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
                 }`}
               >
-                <FileSpreadsheet className="w-4 h-4 text-purple-400" />[ CENTRAL DE CADASTROS ]
+                <FileSpreadsheet className="w-4 h-4 text-purple-600" />[ CENTRAL DE CADASTROS ]
                 {kpis.cadastrosPendentes > 0 && (
                   <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 rounded-full font-mono">
                     {kpis.cadastrosPendentes}
@@ -238,11 +238,11 @@ export default function GestaoClientesPage() {
                 onClick={() => setActiveSection('central-acoes')}
                 className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'central-acoes'
-                    ? 'bg-amber-950 text-amber-300 border-amber-700'
-                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />[ CENTRAL DE AÇÕES ]
+                <Sparkles className="w-4 h-4 text-amber-600" />[ CENTRAL DE AÇÕES ]
               </Button>
 
               <Button
@@ -251,46 +251,46 @@ export default function GestaoClientesPage() {
                 onClick={() => setActiveSection('quem-contatar')}
                 className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'quem-contatar'
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
-                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold'
+                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
                 }`}
               >
-                <PhoneCall className="w-4 h-4 text-emerald-400" />[ QUEM CONTATAR HOJE? ]
+                <PhoneCall className="w-4 h-4 text-emerald-600" />[ QUEM CONTATAR HOJE? ]
               </Button>
             </div>
           </div>
 
           {/* BARRA DE BUSCA GLOBAL UNIVERSAL (Regra 31) */}
-          <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="mt-3.5 pt-3 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative w-full sm:w-96">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-2.5" />
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-2.5" />
               <Input
                 value={globalSearchTerm}
                 onChange={(e) => setGlobalSearchTerm(e.target.value)}
                 placeholder="Busca global: Razão Social, CNPJ, SAP, CRM ID, contato..."
-                className="h-9 pl-9 bg-slate-950 border-slate-800 text-xs rounded-xl text-slate-200 placeholder:text-slate-600 focus:border-sky-500"
+                className="h-9 pl-9 bg-white border-border text-xs rounded-xl text-foreground placeholder:text-muted-foreground focus:border-primary"
               />
             </div>
 
             {/* Micro Indicadores do Registro Único */}
-            <div className="flex items-center gap-3 text-xs text-slate-400 overflow-x-auto w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-500 font-bold uppercase">Base Mestre</span>
-                <strong className="text-white font-mono">{kpis.total}</strong>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground overflow-x-auto w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-border/60">
+                <span className="text-[10px] text-slate-600 font-bold uppercase">Base Mestre</span>
+                <strong className="text-slate-900 font-mono">{kpis.total}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-amber-500 font-bold uppercase">Leads</span>
-                <strong className="text-amber-400 font-mono">{kpis.leads}</strong>
+              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+                <span className="text-[10px] text-amber-800 font-bold uppercase">Leads</span>
+                <strong className="text-amber-900 font-mono">{kpis.leads}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-purple-400 font-bold uppercase">Prospects</span>
-                <strong className="text-purple-300 font-mono">{kpis.prospects}</strong>
+              <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
+                <span className="text-[10px] text-purple-800 font-bold uppercase">Prospects</span>
+                <strong className="text-purple-900 font-mono">{kpis.prospects}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-emerald-400 font-bold uppercase">
+              <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <span className="text-[10px] text-emerald-800 font-bold uppercase">
                   Clientes SAP
                 </span>
-                <strong className="text-emerald-400 font-mono">{kpis.clientesSap}</strong>
+                <strong className="text-emerald-900 font-mono">{kpis.clientesSap}</strong>
               </div>
             </div>
           </div>
@@ -300,46 +300,46 @@ export default function GestaoClientesPage() {
       {/* 2. CORPO PRINCIPAL COM 6 SEÇÕES ORGANIZADAS (Regra 31) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-5">
         <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
-          <TabsList className="bg-slate-900/90 border border-slate-800 p-1 rounded-2xl flex items-center gap-1 overflow-x-auto h-auto">
+          <TabsList className="bg-slate-100 border border-border p-1 rounded-2xl flex items-center gap-1 overflow-x-auto h-auto">
             <TabsTrigger
               value="visao-geral"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               1. VISÃO GERAL & COBERTURA
             </TabsTrigger>
             <TabsTrigger
               value="quem-contatar"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               2. QUEM DEVO CONTATAR HOJE?
             </TabsTrigger>
             <TabsTrigger
               value="leads-prospects"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               3. LEADS & PROSPECTS
             </TabsTrigger>
             <TabsTrigger
               value="lista-clientes"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               4. LISTA DE CLIENTES
             </TabsTrigger>
             <TabsTrigger
               value="cadastros"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               5. CENTRAL DE CADASTROS
             </TabsTrigger>
             <TabsTrigger
               value="cobertura-vendedor"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               6. COBERTURA POR VENDEDOR
             </TabsTrigger>
             <TabsTrigger
               value="funil-cohort"
-              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
               📈 FUNIL & COHORT
             </TabsTrigger>

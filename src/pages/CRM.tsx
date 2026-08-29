@@ -1506,7 +1506,7 @@ export default function CRM() {
                       <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
                         {formatBRL(op.valor)}
                       </td>
-                      <td className="py-3 px-3 text-center font-mono">{op.toneladas}t</td>
+                      <td className="py-3 px-3 text-center font-mono">{op.toneladas} t</td>
                       <td className="py-3 px-3 text-center font-bold text-primary">
                         {op.probabilidade}%
                       </td>

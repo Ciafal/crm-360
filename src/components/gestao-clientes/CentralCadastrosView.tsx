@@ -111,7 +111,7 @@ export function CentralCadastrosView({
   return (
     <div className="space-y-4">
       {/* CABEÇALHO & TABS DA CENTRAL DE CADASTROS (Regra 18) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/90 rounded-3xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-3xl border border-border shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-500/30">
@@ -136,14 +136,14 @@ export function CentralCadastrosView({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar protocolo, CNPJ, cliente..."
-              className="h-9 w-64 bg-slate-950 border-slate-800 pl-9 text-xs rounded-xl"
+              className="h-9 w-64 bg-white border-border pl-9 text-xs rounded-xl"
             />
           </div>
           <Button
             size="sm"
             variant="outline"
             onClick={onRefreshParties}
-            className="h-9 text-xs border-slate-800 bg-slate-950 text-slate-300 rounded-xl gap-1"
+            className="h-9 text-xs border-border bg-white text-slate-700 rounded-xl gap-1"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </Button>
@@ -194,7 +194,7 @@ export function CentralCadastrosView({
               className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 isSelected
                   ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800'
+                  : 'bg-white border border-border text-slate-700 hover:bg-slate-50'
               }`}
             >
               <span>{tab.label}</span>
@@ -211,9 +211,9 @@ export function CentralCadastrosView({
       </div>
 
       {/* TABELA DA CENTRAL DE CADASTROS */}
-      <div className="bg-slate-900/90 rounded-3xl border border-slate-800 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-3xl border border-border overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-slate-950/60">
+          <TableHeader className="bg-slate-50">
             <TableRow className="border-b border-slate-800">
               <TableHead className="text-slate-400 text-xs font-bold uppercase">
                 Protocolo / CRM ID

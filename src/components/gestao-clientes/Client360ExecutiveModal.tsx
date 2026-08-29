@@ -86,21 +86,21 @@ export function Client360ExecutiveModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-slate-950 text-slate-100 border border-slate-800 p-0 overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Banner Mock */}
+      <DialogContent className="max-w-4xl bg-white text-slate-900 border border-border p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Banner Homologação */}
         {cliente.is_mock && (
-          <div className="bg-sky-950/90 border-b border-sky-800/40 px-4 py-1.5 text-[10px] text-sky-300 font-mono flex items-center justify-between">
-            <span>DADOS DE DEMONSTRAÇÃO (is_mock=true) · CIAFAL CRM 360</span>
-            <span className="text-slate-400">Código SAP: {cliente.codigo}</span>
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 text-[10px] text-amber-900 font-mono flex items-center justify-between font-bold">
+            <span>DADOS DE DEMONSTRAÇÃO · CIAFAL CRM 360</span>
+            <span className="text-muted-foreground">Código SAP: {cliente.codigo}</span>
           </div>
         )}
 
-        {/* Header */}
-        <div className="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* HEADER MODAL */}
+        <div className="p-6 border-b border-border/60 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Building2 className="w-5 h-5 text-sky-400" />
-              <h2 className="font-serif text-xl font-bold text-white tracking-tight">
+              <Building2 className="w-5 h-5 text-primary" />
+              <h2 className="font-serif text-xl font-bold text-primary tracking-tight">
                 {cliente.razaoSocial}
               </h2>
               <Badge className="bg-[#003A70] text-sky-200 border-[#005a9c] text-xs">
@@ -206,7 +206,7 @@ export function Client360ExecutiveModal({
         {/* Tabs Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-            <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-2xl w-full grid grid-cols-5 text-xs mb-4">
+            <TabsList className="bg-slate-100 border border-border p-1 rounded-2xl w-full grid grid-cols-5 text-xs mb-4">
               <TabsTrigger
                 value="diagnostico_ia"
                 className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"

@@ -1433,7 +1433,7 @@ export default function Cliente360() {
                         </Badge>
                       </div>
                       <span className="text-xs text-slate-700 font-medium block mt-0.5">
-                        {load.itemsDescription} ({load.tons} toneladas)
+                        {load.itemsDescription} ({load.tons} t)
                       </span>
                     </div>
 

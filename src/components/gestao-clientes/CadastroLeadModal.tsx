@@ -177,17 +177,17 @@ export function CadastroLeadModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-slate-950 text-slate-100 border border-slate-800 rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="border-b border-slate-800 pb-4">
+      <DialogContent className="max-w-2xl bg-white text-slate-900 border border-border rounded-3xl p-6 max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="border-b border-border/60 pb-4">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-500/30">
+            <div className="p-2 bg-primary/10 text-primary rounded-xl border border-primary/20">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="font-serif text-xl font-bold text-white tracking-tight">
+              <DialogTitle className="font-serif text-xl font-bold text-primary tracking-tight">
                 Cadastrar Novo Lead Comercial
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogDescription className="text-xs text-muted-foreground">
                 Registro Comercial Único imediato (UUID + Friendly Code). Sem burocracia na
                 prospecção.
               </DialogDescription>
@@ -208,7 +208,7 @@ export function CadastroLeadModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] bg-slate-950/70 p-3 rounded-xl border border-amber-800/40">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] bg-amber-50 p-3 rounded-xl border border-amber-200">
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">
                   Empresa
@@ -272,13 +272,13 @@ export function CadastroLeadModal({
         <form onSubmit={handleSubmit} className="space-y-4 py-2 text-xs">
           {/* BLOCO 1: IDENTIFICAÇÃO DA EMPRESA */}
           <div className="space-y-3">
-            <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-primary uppercase tracking-wider block">
               1. Identificação da Empresa & Localização
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   Razão Social / Nome da Empresa *
                 </Label>
                 <Input
@@ -286,55 +286,55 @@ export function CadastroLeadModal({
                   value={razaoSocial}
                   onChange={(e) => handleRazaoChange(e.target.value)}
                   placeholder="Ex: Siderúrgica & Estruturas Alvorada Ltda"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Nome Fantasia</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Nome Fantasia</Label>
                 <Input
                   value={nomeFantasia}
                   onChange={(e) => setNomeFantasia(e.target.value)}
                   placeholder="Ex: Alvorada Estruturas"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   CNPJ / CPF (Opcional nesta fase)
                 </Label>
                 <Input
                   value={cnpjCpf}
                   onChange={(e) => handleCnpjChange(e.target.value)}
                   placeholder="00.000.000/0000-00"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl font-mono"
+                  className="h-9 bg-white border-border text-xs rounded-xl font-mono"
                 />
-                <span className="text-[10px] text-slate-500 block">
+                <span className="text-[10px] text-muted-foreground block">
                   Pode ser complementado depois no onboarding
                 </span>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Cidade *</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Cidade *</Label>
                 <Input
                   required
                   value={cidade}
                   onChange={(e) => setCidade(e.target.value)}
                   placeholder="Ex: Contagem"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">UF *</Label>
+                <Label className="text-xs text-slate-700 font-semibold">UF *</Label>
                 <Select value={uf} onValueChange={setUf}>
-                  <SelectTrigger className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl">
+                  <SelectTrigger className="h-9 bg-white border-border text-xs rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+                  <SelectContent className="bg-white border-border text-slate-900 text-xs">
                     <SelectItem value="MG">MG - Minas Gerais</SelectItem>
                     <SelectItem value="SP">SP - São Paulo</SelectItem>
                     <SelectItem value="RJ">RJ - Rio de Janeiro</SelectItem>
@@ -352,61 +352,61 @@ export function CadastroLeadModal({
           </div>
 
           {/* BLOCO 2: CONTATO PRINCIPAL */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
-            <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider block">
+          <div className="space-y-3 pt-2 border-t border-border/60">
+            <span className="text-[11px] font-bold text-primary uppercase tracking-wider block">
               2. Contato Comercial Direto
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Nome do Contato *</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Nome do Contato *</Label>
                 <Input
                   required
                   value={nomeContato}
                   onChange={(e) => setNomeContato(e.target.value)}
                   placeholder="Ex: Rodrigo Mendonça (Compras)"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">WhatsApp Oficial *</Label>
+                <Label className="text-xs text-slate-700 font-semibold">WhatsApp Oficial *</Label>
                 <Input
                   required
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
                   placeholder="(31) 99999-9999"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl font-mono"
+                  className="h-9 bg-white border-border text-xs rounded-xl font-mono"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">E-mail Comercial</Label>
+                <Label className="text-xs text-slate-700 font-semibold">E-mail Comercial</Label>
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="compras@empresa.com.br"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
             </div>
           </div>
 
           {/* BLOCO 3: POTENCIAL & INTERESSE TÉCNICO */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
-            <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider block">
+          <div className="space-y-3 pt-2 border-t border-border/60">
+            <span className="text-[11px] font-bold text-primary uppercase tracking-wider block">
               3. Potencial Técnico & Comercial
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Segmento</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Segmento</Label>
                 <Select value={segmento} onValueChange={setSegmento}>
-                  <SelectTrigger className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl">
+                  <SelectTrigger className="h-9 bg-white border-border text-xs rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+                  <SelectContent className="bg-white border-border text-slate-900 text-xs">
                     <SelectItem value="Construção Civil">Construção Civil & Estruturas</SelectItem>
                     <SelectItem value="Indústria">Indústria Metalmecânica</SelectItem>
                     <SelectItem value="Agronegócio">Agronegócio & Implementos</SelectItem>
@@ -419,7 +419,7 @@ export function CadastroLeadModal({
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   Volume Potencial (t/mês) *
                 </Label>
                 <Input
@@ -428,17 +428,17 @@ export function CadastroLeadModal({
                   required
                   value={potencialMensalTons}
                   onChange={(e) => setPotencialMensalTons(e.target.value)}
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl font-mono"
+                  className="h-9 bg-white border-border text-xs rounded-xl font-mono"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Origem do Lead</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Origem do Lead</Label>
                 <Select value={origem} onValueChange={setOrigem}>
-                  <SelectTrigger className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl">
+                  <SelectTrigger className="h-9 bg-white border-border text-xs rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+                  <SelectContent className="bg-white border-border text-slate-900 text-xs">
                     <SelectItem value="Prospecção Ativa">Prospecção Ativa (Vendedor)</SelectItem>
                     <SelectItem value="Feira / Evento">Feira / Evento do Setor</SelectItem>
                     <SelectItem value="Indicação de Cliente">Indicação de Cliente</SelectItem>
@@ -451,43 +451,43 @@ export function CadastroLeadModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   Produto de Interesse Principal
                 </Label>
                 <Input
                   value={produtoInteresse}
                   onChange={(e) => setProdutoInteresse(e.target.value)}
                   placeholder="Ex: Perfis W 200, Chapas Grossas A36, Tubos Sch40"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">Aplicação / Projeto</Label>
+                <Label className="text-xs text-slate-700 font-semibold">Aplicação / Projeto</Label>
                 <Input
                   value={aplicacao}
                   onChange={(e) => setAplicacao(e.target.value)}
                   placeholder="Ex: Fabricação de galpões logísticos e pontes rolantes"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-border text-xs rounded-xl"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs text-slate-300 font-semibold">Observações Comerciais</Label>
+              <Label className="text-xs text-slate-700 font-semibold">Observações Comerciais</Label>
               <textarea
                 rows={2}
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
                 placeholder="Ex: Cliente solicita entrega fracionada em Betim e prefere cotação com frete CIF..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-sky-500"
+                className="w-full bg-white border border-border rounded-xl p-2.5 text-xs text-slate-900 placeholder:text-muted-foreground focus:outline-hidden focus:border-primary"
               />
             </div>
           </div>
 
-          <DialogFooter className="flex items-center justify-between pt-3 border-t border-slate-800">
-            <span className="text-[11px] text-slate-400">
-              Vendedor Responsável: <strong className="text-slate-200">{vendedorNome}</strong>
+          <DialogFooter className="flex items-center justify-between pt-3 border-t border-border/60">
+            <span className="text-[11px] text-muted-foreground">
+              Vendedor Responsável: <strong className="text-slate-800">{vendedorNome}</strong>
             </span>
 
             <div className="flex gap-2">
@@ -496,14 +496,14 @@ export function CadastroLeadModal({
                 variant="outline"
                 size="sm"
                 onClick={() => onOpenChange(false)}
-                className="h-9 text-xs border-slate-800 bg-slate-900 text-slate-300 hover:text-white rounded-xl"
+                className="h-9 text-xs border-border bg-white text-slate-700 hover:text-slate-900 rounded-xl"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 size="sm"
-                className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5 shadow-sm"
+                className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5 shadow-sm"
               >
                 <CheckCircle2 className="w-4 h-4" /> Cadastrar Lead Comercial
               </Button>

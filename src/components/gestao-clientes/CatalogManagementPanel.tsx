@@ -121,7 +121,7 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
   return (
     <div className="space-y-4 text-slate-100">
       {/* 1. CABEÇALHO DO CATÁLOGO */}
-      <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-4 rounded-3xl bg-white border border-border flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
             <BookOpen className="w-6 h-6" />
@@ -153,7 +153,7 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
             size="sm"
             variant="outline"
             onClick={handleExportCsv}
-            className="h-8 text-xs border-slate-700 bg-slate-950 text-slate-300 hover:text-white rounded-xl gap-1.5"
+            className="h-8 text-xs border-border bg-white text-slate-700 hover:text-primary rounded-xl gap-1.5"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> Exportar Excel
           </Button>
@@ -161,23 +161,23 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
       </div>
 
       {/* 2. FILTROS DO CATÁLOGO (Regra 39) */}
-      <Card className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <Card className="p-4 rounded-2xl bg-white border border-border flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xs">
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
           <Input
             placeholder="Buscar por código, descrição, bitola, norma técnica..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 bg-slate-950 border-slate-800 text-xs text-slate-100 placeholder:text-slate-600 rounded-xl"
+            className="pl-9 h-9 bg-white border-border text-xs text-foreground placeholder:text-muted-foreground rounded-xl"
           />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={lineFilter} onValueChange={setLineFilter}>
-            <SelectTrigger className="h-9 w-44 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-44 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Linha" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Linha (Todas)</SelectItem>
               {lines.map((l) => (
                 <SelectItem key={l} value={l}>
@@ -188,10 +188,10 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
           </Select>
 
           <Select value={familyFilter} onValueChange={setFamilyFilter}>
-            <SelectTrigger className="h-9 w-44 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-44 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Família" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Família (Todas)</SelectItem>
               {families.map((f) => (
                 <SelectItem key={f} value={f}>
@@ -202,10 +202,10 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
           </Select>
 
           <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
-            <SelectTrigger className="h-9 w-40 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-40 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Disponibilidade" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Disponibilidade (Todas)</SelectItem>
               <SelectItem value="imediato">Estoque Imediato</SelectItem>
               <SelectItem value="pcp">PCP Programado</SelectItem>
@@ -219,11 +219,11 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
         {filteredCatalog.map((prod) => (
           <Card
             key={prod.id}
-            className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-sky-500/50 transition-all flex flex-col justify-between gap-3 shadow-xs"
+            className="p-4 rounded-2xl bg-white border border-border hover:border-primary/50 transition-all flex flex-col justify-between gap-3 shadow-xs"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[10px] text-sky-400 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                <span className="font-mono text-[10px] text-primary font-bold bg-slate-100 px-2 py-0.5 rounded border border-border">
                   {prod.codigo}
                 </span>
                 {prod.estoqueDisponivelTons > 0 ? (
@@ -238,42 +238,42 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
               </div>
 
               <div>
-                <strong className="text-sm font-bold text-white block leading-snug">
+                <strong className="text-sm font-bold text-slate-900 block leading-snug">
                   {prod.descricaoComercial}
                 </strong>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
+                <span className="text-[11px] text-muted-foreground block mt-0.5">
                   {prod.familia} · {prod.norma}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-950 rounded-xl text-[11px] border border-slate-800">
+              <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-xl text-[11px] border border-border/60">
                 <div>
-                  <span className="text-slate-500 block text-[10px]">Bitola / Medida:</span>
-                  <strong className="text-slate-200">{prod.bitola}</strong>
+                  <span className="text-muted-foreground block text-[10px]">Bitola / Medida:</span>
+                  <strong className="text-slate-800">{prod.bitola}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">Comprimento:</span>
-                  <strong className="text-slate-200">{prod.comprimento}</strong>
+                  <span className="text-muted-foreground block text-[10px]">Comprimento:</span>
+                  <strong className="text-slate-800">{prod.comprimento}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">Qualidade:</span>
-                  <strong className="text-slate-200 truncate block">{prod.qualidade}</strong>
+                  <span className="text-muted-foreground block text-[10px]">Qualidade:</span>
+                  <strong className="text-slate-800 truncate block">{prod.qualidade}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-[10px]">Preço Tabela:</span>
-                  <strong className="text-emerald-400">
+                  <span className="text-muted-foreground block text-[10px]">Preço Tabela:</span>
+                  <strong className="text-emerald-700">
                     R$ {prod.precoTabelaKg.toFixed(2)} / kg
                   </strong>
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-400 leading-snug">
-                <strong className="text-slate-300">Aplicação:</strong> {prod.aplicacao}
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                <strong className="text-slate-700">Aplicação:</strong> {prod.aplicacao}
               </p>
             </div>
 
             {/* Ações de Envio e Compartilhamento */}
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center gap-2 pt-2 border-t border-border/60">
               <Button
                 size="sm"
                 onClick={() => handleOpenSend(prod, 'whatsapp')}
@@ -296,7 +296,7 @@ export function CatalogManagementPanel({ catalog }: CatalogManagementPanelProps)
 
       {/* DIALOG DE ENVIO DE CATÁLOGO */}
       <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
-        <DialogContent className="bg-slate-950 text-slate-100 border border-slate-800 max-w-md">
+        <DialogContent className="bg-white text-slate-900 border border-border max-w-md">
           <DialogHeader>
             <DialogTitle className="text-base font-serif text-white">
               Enviar Catálogo via {sendType === 'whatsapp' ? 'WhatsApp' : 'E-mail'}

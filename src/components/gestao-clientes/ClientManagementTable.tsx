@@ -120,7 +120,7 @@ export function ClientManagementTable({
   }
 
   return (
-    <Card className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 space-y-4 shadow-xl text-slate-100">
+    <Card className="p-5 rounded-3xl bg-white border border-border space-y-4 shadow-sm text-slate-900">
       {/* 1. BARRA DE FILTROS E BUSCA */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
@@ -129,17 +129,17 @@ export function ClientManagementTable({
             placeholder="Buscar por código, cliente, fantasia, cidade ou vendedor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 bg-slate-950 border-slate-800 text-xs text-slate-100 placeholder:text-slate-600 rounded-xl"
+            className="pl-9 h-9 bg-white border-border text-xs text-foreground placeholder:text-muted-foreground rounded-xl"
           />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filtro Status */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Status (Todos)</SelectItem>
               <SelectItem value="Ativo">Ativos</SelectItem>
               <SelectItem value="Pedido em Carteira">Pedido em Carteira</SelectItem>
@@ -155,10 +155,10 @@ export function ClientManagementTable({
 
           {/* Filtro Classificação */}
           <Select value={classFilter} onValueChange={setClassFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Classificação" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Classificação (Todas)</SelectItem>
               <SelectItem value="ESTRATEGICO">Estratégicos</SelectItem>
               <SelectItem value="CLIENTE_A">Clientes A</SelectItem>
@@ -171,10 +171,10 @@ export function ClientManagementTable({
 
           {/* Filtro Cobertura */}
           <Select value={coverageFilter} onValueChange={setCoverageFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Cobertura" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="todos">Cobertura (Todas)</SelectItem>
               <SelectItem value="cobertos">Cobertos</SelectItem>
               <SelectItem value="descobertos">Sem Cobertura</SelectItem>
@@ -184,10 +184,10 @@ export function ClientManagementTable({
 
           {/* Ordenação */}
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-slate-950 border-slate-800 text-slate-300 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
-            <SelectContent className="bg-slate-950 border-slate-800 text-slate-100 text-xs">
+            <SelectContent className="bg-white border-border text-slate-900 text-xs">
               <SelectItem value="cobertura">Mais Vencidos</SelectItem>
               <SelectItem value="faturamento">Maior Faturamento</SelectItem>
               <SelectItem value="isc">Menor ISC (Risco)</SelectItem>
@@ -199,7 +199,7 @@ export function ClientManagementTable({
             variant="outline"
             size="sm"
             onClick={handleExport}
-            className="h-9 text-xs bg-slate-950 border-slate-800 text-slate-300 hover:text-white rounded-xl gap-1.5"
+            className="h-9 text-xs bg-white border-border text-slate-700 hover:text-slate-900 rounded-xl gap-1.5"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> Exportar
           </Button>
@@ -207,9 +207,9 @@ export function ClientManagementTable({
       </div>
 
       {/* 2. TABELA COMPLETA EXECUTIVA (Regra 9) */}
-      <div className="overflow-x-auto border border-slate-800 rounded-2xl">
-        <table className="w-full text-left text-xs text-slate-300">
-          <thead className="bg-slate-950 text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
+      <div className="overflow-x-auto border border-border rounded-2xl">
+        <table className="w-full text-left text-xs text-slate-700">
+          <thead className="bg-slate-50 text-slate-600 font-mono text-[10px] uppercase border-b border-border">
             <tr>
               <th className="p-3">Código</th>
               <th className="p-3">Cliente / Fantasia</th>
@@ -226,30 +226,32 @@ export function ClientManagementTable({
               <th className="p-3 text-right">Ação</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/80">
+          <tbody className="divide-y divide-border/60">
             {filteredData.map((cliente) => (
               <tr
                 key={cliente.id}
-                className="hover:bg-slate-800/40 transition-colors cursor-pointer"
+                className="hover:bg-slate-50 transition-colors cursor-pointer"
                 onClick={() => onSelectClient(cliente)}
               >
-                <td className="p-3 font-mono font-bold text-sky-400">{cliente.codigo}</td>
+                <td className="p-3 font-mono font-bold text-primary">{cliente.codigo}</td>
 
                 <td className="p-3">
-                  <div className="font-bold text-white leading-tight">{cliente.nomeFantasia}</div>
-                  <span className="text-[10px] text-slate-500 block truncate max-w-[180px]">
+                  <div className="font-bold text-slate-900 leading-tight">
+                    {cliente.nomeFantasia}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground block truncate max-w-[180px]">
                     {cliente.razaoSocial}
                   </span>
                 </td>
 
                 <td className="p-3">
                   <span>{cliente.cidade}</span>
-                  <span className="text-slate-500 block text-[10px]">
+                  <span className="text-muted-foreground block text-[10px]">
                     {cliente.uf} ({cliente.regiao})
                   </span>
                 </td>
 
-                <td className="p-3 font-medium text-slate-200">{cliente.vendedorNome}</td>
+                <td className="p-3 font-medium text-slate-800">{cliente.vendedorNome}</td>
 
                 <td className="p-3 text-center">
                   <Badge

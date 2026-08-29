@@ -112,57 +112,39 @@ export function SmartCrossSellPanel({
   return (
     <Card
       id="cross-sell-opportunities-section"
-      className="rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950/95 to-slate-900 text-slate-100 border border-indigo-500/40 p-4 sm:p-5 shadow-xl space-y-4 transition-all"
+      className="rounded-3xl bg-white text-slate-900 border border-primary/20 p-4 sm:p-5 shadow-sm space-y-4 transition-all"
     >
       {/* 1. CABEÇALHO PERMANENTE COM BANNER DO BLOCO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-indigo-800/40">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-border/60">
         <div className="flex items-start sm:items-center gap-3">
-          <div className="p-2.5 bg-purple-500/20 rounded-2xl border border-purple-400/40 shadow-inner shrink-0 mt-0.5 sm:mt-0">
-            <Sparkles className="w-5 h-5 text-amber-300 animate-pulse" />
+          <div className="p-2.5 bg-primary/10 rounded-2xl border border-primary/20 text-primary shrink-0 mt-0.5 sm:mt-0">
+            <Sparkles className="w-5 h-5 text-primary" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                 ✨ OPORTUNIDADES DE VENDA
               </span>
               {customerName ? (
-                <Badge className="bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 text-[10px] font-semibold">
+                <Badge className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold">
                   {customerName}
                 </Badge>
               ) : null}
               {activeSuggestions.length > 0 && !isLoading && !error && (
-                <Badge className="bg-purple-500/20 text-purple-200 border border-purple-400/50 text-[10px] font-mono">
+                <Badge className="bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-mono font-bold">
                   {activeSuggestions.length} Oportunidades Identificadas
                 </Badge>
               )}
             </div>
-            <p className="text-[11px] text-slate-300 mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Cross Sell e recompra inteligente para este cliente · Motor de 2 Camadas (Histórico +
               Coocorrência)
             </p>
           </div>
         </div>
 
-        {/* Controles do Topo: Switch Homologação/Real + Navegação de Scroll */}
+        {/* Controles do Topo: Navegação de Scroll */}
         <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
-          {onToggleDataMode && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onToggleDataMode(isFixtureMode ? 'REAL' : 'FIXTURE')}
-              title="Alternar entre Dados Reais (QLIK/SAP) e Demonstração Técnica"
-              className={cn(
-                'h-7 px-2.5 text-[10px] font-bold rounded-xl border',
-                isFixtureMode
-                  ? 'bg-amber-500/15 text-amber-300 border-amber-400/40 hover:bg-amber-500/25'
-                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/25',
-              )}
-            >
-              {isFixtureMode ? '🟡 Demonstração (Fixture Ativo)' : '🟢 Modo Real (QLIK/SAP)'}
-            </Button>
-          )}
-
           {activeSuggestions.length > 0 && !isLoading && !error && (
             <div className="flex items-center gap-1">
               <Button
@@ -170,7 +152,7 @@ export function SmartCrossSellPanel({
                 size="sm"
                 variant="ghost"
                 onClick={() => scroll('left')}
-                className="h-7 w-7 p-0 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50"
+                className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-100 border border-border"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
@@ -179,7 +161,7 @@ export function SmartCrossSellPanel({
                 size="sm"
                 variant="ghost"
                 onClick={() => scroll('right')}
-                className="h-7 w-7 p-0 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50"
+                className="h-7 w-7 p-0 rounded-lg text-slate-600 hover:text-primary hover:bg-slate-100 border border-border"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -188,23 +170,23 @@ export function SmartCrossSellPanel({
         </div>
       </div>
 
-      {/* BANNER CLARO DE MODO DE DADOS (TRANSPARÊNCIA OBRIGATÓRIA) */}
+      {/* BANNER DISCRETO DE AMBIENTE DE HOMOLOGAÇÃO (TEXTO DE NEGÓCIO) */}
       {isFixtureMode && (
-        <div className="px-3 py-1.5 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-200 flex items-center justify-between gap-2">
+        <div className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
             <span>
-              <strong>Ambiente de Homologação:</strong> Recomendações demonstrativas ativas para
-              validação visual do fluxo de Cross Sell (Fonte: FIXTURE).
+              <strong>Ambiente de Homologação:</strong> Oportunidades demonstrativas ativas para
+              validação do fluxo comercial de Cross Sell.
             </span>
           </div>
-          <span className="text-[10px] font-mono text-amber-400 shrink-0 hidden sm:inline">
-            TEST_FIXTURE_V2
+          <span className="text-[10px] font-mono text-amber-800 font-bold shrink-0 hidden sm:inline">
+            HOMOLOGAÇÃO
           </span>
         </div>
       )}
 
-      {/* 2. BARRA DE ABAS OBRIGATÓRIAS: [ TODAS ] [ RECOMPRA ] [ CROSS SELL ] [ COMPLEMENTARES ] */}
+      {/* 2. BARRA DE ABAS: [ TODAS ] [ RECOMPRA ] [ CROSS SELL ] [ COMPLEMENTARES ] */}
       {customerId && !isLoading && !error && activeSuggestions.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <Button
@@ -214,8 +196,8 @@ export function SmartCrossSellPanel({
             className={cn(
               'h-7 px-3 text-xs font-semibold rounded-xl transition-all',
               selectedTab === 'TODAS'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-700/60',
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-border/60',
             )}
           >
             Todas ({activeSuggestions.length})
@@ -227,12 +209,12 @@ export function SmartCrossSellPanel({
             className={cn(
               'h-7 px-3 text-xs font-semibold rounded-xl transition-all flex items-center gap-1',
               selectedTab === 'RECOMPRA'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-700/60',
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-border/60',
             )}
           >
             <span>🔄 Recompra</span>
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-none text-[9px] px-1 py-0 ml-0.5">
+            <Badge className="bg-emerald-100 text-emerald-800 border-none text-[9px] px-1 py-0 ml-0.5">
               {countRecompra}
             </Badge>
           </Button>
@@ -243,12 +225,12 @@ export function SmartCrossSellPanel({
             className={cn(
               'h-7 px-3 text-xs font-semibold rounded-xl transition-all flex items-center gap-1',
               selectedTab === 'CROSS_SELL'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-700/60',
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-border/60',
             )}
           >
             <span>✨ Cross Sell</span>
-            <Badge className="bg-purple-500/20 text-purple-200 border-none text-[9px] px-1 py-0 ml-0.5">
+            <Badge className="bg-purple-100 text-purple-800 border-none text-[9px] px-1 py-0 ml-0.5">
               {countCrossSell}
             </Badge>
           </Button>
@@ -259,37 +241,37 @@ export function SmartCrossSellPanel({
             className={cn(
               'h-7 px-3 text-xs font-semibold rounded-xl transition-all flex items-center gap-1',
               selectedTab === 'COMPLEMENTARES'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 border border-slate-700/60',
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-border/60',
             )}
           >
             <span>🔗 Complementares</span>
-            <Badge className="bg-blue-500/20 text-blue-300 border-none text-[9px] px-1 py-0 ml-0.5">
+            <Badge className="bg-blue-100 text-blue-800 border-none text-[9px] px-1 py-0 ml-0.5">
               {countComplementares}
             </Badge>
           </Button>
         </div>
       )}
 
-      {/* 3. ESTADOS EXPLÍCITOS COM REPRESENTAÇÃO VISUAL */}
+      {/* 3. ESTADOS EXPLÍCITOS */}
 
       {/* ESTADO 1: NENHUM CLIENTE SELECIONADO */}
       {!customerId && (
-        <div className="p-8 rounded-2xl bg-slate-900/80 border border-dashed border-indigo-700/50 text-center space-y-3 animate-fade-in">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-400/30 flex items-center justify-center">
-            <Search className="w-6 h-6 text-indigo-300" />
+        <div className="p-8 rounded-2xl bg-slate-50 border border-dashed border-border/80 text-center space-y-3 animate-fade-in">
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <Search className="w-6 h-6 text-primary" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
-            <h4 className="text-sm font-bold text-white">
+            <h4 className="text-sm font-bold text-slate-900">
               Selecione um cliente para identificar oportunidades de venda.
             </h4>
-            <p className="text-xs text-slate-400">
-              O motor de IA cruzará instantaneamente o histórico técnico de compras (QLIK/SAP ECC),
-              recência, coocorrência de produtos e disponibilidade de estoque.
+            <p className="text-xs text-muted-foreground">
+              O motor de IA cruzará o histórico de compras, recência, coocorrência de produtos e
+              disponibilidade de estoque.
             </p>
           </div>
-          <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-indigo-300 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+          <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-primary font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
             <span>Aguardando seleção no Passo 1</span>
           </div>
         </div>
@@ -297,38 +279,37 @@ export function SmartCrossSellPanel({
 
       {/* ESTADO 2: CARREGANDO (SKELETON) */}
       {customerId && isLoading && (
-        <div className="p-8 rounded-2xl bg-slate-900/80 border border-indigo-800/40 text-center space-y-4 animate-pulse">
+        <div className="p-8 rounded-2xl bg-slate-50 border border-border/60 text-center space-y-4 animate-pulse">
           <div className="flex items-center justify-center gap-3">
-            <RefreshCw className="w-6 h-6 text-purple-400 animate-spin" />
-            <span className="text-sm font-semibold text-purple-200">
+            <RefreshCw className="w-6 h-6 text-primary animate-spin" />
+            <span className="text-sm font-semibold text-primary">
               Analisando histórico e oportunidades...
             </span>
           </div>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Cruzando histórico faturado no SAP, frequência de recompra, coocorrência de mix e saldos
-            de estoque no WMS.
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            Cruzando histórico faturado, frequência de recompra, coocorrência de mix e saldos de
+            estoque.
           </p>
           <div className="flex gap-4 justify-center pt-2">
-            <div className="w-64 h-32 bg-slate-800/80 rounded-2xl border border-slate-700/50" />
-            <div className="w-64 h-32 bg-slate-800/80 rounded-2xl border border-slate-700/50 hidden sm:block" />
-            <div className="w-64 h-32 bg-slate-800/80 rounded-2xl border border-slate-700/50 hidden md:block" />
+            <div className="w-64 h-32 bg-slate-200/60 rounded-2xl border border-slate-300/50" />
+            <div className="w-64 h-32 bg-slate-200/60 rounded-2xl border border-slate-300/50 hidden sm:block" />
+            <div className="w-64 h-32 bg-slate-200/60 rounded-2xl border border-slate-300/50 hidden md:block" />
           </div>
         </div>
       )}
 
       {/* ESTADO 3: ERRO / INTEGRAÇÃO INDISPONÍVEL */}
       {customerId && !isLoading && error && (
-        <div className="p-6 rounded-2xl bg-rose-950/30 border border-rose-500/40 text-center space-y-3 animate-fade-in">
-          <div className="w-10 h-10 mx-auto rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-400">
+        <div className="p-6 rounded-2xl bg-amber-50/60 border border-amber-300 text-center space-y-3 animate-fade-in">
+          <div className="w-10 h-10 mx-auto rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
             <ServerOff className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <h4 className="text-sm font-bold text-rose-200">
-              Histórico comercial temporariamente indisponível.
+            <h4 className="text-sm font-bold text-amber-900">
+              Não foi possível atualizar o histórico comercial neste momento.
             </h4>
-            <p className="text-xs text-slate-300 max-w-lg mx-auto">
-              {error ||
-                'Não foi possível conectar ao servidor de histórico QLIK/SAP. A elaboração da cotação prossegue normalmente.'}
+            <p className="text-xs text-amber-800 max-w-lg mx-auto">
+              A elaboração da cotação prossegue normalmente. Tente novamente em alguns minutos.
             </p>
           </div>
           {onRetry && (
@@ -337,7 +318,7 @@ export function SmartCrossSellPanel({
               size="sm"
               variant="outline"
               onClick={onRetry}
-              className="text-xs bg-rose-900/40 border-rose-400/50 text-rose-200 hover:bg-rose-800/50 h-8 rounded-xl gap-1"
+              className="text-xs bg-white border-amber-400 text-amber-900 hover:bg-amber-100 h-8 rounded-xl gap-1"
             >
               <RefreshCw className="w-3.5 h-3.5" /> Tentar novamente
             </Button>
@@ -347,16 +328,16 @@ export function SmartCrossSellPanel({
 
       {/* ESTADO 4: CLIENTE SEM OPORTUNIDADE (APÓS FILTROS OU QUANDO VAZIO) */}
       {customerId && !isLoading && !error && activeSuggestions.length === 0 && (
-        <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 text-center space-y-2 animate-fade-in">
-          <div className="w-10 h-10 mx-auto rounded-xl bg-slate-800 flex items-center justify-center text-slate-400">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        <div className="p-6 rounded-2xl bg-slate-50 border border-border text-center space-y-2 animate-fade-in">
+          <div className="w-10 h-10 mx-auto rounded-xl bg-slate-200/80 flex items-center justify-center text-slate-500">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
           </div>
-          <h4 className="text-xs sm:text-sm font-semibold text-slate-200">
+          <h4 className="text-xs sm:text-sm font-semibold text-slate-800">
             Nenhuma oportunidade relevante identificada para este cliente neste momento.
           </h4>
-          <p className="text-[11px] text-slate-400 max-w-md mx-auto">
-            Todos os itens sugeridos já foram adicionados à cotação ou o cliente não possui janelas
-            de recompra abertas hoje.
+          <p className="text-[11px] text-muted-foreground max-w-md mx-auto">
+            Não foram encontradas compras anteriores deste cliente para gerar recomendações
+            adicionais ou os itens já constam na cotação.
           </p>
         </div>
       )}
@@ -375,7 +356,7 @@ export function SmartCrossSellPanel({
             return (
               <div
                 key={sug.id}
-                className="min-w-[340px] max-w-[340px] p-4 rounded-2xl bg-slate-900/95 border border-indigo-900/70 hover:border-indigo-400 transition-all flex flex-col justify-between space-y-3 shrink-0 snap-start shadow-lg relative group"
+                className="min-w-[340px] max-w-[340px] p-4 rounded-2xl bg-white border border-border/80 hover:border-primary/50 transition-all flex flex-col justify-between space-y-3 shrink-0 snap-start shadow-sm relative group hover:shadow-md"
               >
                 <div className="space-y-2.5">
                   {/* Linha 1: Badge do Tipo + Score IA */}
@@ -392,7 +373,7 @@ export function SmartCrossSellPanel({
 
                     <Badge
                       variant="outline"
-                      className="font-mono text-[9px] font-bold bg-purple-950/90 text-purple-200 border-purple-500/50"
+                      className="font-mono text-[9px] font-bold bg-purple-50 text-purple-700 border-purple-300"
                     >
                       {sug.scoreLabel.split('·')[0].trim()}
                     </Badge>
@@ -401,94 +382,94 @@ export function SmartCrossSellPanel({
                   {/* Linha 2: Código SAP e Descrição do Produto */}
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-sky-400 block">
+                      <span className="font-mono text-xs font-bold text-primary block">
                         SAP: {sug.codigo}
                       </span>
-                      <span className="text-[11px] font-mono font-bold text-slate-200">
+                      <span className="text-[11px] font-mono font-bold text-slate-900">
                         {formatBRL(sug.precoReferenciaTon)}/t
                       </span>
                     </div>
                     <strong
-                      className="text-xs text-white block mt-0.5 line-clamp-1"
+                      className="text-xs text-slate-900 block mt-0.5 line-clamp-1 font-bold"
                       title={sug.descricao}
                     >
                       {sug.descricao}
                     </strong>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                    <span className="text-[10px] text-muted-foreground block mt-0.5">
                       {sug.familia} {sug.dimensao ? `· ${sug.dimensao}` : ''}
                     </span>
                   </div>
 
                   {/* Linha 3: Cruzamento de Disponibilidade (Estoque SAP/WMS + PCP + TMS) */}
-                  <div className="p-2.5 bg-slate-950/90 rounded-xl border border-indigo-900/50 space-y-1.5 text-[10px]">
+                  <div className="p-2.5 bg-slate-50 rounded-xl border border-border/60 space-y-1.5 text-[10px]">
                     {/* Disponibilidade / Estoque */}
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1">
-                        <Radio className="w-3 h-3 text-sky-400" /> Estoque:
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Radio className="w-3 h-3 text-primary" /> Estoque:
                       </span>
                       {hasImmediate ? (
-                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-400/40 text-[9px] font-bold">
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-bold">
                           ✓ {formatTons(sug.baseRastreabilidade.estoqueDisponivelTons)} disponível
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-500/20 text-amber-300 border-amber-400/40 text-[9px] font-bold">
+                        <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] font-bold">
                           ⚠ {formatTons(sug.baseRastreabilidade.estoqueDisponivelTons)} (Baixo &lt;
-                          5t)
+                          5 t)
                         </Badge>
                       )}
                     </div>
 
                     {/* Próxima Produção (PCP) */}
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1">
-                        <Factory className="w-3 h-3 text-purple-400" /> PCP Produção:
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Factory className="w-3 h-3 text-purple-600" /> PCP Produção:
                       </span>
-                      <span className="text-purple-300 font-semibold font-mono text-right text-[10px] truncate max-w-[170px]">
+                      <span className="text-purple-800 font-semibold font-mono text-right text-[10px] truncate max-w-[170px]">
                         {sug.baseRastreabilidade.producaoPrevista || 'Sem ordem programada'}
                       </span>
                     </div>
 
                     {/* Logística TMS */}
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-400 flex items-center gap-1">
-                        <Truck className="w-3 h-3 text-blue-400" /> TMS Logística:
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Truck className="w-3 h-3 text-blue-600" /> TMS Logística:
                       </span>
-                      <span className="text-blue-300 font-semibold text-right text-[10px]">
+                      <span className="text-blue-800 font-semibold text-right text-[10px]">
                         {sug.baseRastreabilidade.previsaoLogisticaTMS || '1 a 2 dias úteis'}
                       </span>
                     </div>
                   </div>
 
                   {/* Linha 4: Histórico Real do Cliente (Recência, Frequência, Coocorrência) */}
-                  <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-950/70 rounded-xl border border-slate-800 text-[10px]">
+                  <div className="grid grid-cols-2 gap-1.5 p-2 bg-slate-50/80 rounded-xl border border-border/60 text-[10px]">
                     <div>
-                      <span className="text-slate-400 block">Última compra:</span>
-                      <strong className="text-slate-200 font-mono">
+                      <span className="text-muted-foreground block">Última compra:</span>
+                      <strong className="text-slate-800 font-mono">
                         {sug.baseRastreabilidade.ultimaCompraData}
                       </strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Último volume:</span>
-                      <strong className="text-slate-200 font-mono">
+                      <span className="text-muted-foreground block">Último volume:</span>
+                      <strong className="text-slate-800 font-mono">
                         {formatTons(sug.baseRastreabilidade.ultimaQuantidadeTons)}
                       </strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Média habitual:</span>
-                      <strong className="text-slate-200 font-mono">
+                      <span className="text-muted-foreground block">Média habitual:</span>
+                      <strong className="text-slate-800 font-mono">
                         {formatTons(sug.baseRastreabilidade.volumeMedioTons)}
                       </strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 block">Frequência:</span>
-                      <strong className="text-slate-200 truncate block">
-                        a cada {sug.baseRastreabilidade.intervaloMedioDias}d
+                      <span className="text-muted-foreground block">Frequência:</span>
+                      <strong className="text-slate-800 truncate block">
+                        a cada {sug.baseRastreabilidade.intervaloMedioDias} dias
                       </strong>
                     </div>
                     {sug.baseRastreabilidade.coOcorrenciaPct ? (
-                      <div className="col-span-2 pt-0.5 border-t border-slate-800/80 flex items-center justify-between">
-                        <span className="text-slate-400">Coocorrência histórica:</span>
-                        <Badge className="bg-purple-500/20 text-purple-200 border-none text-[9px] font-mono">
+                      <div className="col-span-2 pt-0.5 border-t border-border/40 flex items-center justify-between">
+                        <span className="text-muted-foreground">Coocorrência histórica:</span>
+                        <Badge className="bg-purple-100 text-purple-800 border-none text-[9px] font-mono">
                           {sug.baseRastreabilidade.coOcorrenciaPct}% dos pedidos
                         </Badge>
                       </div>
@@ -496,22 +477,22 @@ export function SmartCrossSellPanel({
                   </div>
 
                   {/* Linha 5: Motivo da Sugestão IA */}
-                  <div className="p-2 bg-indigo-950/60 rounded-xl border border-indigo-900/60 space-y-1 text-[10px]">
-                    <div className="flex items-center gap-1 text-indigo-300 font-bold">
-                      <Lightbulb className="w-3 h-3 text-amber-400 shrink-0" />
+                  <div className="p-2 bg-blue-50/70 rounded-xl border border-blue-100 space-y-1 text-[10px]">
+                    <div className="flex items-center gap-1 text-primary font-bold">
+                      <Lightbulb className="w-3 h-3 text-amber-500 shrink-0" />
                       <span>Por que ofertar agora?</span>
                     </div>
-                    <p className="text-slate-200 leading-tight line-clamp-2">{sug.motivoIA}</p>
+                    <p className="text-slate-700 leading-tight line-clamp-2">{sug.motivoIA}</p>
                   </div>
                 </div>
 
-                {/* BOTÕES DE AÇÃO OBRIGATÓRIOS: [+ ADICIONAR À COTAÇÃO] E [VER HISTÓRICO] */}
-                <div className="space-y-1.5 pt-1 border-t border-indigo-950">
+                {/* BOTÕES DE AÇÃO: [+ ADICIONAR À COTAÇÃO] E [VER HISTÓRICO] */}
+                <div className="space-y-1.5 pt-1 border-t border-border/60">
                   <Button
                     size="sm"
                     type="button"
                     onClick={() => onAddSuggestion(sug)}
-                    className="w-full h-8 text-xs bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl gap-1.5 shadow-md transition-transform active:scale-95"
+                    className="w-full h-8 text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5 shadow-sm transition-transform active:scale-95"
                   >
                     <Plus className="w-4 h-4" /> + Adicionar à cotação
                   </Button>
@@ -522,7 +503,7 @@ export function SmartCrossSellPanel({
                       variant="ghost"
                       type="button"
                       onClick={() => setSelectedTraceability(sug)}
-                      className="h-6 px-2 text-indigo-300 hover:text-white hover:bg-slate-800 text-[10px] rounded-lg gap-1"
+                      className="h-6 px-2 text-primary hover:text-primary/90 hover:bg-primary/5 text-[10px] rounded-lg gap-1 font-semibold"
                     >
                       <History className="w-3 h-3" /> Ver histórico
                     </Button>
@@ -533,9 +514,9 @@ export function SmartCrossSellPanel({
                         variant="ghost"
                         type="button"
                         onClick={() => onRequestStockCheck(sug)}
-                        className="h-6 px-1.5 text-amber-300 hover:text-amber-200 hover:bg-amber-950/40 text-[10px] rounded-lg gap-0.5"
+                        className="h-6 px-1.5 text-amber-800 hover:text-amber-900 hover:bg-amber-100 text-[10px] rounded-lg gap-0.5 font-semibold"
                       >
-                        <AlertTriangle className="w-3 h-3 text-amber-400" /> Checar WMS
+                        <AlertTriangle className="w-3 h-3 text-amber-600" /> Checar WMS
                       </Button>
                     )}
 
@@ -544,8 +525,8 @@ export function SmartCrossSellPanel({
                       variant="ghost"
                       type="button"
                       onClick={() => handleDismiss(sug)}
-                      className="h-6 px-1.5 text-slate-400 hover:text-rose-300 hover:bg-rose-950/40 text-[10px] rounded-lg"
-                      title="Dispensar sugestão"
+                      className="h-6 px-1.5 text-muted-foreground hover:text-rose-600 hover:bg-rose-50 text-[10px] rounded-lg"
+                      title="Não sugerir novamente"
                     >
                       <X className="w-3 h-3" />
                     </Button>
