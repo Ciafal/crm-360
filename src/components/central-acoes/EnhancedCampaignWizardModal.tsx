@@ -43,7 +43,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { CampaignChannel, CampaignType, CustomerManagementItem } from '@/types/commercial_execution'
+import { CampaignChannel, CampaignType } from '@/types/commercial_execution'
+import { CustomerManagementItem } from '@/types/customer_management'
 import { campaignService } from '@/services/campaign_service'
 
 export interface EnhancedCampaignWizardModalProps {
@@ -121,9 +122,15 @@ export function EnhancedCampaignWizardModal({
 
   // Amostra de prévia
   const sampleClient = clientesSelecionados[0]
+  const sampleContactName =
+    sampleClient?.datasImportantes?.[0]?.nomeContato ||
+    sampleClient?.contatosHistorico?.[0]?.autor ||
+    sampleClient?.nomeFantasia ||
+    'Comprador'
+
   const samplePreviewTextA = sampleClient
     ? templateMensagemA
-        .replace(/{{contato_nome}}/g, sampleClient.contatoNome || 'Comprador')
+        .replace(/{{contato_nome}}/g, sampleContactName)
         .replace(
           /{{cliente_nome}}/g,
           sampleClient.nomeFantasia || sampleClient.razaoSocial || 'Cliente',
@@ -136,7 +143,7 @@ export function EnhancedCampaignWizardModal({
 
   const samplePreviewTextB = sampleClient
     ? templateMensagemB
-        .replace(/{{contato_nome}}/g, sampleClient.contatoNome || 'Comprador')
+        .replace(/{{contato_nome}}/g, sampleContactName)
         .replace(
           /{{cliente_nome}}/g,
           sampleClient.nomeFantasia || sampleClient.razaoSocial || 'Cliente',
