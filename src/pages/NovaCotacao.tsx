@@ -396,6 +396,9 @@ export default function NovaCotacao() {
       stock_details: selectedMaterial.stockDetails,
       planned_production: selectedMaterial.plannedProduction,
       price_justification: itemPriceJustification,
+      origem_item: 'MANUAL',
+      score_ia: 0,
+      motivo_ia: 'Item adicionado manualmente pelo vendedor',
     }
 
     setItems([...items, newItem])
@@ -1071,6 +1074,18 @@ export default function NovaCotacao() {
                   sug.codigo,
                   sug.tipo,
                   'ADICIONADA',
+                  {
+                    sellerId: 'qas-vendedor_teste',
+                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
+                    customerName: selectedCustomer.nomeFantasia,
+                    materialDescription: sug.descricao,
+                    materialFamily: sug.familia,
+                    valueBrl:
+                      sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
+                    tons: sug.baseRastreabilidade.volumeMedioTons || 2.0,
+                    scoreIa: sug.scoreOportunidade,
+                    motivoIa: sug.motivoIA,
+                  },
                 )
 
                 // Adicionar diretamente aos itens da cotação com 1 clique
@@ -1116,6 +1131,29 @@ export default function NovaCotacao() {
                   className: 'bg-purple-950 text-white border-purple-800',
                 })
               }}
+              onRequestStockCheck={(sug) => {
+                setStockCheckItemTarget({
+                  id: `temp-cs-${Date.now()}`,
+                  item_sequence: (items.length + 1) * 10,
+                  material_code: sug.codigo,
+                  description: sug.descricao,
+                  family: sug.familia,
+                  dimension: sug.dimensao,
+                  quantity: sug.baseRastreabilidade.volumeMedioTons || 2.0,
+                  unit: 't',
+                  requested_date: itemDeliveryDate,
+                  sap_price: sug.precoReferenciaTon,
+                  proposed_price: sug.precoReferenciaTon,
+                  deviation_pct: 0,
+                  final_price: sug.precoReferenciaTon,
+                  total: sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
+                  stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
+                  stock_situation: 'ESTOQUE_BAIXO',
+                  stock_updated_at: 'Hoje 07:15',
+                  stock_confirmation_required: true,
+                })
+                setStockCheckDrawerOpen(true)
+              }}
               onDismissSuggestion={(sug) => {
                 smartCrossSellEngine.recordFeedback(
                   quoteCode,
@@ -1123,6 +1161,15 @@ export default function NovaCotacao() {
                   sug.codigo,
                   sug.tipo,
                   'DISPENSADA',
+                  {
+                    sellerId: 'qas-vendedor_teste',
+                    sellerName: selectedCustomer.vendedor || 'Carlos Mendonça',
+                    customerName: selectedCustomer.nomeFantasia,
+                    materialDescription: sug.descricao,
+                    materialFamily: sug.familia,
+                    scoreIa: sug.scoreOportunidade,
+                    motivoIa: sug.motivoIA,
+                  },
                 )
                 toast({
                   title: 'Sugestão Dispensada',
@@ -1457,14 +1504,29 @@ export default function NovaCotacao() {
                         return (
                           <tr key={it.id} className="hover:bg-primary/5 transition-colors group">
                             <td className="p-3 font-mono font-bold text-primary">
-                              {it.material_code}
+                              <div>{it.material_code}</div>
+                              {it.origem_item === 'CROSS_SELL_IA' && (
+                                <Badge className="bg-purple-100 text-purple-800 border-purple-300 text-[9px] px-1.5 py-0 mt-0.5">
+                                  ✨ Cross-Sell IA ({it.score_ia}/100)
+                                </Badge>
+                              )}
+                              {it.origem_item === 'RECOMPRA_IA' && (
+                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] px-1.5 py-0 mt-0.5">
+                                  🔄 Recompra IA ({it.score_ia}/100)
+                                </Badge>
+                              )}
+                              {it.origem_item === 'MANUAL' && (
+                                <span className="text-[9px] text-muted-foreground block mt-0.5 font-sans font-normal">
+                                  Manual
+                                </span>
+                              )}
                             </td>
                             <td className="p-3">
                               <span className="font-semibold text-slate-800 block">
                                 {it.description}
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                {it.dimension}
+                                {it.dimension} {it.motivo_ia ? `· ${it.motivo_ia}` : ''}
                               </span>
                             </td>
                             <td className="p-3 text-right font-mono font-bold text-slate-900">
