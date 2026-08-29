@@ -78,7 +78,8 @@ import type {
 import type { CustomerManagementItem } from '@/types/customer_management'
 import type { StockItem } from '@/types/stock'
 import { CreateBulkTasksModal } from '@/components/central-acoes/CreateBulkTasksModal'
-import { CampaignWizardModal } from '@/components/central-acoes/CampaignWizardModal'
+import { EnhancedCampaignWizardModal } from '@/components/central-acoes/EnhancedCampaignWizardModal'
+import { CampaignAIDrilldownModal } from '@/components/central-acoes/CampaignAIDrilldownModal'
 import { toast } from 'sonner'
 import { formatCurrency, formatWeight } from '@/lib/utils'
 
@@ -113,6 +114,8 @@ export default function CentralAcoesPage() {
   const [campaignTypeToCreate, setCampaignTypeToCreate] =
     useState<CommercialCampaign['tipo']>('reativacao_sem_compra')
   const [campaignProducts, setCampaignProducts] = useState<any[]>([])
+  const [selectedCampaignForDrilldown, setSelectedCampaignForDrilldown] =
+    useState<CommercialCampaign | null>(null)
 
   // Modal de Reatribuição / Alteração de Prazo
   const [reassignModalOpen, setReassignModalOpen] = useState(false)
@@ -1196,19 +1199,13 @@ export default function CentralAcoesPage() {
                       {formatCurrency(camp.metricas.faturamentoTotal)}
                     </strong>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        toast.info(
-                          `Auditoria: Campanha criada por ${camp.criadoPor} em ${camp.criadoEm}. ${camp.publicoSupresso} contatos suprimidos por LGPD.`,
-                        )
-                      }}
-                      className="h-8 text-xs border-slate-700 text-slate-300 rounded-xl"
+                      onClick={() => setSelectedCampaignForDrilldown(camp)}
+                      className="h-8 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl gap-1"
                     >
-                      Auditoria
+                      <Sparkles className="w-3.5 h-3.5" /> Drill-down & IA
                     </Button>
                     <Button
                       size="sm"
@@ -1224,7 +1221,7 @@ export default function CentralAcoesPage() {
                     >
                       Gerar Cotação
                     </Button>
-                  </div>
+                  </div>{' '}
                 </div>
               </Card>
             ))}
@@ -1628,16 +1625,35 @@ export default function CentralAcoesPage() {
         onTasksCreated={reloadAll}
       />
 
-      {/* MODAL DE CAMPANHAS E DISPARO */}
-      <CampaignWizardModal
+      {/* 8. MODAL WIZARD DE CAMPANHA COMERCIAL INTELIGENTE COM A/B TEST E IA */}
+      <EnhancedCampaignWizardModal
         open={campaignWizardOpen}
         onOpenChange={setCampaignWizardOpen}
         tipoCampanha={campaignTypeToCreate}
         clientesSelecionados={
           selectedCustomersForBulk.length > 0 ? selectedCustomersForBulk : customers.slice(0, 8)
         }
-        produtosVinculados={campaignProducts}
-        onCampaignCreated={reloadAll}
+        produtosIniciais={campaignProducts}
+        onCampaignCreated={() => {
+          reloadAll()
+          setActiveTab('campanhas')
+        }}
+      />
+
+      {/* 9. MODAL DRILL-DOWN DA CAMPANHA + A/B TEST + DIAGNÓSTICO IA EM 10 PONTOS */}
+      <CampaignAIDrilldownModal
+        open={Boolean(selectedCampaignForDrilldown)}
+        onOpenChange={(op) => !op && setSelectedCampaignForDrilldown(null)}
+        campanha={selectedCampaignForDrilldown}
+        onNavigateToQuote={(cmp) => {
+          setSelectedCampaignForDrilldown(null)
+          navigate('/crm/cotacoes/nova', {
+            state: {
+              origem: `campanha_${cmp.id}`,
+              campanhaNome: cmp.titulo,
+            },
+          })
+        }}
       />
     </div>
   )

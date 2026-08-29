@@ -18,9 +18,12 @@ import {
   ArrowRight,
   ChevronRight,
   HelpCircle,
+  MessageSquare,
+  Network,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { WhatsAppOfficialSettingsView } from '@/components/whatsapp/WhatsAppOfficialSettingsView'
 
 interface IntegrationConnector {
   id: string
@@ -37,6 +40,9 @@ interface IntegrationConnector {
 }
 
 export default function CentralIntegracoes() {
+  const [activeMainTab, setActiveMainTab] = useState<'whatsapp_oficial' | 'integracoes_gerais'>(
+    'whatsapp_oficial',
+  )
   const [testingId, setTestingId] = useState<string | null>(null)
   const [connectors, setConnectors] = useState<IntegrationConnector[]>([
     {
@@ -175,143 +181,187 @@ export default function CentralIntegracoes() {
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-6 animate-fade-in pb-16">
-      {/* 1. HEADER EXECUTIVO COM DESIGN EQUILIBRADO */}
-      <div className="p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl border border-border/50 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-3xl">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-primary text-white font-bold border-none text-[10px]">
-                INFRAESTRUTURA & INTEGRAÇÕES
-              </Badge>
-              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-[10px]">
-                6 CONECTORES ATIVOS
-              </Badge>
-            </div>
-            <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
-              Central de Integrações Corporativas
-            </h1>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Painel de conectividade unificada: orquestração de endpoints SAP ECC, TOTVS RM, Qlik
-              Sense, Microsoft Graph, Meta WhatsApp e TMS Logístico.
-            </p>
-          </div>
+      {/* SELETOR DE ABAS PRINCIPAIS: WHATSAPP BUSINESS OFICIAL / CONECTORES GERAIS */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+        <Button
+          size="sm"
+          variant={activeMainTab === 'whatsapp_oficial' ? 'default' : 'ghost'}
+          onClick={() => setActiveMainTab('whatsapp_oficial')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-bold flex items-center gap-2',
+            activeMainTab === 'whatsapp_oficial'
+              ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs'
+              : 'text-slate-700',
+          )}
+        >
+          <MessageSquare className="w-4 h-4 text-emerald-300" />
+          WhatsApp Business Oficial (Meta Cloud API)
+          <Badge className="bg-emerald-900 text-emerald-100 text-[9px] border-none">
+            Homologado
+          </Badge>
+        </Button>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <Button
-              onClick={handleTestAll}
-              disabled={testingId === 'ALL'}
-              className="h-9 text-xs bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 font-bold shadow-xs"
-            >
-              {testingId === 'ALL' ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Testando Todos...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-3.5 h-3.5" /> Testar Todos os Conectores
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <Button
+          size="sm"
+          variant={activeMainTab === 'integracoes_gerais' ? 'default' : 'ghost'}
+          onClick={() => setActiveMainTab('integracoes_gerais')}
+          className={cn(
+            'h-9 text-xs rounded-xl font-bold flex items-center gap-2',
+            activeMainTab === 'integracoes_gerais'
+              ? 'bg-primary text-white shadow-xs'
+              : 'text-slate-700',
+          )}
+        >
+          <Network className="w-4 h-4" />
+          Conectores Corporativos (SAP ECC, Qlik, WMS, TMS, VoIP)
+        </Button>
       </div>
 
-      {/* 2. GRID 12 COLUNAS RESPONSIVO COM LARGURA SUFICIENTE PARA CADA CARD */}
-      <div className="grid grid-cols-12 gap-6">
-        {connectors.map((conn) => (
-          <Card
-            key={conn.id}
-            className="col-span-12 lg:col-span-6 bg-white/95 border-border/40 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all space-y-4"
-          >
-            <div className="space-y-3">
-              {/* TOPO DO CARD */}
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-primary/10 text-primary border-none text-[10px] font-bold">
-                      {conn.category}
-                    </Badge>
-                    <span className="text-[11px] text-muted-foreground font-semibold">
-                      {conn.provider}
-                    </span>
-                  </div>
-                  <h3 className="font-serif font-bold text-base text-primary mt-1">{conn.name}</h3>
+      {activeMainTab === 'whatsapp_oficial' ? (
+        <WhatsAppOfficialSettingsView />
+      ) : (
+        <>
+          {/* 1. HEADER EXECUTIVO COM DESIGN EQUILIBRADO */}
+          <div className="p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-3xl border border-border/50 shadow-xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-3xl">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary text-white font-bold border-none text-[10px]">
+                    INFRAESTRUTURA & INTEGRAÇÕES
+                  </Badge>
+                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-[10px]">
+                    6 CONECTORES ATIVOS
+                  </Badge>
                 </div>
-
-                <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold text-[10px] gap-1 shrink-0">
-                  <CheckCircle2 className="w-3 h-3" /> {conn.status}
-                </Badge>
+                <h1 className="font-serif text-3xl font-bold text-primary tracking-tight">
+                  Central de Integrações Corporativas
+                </h1>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Painel de conectividade unificada: orquestração de endpoints SAP ECC, TOTVS RM,
+                  Qlik Sense, Microsoft Graph, Meta WhatsApp e TMS Logístico.
+                </p>
               </div>
 
-              {/* DESCRIÇÃO */}
-              <p className="text-xs text-slate-700 leading-relaxed">{conn.description}</p>
-
-              {/* ENDPOINT COM LARGURA SEGURA E QUEBRA ADEQUADA */}
-              <div className="p-3 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Endpoint & Roteamento
-                </span>
-                <span className="font-mono text-[11px] text-slate-800 break-all block">
-                  {conn.endpoint}
-                </span>
-              </div>
-
-              {/* FEATURES & CAPACIDADES */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  Recursos Homologados
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {conn.features.map((feat, idx) => (
-                    <span
-                      key={idx}
-                      className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md"
-                    >
-                      {feat}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* RODAPÉ DO CARD COM LATÊNCIA, AUTENTICAÇÃO E BOTÃO DE TESTE */}
-            <div className="pt-4 border-t space-y-3">
-              <div className="flex flex-wrap items-center justify-between text-[11px] text-muted-foreground gap-2">
-                <span>
-                  Auth: <strong>{conn.authType}</strong>
-                </span>
-                <span className="font-mono text-emerald-700 font-bold">
-                  Latência: {conn.latencyMs}ms
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] text-muted-foreground">
-                  Último Sync: {conn.lastSync}
-                </span>
-
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleTestConnection(conn)}
-                  disabled={testingId === conn.id}
-                  className="h-8 text-xs text-primary gap-1.5 font-semibold shrink-0"
+                  onClick={handleTestAll}
+                  disabled={testingId === 'ALL'}
+                  className="h-9 text-xs bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 font-bold shadow-xs"
                 >
-                  {testingId === conn.id ? (
+                  {testingId === 'ALL' ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Testando...
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Testando Todos...
                     </>
                   ) : (
                     <>
-                      <Zap className="w-3.5 h-3.5" /> Testar Conexão
+                      <Zap className="w-3.5 h-3.5" /> Testar Todos os Conectores
                     </>
                   )}
                 </Button>
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
+          </div>
+
+          {/* 2. GRID 12 COLUNAS RESPONSIVO COM LARGURA SUFICIENTE PARA CADA CARD */}
+          <div className="grid grid-cols-12 gap-6">
+            {connectors.map((conn) => (
+              <Card
+                key={conn.id}
+                className="col-span-12 lg:col-span-6 bg-white/95 border-border/40 rounded-3xl p-6 shadow-xs flex flex-col justify-between hover:border-primary/40 transition-all space-y-4"
+              >
+                <div className="space-y-3">
+                  {/* TOPO DO CARD */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-primary/10 text-primary border-none text-[10px] font-bold">
+                          {conn.category}
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground font-semibold">
+                          {conn.provider}
+                        </span>
+                      </div>
+                      <h3 className="font-serif font-bold text-base text-primary mt-1">
+                        {conn.name}
+                      </h3>
+                    </div>
+
+                    <Badge className="bg-emerald-100 text-emerald-800 border-none font-bold text-[10px] gap-1 shrink-0">
+                      <CheckCircle2 className="w-3 h-3" /> {conn.status}
+                    </Badge>
+                  </div>
+
+                  {/* DESCRIÇÃO */}
+                  <p className="text-xs text-slate-700 leading-relaxed">{conn.description}</p>
+
+                  {/* ENDPOINT COM LARGURA SEGURA E QUEBRA ADEQUADA */}
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-border/40 space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Endpoint & Roteamento
+                    </span>
+                    <span className="font-mono text-[11px] text-slate-800 break-all block">
+                      {conn.endpoint}
+                    </span>
+                  </div>
+
+                  {/* FEATURES & CAPACIDADES */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Recursos Homologados
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {conn.features.map((feat, idx) => (
+                        <span
+                          key={idx}
+                          className="text-[10px] font-medium bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md"
+                        >
+                          {feat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RODAPÉ DO CARD COM LATÊNCIA, AUTENTICAÇÃO E BOTÃO DE TESTE */}
+                <div className="pt-4 border-t space-y-3">
+                  <div className="flex flex-wrap items-center justify-between text-[11px] text-muted-foreground gap-2">
+                    <span>
+                      Auth: <strong>{conn.authType}</strong>
+                    </span>
+                    <span className="font-mono text-emerald-700 font-bold">
+                      Latência: {conn.latencyMs}ms
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] text-muted-foreground">
+                      Último Sync: {conn.lastSync}
+                    </span>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTestConnection(conn)}
+                      disabled={testingId === conn.id}
+                      className="h-8 text-xs text-primary gap-1.5 font-semibold shrink-0"
+                    >
+                      {testingId === conn.id ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Testando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3.5 h-3.5" /> Testar Conexão
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
