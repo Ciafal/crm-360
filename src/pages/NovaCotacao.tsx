@@ -77,7 +77,15 @@ import {
 import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
 import type { QuotationItem, Quotation } from '@/types/quotation'
 import { customerManagementService } from '@/services/customer_management_service'
-import { CrossSellCarousel } from '@/components/cotacoes/CrossSellCarousel'
+import { SmartCrossSellPanel } from '@/components/cotacoes/SmartCrossSellPanel'
+import { MaterialProgressiveTracker } from '@/components/cotacoes/MaterialProgressiveTracker'
+import {
+  materialAsyncService,
+  type MaterialAsyncStatus,
+  type MaterialEnrichedDetails,
+} from '@/services/material_async_service'
+import { smartCrossSellEngine, type SmartCrossSellSuggestion } from '@/services/cross_sell_engine'
+import { useDebounce } from '@/hooks/use-debounce'
 import { cn } from '@/lib/utils'
 import type { SAPCreditStatus } from '@/providers/SAPCreditProvider'
 import { PDFPreviewDialog } from '@/components/cotacoes/PDFPreviewDialog'
@@ -137,10 +145,15 @@ export default function NovaCotacao() {
   const [creditStatus, setCreditStatus] = useState<SAPCreditStatus | null>(null)
   const [loadingCredit, setLoadingCredit] = useState(false)
 
-  // Itens da Cotação
+  // Itens da Cotação & Busca Resiliente com Debounce e AbortController
   const [items, setItems] = useState<QuotationItem[]>([])
   const [materialSearch, setMaterialSearch] = useState('')
+  const debouncedMaterialSearch = useDebounce(materialSearch, 180)
   const [selectedMaterial, setSelectedMaterial] = useState<CatalogMaterial | null>(null)
+  const [activeAsyncStatuses, setActiveAsyncStatuses] = useState<
+    Record<string, MaterialAsyncStatus>
+  >({})
+  const [isMaterialEnriching, setIsMaterialEnriching] = useState(false)
   const [itemQtyTons, setItemQtyTons] = useState<string>('2.0')
   const [itemProposedPrice, setItemProposedPrice] = useState<string>('')
   const [itemPriceJustification, setItemPriceJustification] = useState<string>('')
@@ -220,18 +233,18 @@ export default function NovaCotacao() {
     )
   }, [customerSearch])
 
-  // Filtragem de materiais para busca no Grid
+  // Filtragem Otimizada com Debounce
   const filteredMaterials = useMemo(() => {
-    if (!materialSearch.trim()) return CATALOG_MATERIALS
-    const term = materialSearch.toLowerCase()
+    if (!debouncedMaterialSearch.trim()) return CATALOG_MATERIALS.slice(0, 15)
+    const term = debouncedMaterialSearch.toLowerCase()
     return CATALOG_MATERIALS.filter(
       (m) =>
         m.code.toLowerCase().includes(term) ||
         m.description.toLowerCase().includes(term) ||
         m.family.toLowerCase().includes(term) ||
         m.dimension.toLowerCase().includes(term),
-    )
-  }, [materialSearch])
+    ).slice(0, 15)
+  }, [debouncedMaterialSearch])
 
   // Buscar dados de crédito SAP ECC (F.35)
   const fetchCreditData = async (sapCode: string, customerId = 'cust-default') => {
@@ -270,20 +283,55 @@ export default function NovaCotacao() {
     triggerAutosave()
   }
 
-  // Preencher produto ao selecionar material
-  const handleSelectMaterial = (mat: CatalogMaterial) => {
+  // ETAPA A + ETAPA B: Seleção Não-Bloqueante com Enriquecimento Progressivo
+  const handleSelectMaterial = (
+    mat: CatalogMaterial,
+    customOrigin?: 'MANUAL' | 'CROSS_SELL_IA' | 'RECOMPRA_IA',
+  ) => {
+    // 1. ETAPA A: Resposta Imediata (Feedback instantâneo sem congelar)
     setSelectedMaterial(mat)
     setItemProposedPrice(mat.sapPrice.toString())
     setItemPriceJustification('')
-    // Calcular envio estimado com base na produção prevista e estoque
+    setMaterialSearch('')
+
     if (mat.availableStock >= 5.0) {
       setItemDeliveryDate('2026-09-03')
     } else if (mat.plannedProduction.hasPlannedProduction) {
-      // Produção 02/09, expedição 03/09, transporte 1d -> 04/09
       setItemDeliveryDate('2026-09-04')
     } else {
       setItemDeliveryDate('2026-09-10')
     }
+
+    // 2. ETAPA B: Consultas Assíncronas e Paralelas em Segundo Plano
+    setIsMaterialEnriching(true)
+    const abortCtrl = new AbortController()
+
+    materialAsyncService
+      .enrichMaterialDetailsAsync(
+        mat.code,
+        selectedCustomer?.sapCode,
+        (partial, status) => {
+          setActiveAsyncStatuses((prev) => ({
+            ...prev,
+            [status.service]: status,
+          }))
+
+          if (partial.sapPrice !== undefined) {
+            setItemProposedPrice(partial.sapPrice.toString())
+          }
+          if (partial.tmsEstimatedDeliveryDate) {
+            setItemDeliveryDate(partial.tmsEstimatedDeliveryDate)
+          }
+        },
+        abortCtrl.signal,
+      )
+      .then((enriched) => {
+        setIsMaterialEnriching(false)
+        setActiveAsyncStatuses(enriched.integrationStatuses)
+      })
+      .catch(() => {
+        setIsMaterialEnriching(false)
+      })
   }
 
   // Adicionar Item no Grid
@@ -423,17 +471,12 @@ export default function NovaCotacao() {
     [subtotalValue, freightType, freightValue],
   )
 
-  // Sugestões de Cross-Sell para o Cliente Selecionado (Regras 27 e 28)
+  // Motor Inteligente de Cross Sell & Recorrência (P3)
   const crossSellSuggestions = useMemo(() => {
     if (!selectedCustomer) return []
-    const allCustomers = customerManagementService.getCustomers()
-    const target =
-      allCustomers.find((c) => c.codigo === selectedCustomer.sapCode) || allCustomers[0]
-    return customerManagementService.getCrossSellSuggestions(
-      target,
-      customerManagementService.getCatalog(),
-    )
-  }, [selectedCustomer])
+    const existingCodes = items.map((i) => i.material_code)
+    return smartCrossSellEngine.getSuggestionsForCustomer(selectedCustomer.sapCode, existingCodes)
+  }, [selectedCustomer, items])
 
   // Alçada de Aprovação Dinâmica
   const approvalEval = useMemo(() => quotationService.calculateApprovalStatus(items), [items])
@@ -1015,23 +1058,76 @@ export default function NovaCotacao() {
             </div>
           )}
 
-          {/* CARROSSEL INTEGRAL DE CROSS-SELL & MIX INTELIGENTE */}
+          {/* PAINEL DE OPORTUNIDADES & CROSS-SELL INTELIGENTE (P3) */}
           {selectedCustomer && crossSellSuggestions.length > 0 && (
-            <CrossSellCarousel
+            <SmartCrossSellPanel
               customerName={selectedCustomer.nomeFantasia}
               suggestions={crossSellSuggestions}
-              onAddMaterial={(sug) => {
-                const found = CATALOG_MATERIALS.find(
-                  (m) =>
-                    m.code.includes(sug.codigo) ||
-                    sug.codigo.includes(m.code) ||
-                    m.family.toLowerCase().includes(sug.familia.toLowerCase()),
+              onAddSuggestion={(sug) => {
+                // Registro de Aprendizado da IA
+                smartCrossSellEngine.recordFeedback(
+                  quoteCode,
+                  selectedCustomer.sapCode,
+                  sug.codigo,
+                  sug.tipo,
+                  'ADICIONADA',
                 )
-                const matchingCatalog = found || CATALOG_MATERIALS[0]
-                handleSelectMaterial(matchingCatalog)
+
+                // Adicionar diretamente aos itens da cotação com 1 clique
+                const matFound =
+                  CATALOG_MATERIALS.find(
+                    (m) => m.code.toLowerCase() === sug.codigo.toLowerCase(),
+                  ) || CATALOG_MATERIALS[0]
+
+                const isLow = matFound.availableStock < stockCheckThreshold
+                const newItem: QuotationItem = {
+                  id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                  item_sequence: (items.length + 1) * 10,
+                  material_code: sug.codigo,
+                  description: sug.descricao,
+                  family: sug.familia,
+                  dimension: sug.dimensao,
+                  quantity: sug.baseRastreabilidade.volumeMedioTons || 2.0,
+                  unit: 't',
+                  requested_date: itemDeliveryDate,
+                  sap_price: sug.precoReferenciaTon,
+                  proposed_price: sug.precoReferenciaTon,
+                  deviation_pct: 0,
+                  final_price: sug.precoReferenciaTon,
+                  total: sug.precoReferenciaTon * (sug.baseRastreabilidade.volumeMedioTons || 2.0),
+                  stock_available: sug.baseRastreabilidade.estoqueDisponivelTons,
+                  stock_situation: isLow ? 'ESTOQUE_BAIXO' : 'ESTOQUE_SUFICIENTE',
+                  stock_updated_at: matFound.stockUpdatedAt,
+                  stock_confirmation_required: isLow,
+                  stock_confirmed: !isLow,
+                  plant: sug.baseRastreabilidade.planta,
+                  storage_location: sug.baseRastreabilidade.deposito,
+                  origem_item: sug.origemItem,
+                  score_ia: sug.scoreOportunidade,
+                  motivo_ia: sug.motivoIA,
+                }
+
+                setItems((prev) => [...prev, newItem])
+                triggerAutosave()
+
                 toast({
-                  title: 'Item Sugerido Adicionado',
-                  description: `${sug.descricao} carregado no formulário com estoque e preços oficiais.`,
+                  title: '✨ Oportunidade IA Adicionada com Sucesso!',
+                  description: `${sug.descricao} (${sug.tipoLabel}) incluído na cotação.`,
+                  className: 'bg-purple-950 text-white border-purple-800',
+                })
+              }}
+              onDismissSuggestion={(sug) => {
+                smartCrossSellEngine.recordFeedback(
+                  quoteCode,
+                  selectedCustomer.sapCode,
+                  sug.codigo,
+                  sug.tipo,
+                  'DISPENSADA',
+                )
+                toast({
+                  title: 'Sugestão Dispensada',
+                  description:
+                    'A IA registrou sua preferência para refinar as recomendações deste cliente.',
                 })
               }}
             />
@@ -1114,6 +1210,14 @@ export default function NovaCotacao() {
               {/* CARD DE ADIÇÃO DE ITEM SELECIONADO COM ESTOQUE, PCP E TMS */}
               {selectedMaterial && (
                 <div className="p-4 rounded-2xl bg-slate-50 border border-primary/20 space-y-4 animate-scale-in">
+                  {/* Status Progressivo das Integrações Assíncronas (P0) */}
+                  {Object.keys(activeAsyncStatuses).length > 0 && (
+                    <MaterialProgressiveTracker
+                      statuses={activeAsyncStatuses}
+                      materialCode={selectedMaterial.code}
+                    />
+                  )}
+
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-border/40">
                     <div>
                       <span className="font-mono font-bold text-sm text-primary block">
@@ -1123,7 +1227,7 @@ export default function NovaCotacao() {
                         {selectedMaterial.description}
                       </span>
                       <span className="text-[11px] text-muted-foreground block">
-                        {selectedMaterial.dimension}
+                        {selectedMaterial.dimension} · {selectedMaterial.family}
                       </span>
                     </div>
 

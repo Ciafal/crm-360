@@ -141,6 +141,17 @@ export default function Layout() {
                 <DropdownMenuSeparator />
                 <div className="grid grid-cols-2 gap-1.5 py-1">
                   <Link
+                    to="/cotacoes"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-amber-50/60 border border-amber-300/60"
+                  >
+                    <strong className="text-amber-900 font-bold flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-amber-600" /> COTAÇÕES
+                    </strong>
+                    <span className="text-[10px] text-amber-800/80">
+                      Propostas, Aprovações & Cross Sell
+                    </span>
+                  </Link>
+                  <Link
                     to="/gestao-clientes"
                     className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-primary/5 border border-primary/20"
                   >

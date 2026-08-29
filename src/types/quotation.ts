@@ -113,6 +113,8 @@ export interface MaterialPlannedProduction {
   sourceSystem: string // "SAP ECC PP / Planejamento Oficial"
 }
 
+export type ItemOrigin = 'MANUAL' | 'CROSS_SELL_IA' | 'RECOMPRA_IA'
+
 export interface QuotationItem {
   id: string
   item_sequence: number
@@ -143,6 +145,11 @@ export interface QuotationItem {
   weight_per_unit?: number
   stock_details?: MaterialStockInfo
   planned_production?: MaterialPlannedProduction
+  origem_item?: ItemOrigin
+  async_status?: 'LOADED' | 'PROGRESSIVE_LOADING' | 'OFFLINE_FALLBACK'
+  score_ia?: number
+  motivo_ia?: string
+  score_urgencia?: number
 }
 
 export interface QuotationTimelineEvent {
