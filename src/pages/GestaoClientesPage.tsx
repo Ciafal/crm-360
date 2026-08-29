@@ -1,401 +1,591 @@
-// src/pages/GestaoClientesPage.tsx
-import React, { useState, useMemo } from 'react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   Users,
-  ShieldCheck,
-  AlertTriangle,
-  Sparkles,
-  Layers,
-  Globe2,
-  BookOpen,
-  Target,
+  Search,
+  Filter,
+  UserPlus,
+  Compass,
   FileSpreadsheet,
+  Layers,
+  MapPin,
   TrendingUp,
-  Clock,
-  ShieldAlert,
-  Building2,
+  Sparkles,
   PhoneCall,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
   RefreshCw,
-  PlusCircle,
+  Building2,
+  DollarSign,
+  Package,
 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/use-auth'
-import { customerManagementService } from '@/services/customer_management_service'
-import type {
-  CustomerManagementItem,
-  CoverageSummaryKpi,
-  SellerCoverageItem,
-  CatalogProduct,
-  EspeculacaoItem,
-  MarketingCampaign,
-  RegionalGeoMetric,
-} from '@/types/customer_management'
-
-// Componentes modulares
-import { CoverageKpisPanel } from '@/components/gestao-clientes/CoverageKpisPanel'
-import { WhoToContactPanel } from '@/components/gestao-clientes/WhoToContactPanel'
-import { ClientManagementTable } from '@/components/gestao-clientes/ClientManagementTable'
-import { Client360ExecutiveModal } from '@/components/gestao-clientes/Client360ExecutiveModal'
-import { ClientGeoMapPanel } from '@/components/gestao-clientes/ClientGeoMapPanel'
-import { CatalogManagementPanel } from '@/components/gestao-clientes/CatalogManagementPanel'
-import { EspeculacoesPanel } from '@/components/gestao-clientes/EspeculacoesPanel'
-import { SellerCoverageRanking } from '@/components/gestao-clientes/SellerCoverageRanking'
 import { toast } from 'sonner'
 
-export type GestaoClientesTab =
-  | 'visao_geral'
-  | 'quem_contatar'
-  | 'lista_clientes'
-  | 'cobertura_vendedores'
-  | 'mapa_brasil'
-  | 'catalogo'
-  | 'especulacoes'
+// Modelos e Serviços Unificados CRM Party 360º
+import { crmPartyService } from '@/services/crm_party_service'
+import type { CrmPartyMaster, CommercialStage } from '@/types/crm_party'
+import { customerManagementService } from '@/services/customer_management_service'
+import type { CustomerManagementItem } from '@/types/customer_management'
+
+// Componentes Existentes Preservados
+import { CoverageKpisPanel } from '@/components/gestao-clientes/CoverageKpisPanel'
+import { ClientManagementTable } from '@/components/gestao-clientes/ClientManagementTable'
+import { WhoToContactPanel } from '@/components/gestao-clientes/WhoToContactPanel'
+import { SellerCoverageRanking } from '@/components/gestao-clientes/SellerCoverageRanking'
+import { ClientGeoMapPanel } from '@/components/gestao-clientes/ClientGeoMapPanel'
+import { EspeculacoesPanel } from '@/components/gestao-clientes/EspeculacoesPanel'
+import { CatalogManagementPanel } from '@/components/gestao-clientes/CatalogManagementPanel'
+import { Client360ExecutiveModal } from '@/components/gestao-clientes/Client360ExecutiveModal'
+
+// Novos Componentes da Jornada Comercial Única CRM 360º
+import { CadastroLeadModal } from '@/components/gestao-clientes/CadastroLeadModal'
+import { QualificarLeadModal } from '@/components/gestao-clientes/QualificarLeadModal'
+import { PortalFichaCadastralModal } from '@/components/gestao-clientes/PortalFichaCadastralModal'
+import { AnaliseFinanceiraCreditoModal } from '@/components/gestao-clientes/AnaliseFinanceiraCreditoModal'
+import { CentralCadastrosView } from '@/components/gestao-clientes/CentralCadastrosView'
+import { CentralAcoesInteligentesView } from '@/components/gestao-clientes/CentralAcoesInteligentesView'
+import { FunilAquisicaoCohortView } from '@/components/gestao-clientes/FunilAquisicaoCohortView'
+import { LeadsProspectsTab } from '@/components/gestao-clientes/LeadsProspectsTab'
+import { CrmParty360FichaModal } from '@/components/gestao-clientes/CrmParty360FichaModal'
+import { TransferenciaCarteiraModal } from '@/components/gestao-clientes/TransferenciaCarteiraModal'
+import { ReativarOportunidadeModal } from '@/components/gestao-clientes/ReativarOportunidadeModal'
 
 export default function GestaoClientesPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
-  // Estado da aba principal
-  const [activeTab, setActiveTab] = useState<GestaoClientesTab>('visao_geral')
+  // 1. Estados Centrais do CRM Party Master
+  const [parties, setParties] = useState<CrmPartyMaster[]>([])
+  const [selectedParty, setSelectedParty] = useState<CrmPartyMaster | null>(null)
 
-  // Perfil RBAC (Visão Vendedor vs Visão Gestão)
-  const [profileView, setProfileView] = useState<'vendedor' | 'gestao'>('gestao')
-  const currentSellerName = 'Carlos Mendonça'
+  // 2. Modais de Gestão Comercial e Onboarding
+  const [isCadastroLeadOpen, setIsCadastroLeadOpen] = useState(false)
+  const [isQualificarOpen, setIsQualificarOpen] = useState(false)
+  const [isFichaCadastralOpen, setIsFichaCadastralOpen] = useState(false)
+  const [isAnaliseFinanceiraOpen, setIsAnaliseFinanceiraOpen] = useState(false)
+  const [isCrmPartyModalOpen, setIsCrmPartyModalOpen] = useState(false)
+  const [isTransferenciaOpen, setIsTransferenciaOpen] = useState(false)
+  const [isReativarOpen, setIsReativarOpen] = useState(false)
 
-  // Dados mestres
-  const [rawCustomers, setRawCustomers] = useState<CustomerManagementItem[]>(() =>
-    customerManagementService.getCustomers(),
-  )
-  const [catalog, setCatalog] = useState<CatalogProduct[]>(() =>
-    customerManagementService.getCatalog(),
-  )
-  const [especulacoes, setEspeculacoes] = useState<EspeculacaoItem[]>(() =>
-    customerManagementService.getEspeculacoes(),
-  )
-  const [regionalMetrics] = useState<RegionalGeoMetric[]>(() =>
-    customerManagementService.getRegionalMetrics(),
-  )
+  // Modal 360 legado para retrocompatibilidade
+  const [selectedItemFor360, setSelectedItemFor360] = useState<CustomerManagementItem | null>(null)
+  const [is360ExecutiveModalOpen, setIs360ExecutiveModalOpen] = useState(false)
 
-  // Modais
-  const [selectedClientModal, setSelectedClientModal] = useState<CustomerManagementItem | null>(
-    null,
-  )
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+  // 3. Organização de Seções Obrigatória (Regra 31)
+  // 1. VISÃO GERAL & COBERTURA; 2. QUEM DEVO CONTATAR HOJE?; 3. LEADS & PROSPECTS; 4. LISTA DE CLIENTES; 5. CADASTROS; 6. COBERTURA POR VENDEDOR
+  const [activeSection, setActiveSection] = useState<string>('visao-geral')
 
-  // Recarregar dados do storage
-  const reloadData = () => {
-    setRawCustomers(customerManagementService.getCustomers())
-    setCatalog(customerManagementService.getCatalog())
-    setEspeculacoes(customerManagementService.getEspeculacoes())
+  // 4. Busca Global & Filtros Unificados (Regra 31)
+  const [globalSearchTerm, setGlobalSearchTerm] = useState('')
+  const [filterRegional, setFilterRegional] = useState('TODOS')
+  const [filterVendedor, setFilterVendedor] = useState('TODOS')
+  const [filterEstagio, setFilterEstagio] = useState('TODOS')
+
+  // Carrega lista de CRM Party Master
+  const loadParties = () => {
+    const data = crmPartyService.getParties()
+    setParties(data)
   }
 
-  // Filtragem conforme Perfil (Visão Vendedor vê só a própria carteira)
-  const authorizedCustomers = useMemo(() => {
-    if (profileView === 'vendedor') {
-      return rawCustomers.filter(
-        (c) =>
-          c.vendedorNome.toLowerCase().includes('carlos') ||
-          c.vendedorId === user?.id ||
-          c.vendedorId === 'qas-vendedor_teste',
-      )
+  useEffect(() => {
+    loadParties()
+  }, [])
+
+  // KPI calculations baseados no CRM Party Master
+  const kpis = useMemo(() => {
+    const total = parties.length
+    const leads = parties.filter(
+      (p) => p.commercial_stage === 'LEAD' || p.commercial_stage === 'LEAD_QUALIFICADO',
+    ).length
+    const prospects = parties.filter(
+      (p) => p.commercial_stage === 'PROSPECT' || p.commercial_stage === 'CADASTRO_EM_ANDAMENTO',
+    ).length
+    const clientesSap = parties.filter(
+      (p) =>
+        p.sap_customer_id ||
+        p.commercial_stage === 'CLIENTE_SAP' ||
+        p.commercial_stage === 'CLIENTE_ATIVO',
+    ).length
+    const faturados = parties.filter((p) => p.data_primeiro_faturamento).length
+    const cadastrosPendentes = parties.filter(
+      (p) =>
+        p.registration_status !== 'NAO_INICIADO' &&
+        p.registration_status !== 'CADASTRO_SAP_CONCLUIDO',
+    ).length
+
+    return {
+      total,
+      leads,
+      prospects,
+      clientesSap,
+      faturados,
+      cadastrosPendentes,
+      taxaConversao: leads > 0 ? Math.round((clientesSap / total) * 100) : 0,
     }
-    return rawCustomers
-  }, [rawCustomers, profileView, user])
+  }, [parties])
 
-  // KPIs de Cobertura
-  const coverageKpis: CoverageSummaryKpi = useMemo(() => {
-    return customerManagementService.calculateCoverageKpis(authorizedCustomers, 95)
-  }, [authorizedCustomers])
-
-  // Ranking de Cobertura por Vendedor
-  const sellerCoverageList: SellerCoverageItem[] = useMemo(() => {
-    return customerManagementService.calculateSellerCoverage(rawCustomers)
-  }, [rawCustomers])
-
-  // IA: Quem Devo Contatar Hoje?
-  const whoToContactSuggestions = useMemo(() => {
-    return customerManagementService.getWhoToContactToday(authorizedCustomers)
-  }, [authorizedCustomers])
-
-  // Handlers
-  const handleOpenClientDetail = (cliente: CustomerManagementItem) => {
-    setSelectedClientModal(cliente)
-    setIsClientModalOpen(true)
+  // Abertura Universal da Ficha 360º (Regra 31: Busca por cliente, CNPJ, SAP, CRM ID abre a mesma ficha)
+  const handleOpenParty360 = (partyIdOrCrmId: string) => {
+    const party =
+      crmPartyService.getPartyById(partyIdOrCrmId) ||
+      crmPartyService.getPartyBySapCode(partyIdOrCrmId)
+    if (party) {
+      setSelectedParty(party)
+      setIsCrmPartyModalOpen(true)
+    } else {
+      // Fallback para customerManagementService legado
+      const legacyItem = customerManagementService
+        .getCustomers()
+        .find((c) => c.id === partyIdOrCrmId || c.codigo === partyIdOrCrmId)
+      if (legacyItem) {
+        setSelectedItemFor360(legacyItem)
+        setIs360ExecutiveModalOpen(true)
+      } else {
+        toast.error('Registro não encontrado no CRM')
+      }
+    }
   }
 
-  const handleQuickAction = (cliente: CustomerManagementItem, acao: string) => {
-    setSelectedClientModal(cliente)
-    setIsClientModalOpen(true)
+  // Abertura Direta de Nova Cotação (Regra 24: CTA que pré-preenche cliente)
+  const handleOpenNovaCotacao = (party: CrmPartyMaster) => {
+    navigate('/cotacoes/nova', {
+      state: {
+        clienteId: party.crm_party_id,
+        codigoSap: party.sap_customer_id,
+        razaoSocial: party.razao_social,
+        cnpj: party.cnpj_cpf,
+        vendedorNome: party.vendedor_atual_nome,
+        contatoNome: party.contatos?.[0]?.nome,
+        contatoEmail: party.contatos?.[0]?.email,
+        contatoTel: party.contatos?.[0]?.whatsapp,
+        condicaoPagamento: party.analise_credito?.condicao_pagamento_recomendada,
+        limiteDisponivel: party.analise_credito?.limite_disponivel,
+      },
+    })
   }
 
   return (
-    <div className="space-y-6 pb-16 text-slate-100">
-      {/* 1. BANNER OFICIAL DE DEMONSTRAÇÃO E AMBIENTE */}
-      <div className="bg-gradient-to-r from-sky-950/80 via-slate-900 to-slate-950 border border-sky-900/40 p-3 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-mono uppercase tracking-wider">
-            DADOS DE DEMONSTRAÇÃO (is_mock=true)
-          </Badge>
-          <span className="text-slate-300 text-[11px]">
-            Módulo Gestão de Carteira CIAFAL · Sincronizado com SAP ECC, PCP Robotizado e TMS Frota
-          </span>
-        </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
+      {/* 1. TOPO EXECUTIVO CIAFAL & AÇÕES CENTRAIS (Regra 31) */}
+      <div className="border-b border-slate-800 bg-slate-900/90 sticky top-0 z-30 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Título & Badge de Origem Mestre */}
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-sky-500/20 text-sky-400 rounded-2xl border border-sky-500/30 shadow-inner">
+                <Compass className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-serif font-bold text-white tracking-tight">
+                    GESTÃO DE CLIENTES & COBERTURA DA CARTEIRA
+                  </h1>
+                  <Badge className="bg-sky-950 text-sky-300 border-sky-800 text-[10px] font-mono">
+                    CRM 360º CIAFAL
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Registro Comercial Único · Jornada Lead → Prospect → Cliente SAP · Sem Cadastros
+                  Paralelos
+                </p>
+              </div>
+            </div>
 
-        {/* Alternador de Perfil RBAC (Regra 4) */}
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 text-xs">Visão:</span>
-          <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800">
-            <button
-              onClick={() => setProfileView('vendedor')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                profileView === 'vendedor'
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Visão Vendedor (Minha Carteira)
-            </button>
-            <button
-              onClick={() => setProfileView('gestao')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                profileView === 'gestao'
-                  ? 'bg-sky-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Visão Gestão (Empresa / Equipes)
-            </button>
-          </div>
-        </div>
-      </div>
+            {/* BOTÕES DE AÇÃO OBRIGATÓRIOS NO CABEÇALHO (Regra 31) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                size="sm"
+                onClick={() => setIsCadastroLeadOpen(true)}
+                className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5 shadow-md hover:shadow-sky-600/20 transition-all"
+              >
+                <UserPlus className="w-4 h-4" /> [ + CADASTRAR LEAD ]
+              </Button>
 
-      {/* 2. CABEÇALHO EXECUTIVO DO MÓDULO */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs font-bold text-sky-400 bg-sky-950/80 px-2.5 py-0.5 rounded-xl border border-sky-800/50">
-              CRM 360º CIAFAL FERRO & AÇO
-            </span>
-            <span className="text-xs text-slate-400">
-              {profileView === 'vendedor'
-                ? `Vendedor: ${currentSellerName}`
-                : 'Diretoria & Supervisão Regional'}
-            </span>
-          </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveSection('cadastros')}
+                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                  activeSection === 'cadastros'
+                    ? 'bg-purple-950 text-purple-300 border-purple-700'
+                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                }`}
+              >
+                <FileSpreadsheet className="w-4 h-4 text-purple-400" />[ CENTRAL DE CADASTROS ]
+                {kpis.cadastrosPendentes > 0 && (
+                  <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 rounded-full font-mono">
+                    {kpis.cadastrosPendentes}
+                  </Badge>
+                )}
+              </Button>
 
-          <h1 className="font-serif text-3xl font-bold text-white tracking-tight mt-1 flex items-center gap-2.5">
-            <Users className="w-8 h-8 text-sky-400" />
-            Gestão de Clientes & Cobertura da Carteira
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Visão operacional e gerencial da carteira ativa, cotações, faturamento, cobertura
-            comercial, recomendações de IA, cross-sell, catálogo técnico, especulações e OTIF.
-          </p>
-        </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveSection('central-acoes')}
+                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                  activeSection === 'central-acoes'
+                    ? 'bg-amber-950 text-amber-300 border-amber-700'
+                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />[ CENTRAL DE AÇÕES ]
+              </Button>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              reloadData()
-              toast.success('Dados de clientes e cotações sincronizados com o backend!')
-            }}
-            className="h-9 text-xs border-slate-700 bg-slate-900 text-slate-300 hover:text-white rounded-2xl gap-1.5"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-sky-400" /> Sincronizar Carteira
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => navigate('/central-acoes')}
-            className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-2xl gap-1.5 shadow-sm"
-          >
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Central de Ações</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => setActiveTab('quem_contatar')}
-            className="h-9 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-2xl gap-1.5 shadow-sm"
-          >
-            <Sparkles className="w-4 h-4" /> Quem Contatar Hoje?
-          </Button>
-        </div>
-      </div>
-
-      {/* 3. NAVEGAÇÃO ENTRE AS ABAS PRINCIPAIS DO MÓDULO */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-slate-800 scrollbar-none">
-        <button
-          onClick={() => setActiveTab('visao_geral')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'visao_geral'
-              ? 'bg-sky-600 text-white shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Visão Geral & Cobertura</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('quem_contatar')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'quem_contatar'
-              ? 'bg-amber-500 text-slate-950 shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>Quem Devo Contatar Hoje?</span>
-          <Badge className="ml-1 px-1.5 text-[9px] bg-amber-600 text-white">
-            {whoToContactSuggestions.length}
-          </Badge>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('lista_clientes')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'lista_clientes'
-              ? 'bg-sky-600 text-white shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Lista de Clientes ({authorizedCustomers.length})</span>
-        </button>
-
-        {profileView === 'gestao' && (
-          <button
-            onClick={() => setActiveTab('cobertura_vendedores')}
-            className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-              activeTab === 'cobertura_vendedores'
-                ? 'bg-sky-600 text-white shadow-xs'
-                : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Cobertura por Vendedor</span>
-          </button>
-        )}
-
-        <button
-          onClick={() => setActiveTab('mapa_brasil')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'mapa_brasil'
-              ? 'bg-sky-600 text-white shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <Globe2 className="w-4 h-4" />
-          <span>Mapa Brasil & Regional</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('catalogo')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'catalogo'
-              ? 'bg-sky-600 text-white shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          <span>Catálogo Comercial CIAFAL</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('especulacoes')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
-            activeTab === 'especulacoes'
-              ? 'bg-sky-600 text-white shadow-xs'
-              : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-          }`}
-        >
-          <Target className="w-4 h-4" />
-          <span>Especulações ({especulacoes.length})</span>
-        </button>
-      </div>
-
-      {/* 4. RENDERIZAÇÃO DA VISÃO ATIVA */}
-      {activeTab === 'visao_geral' && (
-        <div className="space-y-6">
-          <CoverageKpisPanel
-            kpis={coverageKpis}
-            onSelectFilter={() => setActiveTab('lista_clientes')}
-          />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <WhoToContactPanel
-              suggestions={whoToContactSuggestions.slice(0, 4)}
-              onSelectClient={handleOpenClientDetail}
-              onQuickAction={handleQuickAction}
-            />
-            <div className="space-y-4">
-              <ClientGeoMapPanel
-                clientes={authorizedCustomers}
-                regionalMetrics={regionalMetrics}
-                onSelectClient={handleOpenClientDetail}
-              />
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveSection('quem-contatar')}
+                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                  activeSection === 'quem-contatar'
+                    ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white'
+                }`}
+              >
+                <PhoneCall className="w-4 h-4 text-emerald-400" />[ QUEM CONTATAR HOJE? ]
+              </Button>
             </div>
           </div>
-          <ClientManagementTable
-            clientes={authorizedCustomers}
-            onSelectClient={handleOpenClientDetail}
-            userRole={profileView}
-          />
+
+          {/* BARRA DE BUSCA GLOBAL UNIVERSAL (Regra 31) */}
+          <div className="mt-3.5 pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-96">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-2.5" />
+              <Input
+                value={globalSearchTerm}
+                onChange={(e) => setGlobalSearchTerm(e.target.value)}
+                placeholder="Busca global: Razão Social, CNPJ, SAP, CRM ID, contato..."
+                className="h-9 pl-9 bg-slate-950 border-slate-800 text-xs rounded-xl text-slate-200 placeholder:text-slate-600 focus:border-sky-500"
+              />
+            </div>
+
+            {/* Micro Indicadores do Registro Único */}
+            <div className="flex items-center gap-3 text-xs text-slate-400 overflow-x-auto w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Base Mestre</span>
+                <strong className="text-white font-mono">{kpis.total}</strong>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-amber-500 font-bold uppercase">Leads</span>
+                <strong className="text-amber-400 font-mono">{kpis.leads}</strong>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-purple-400 font-bold uppercase">Prospects</span>
+                <strong className="text-purple-300 font-mono">{kpis.prospects}</strong>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-950/60 px-3 py-1.5 rounded-xl border border-slate-800">
+                <span className="text-[10px] text-emerald-400 font-bold uppercase">
+                  Clientes SAP
+                </span>
+                <strong className="text-emerald-400 font-mono">{kpis.clientesSap}</strong>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {activeTab === 'quem_contatar' && (
-        <WhoToContactPanel
-          suggestions={whoToContactSuggestions}
-          onSelectClient={handleOpenClientDetail}
-          onQuickAction={handleQuickAction}
-        />
-      )}
+      {/* 2. CORPO PRINCIPAL COM 6 SEÇÕES ORGANIZADAS (Regra 31) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-5">
+        <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
+          <TabsList className="bg-slate-900/90 border border-slate-800 p-1 rounded-2xl flex items-center gap-1 overflow-x-auto h-auto">
+            <TabsTrigger
+              value="visao-geral"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              1. VISÃO GERAL & COBERTURA
+            </TabsTrigger>
+            <TabsTrigger
+              value="quem-contatar"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              2. QUEM DEVO CONTATAR HOJE?
+            </TabsTrigger>
+            <TabsTrigger
+              value="leads-prospects"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              3. LEADS & PROSPECTS
+            </TabsTrigger>
+            <TabsTrigger
+              value="lista-clientes"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              4. LISTA DE CLIENTES
+            </TabsTrigger>
+            <TabsTrigger
+              value="cadastros"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              5. CENTRAL DE CADASTROS
+            </TabsTrigger>
+            <TabsTrigger
+              value="cobertura-vendedor"
+              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-sky-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              6. COBERTURA POR VENDEDOR
+            </TabsTrigger>
+            <TabsTrigger
+              value="funil-cohort"
+              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              📈 FUNIL & COHORT
+            </TabsTrigger>
+            <TabsTrigger
+              value="central-acoes"
+              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+            >
+              ✨ CENTRAL DE AÇÕES
+            </TabsTrigger>
+          </TabsList>
 
-      {activeTab === 'lista_clientes' && (
-        <ClientManagementTable
-          clientes={authorizedCustomers}
-          onSelectClient={handleOpenClientDetail}
-          userRole={profileView}
-        />
-      )}
+          {/* SEÇÃO 1: VISÃO GERAL & COBERTURA */}
+          <TabsContent value="visao-geral" className="space-y-4">
+            <CoverageKpisPanel
+              kpis={customerManagementService.calculateCoverageKpis(
+                customerManagementService.getCustomers(),
+              )}
+            />
 
-      {activeTab === 'cobertura_vendedores' && profileView === 'gestao' && (
-        <SellerCoverageRanking
-          sellers={sellerCoverageList}
-          onSelectSeller={(sel) => {
-            toast.info(`Filtrando carteira do vendedor ${sel.vendedorNome}`)
-            setActiveTab('lista_clientes')
-          }}
-        />
-      )}
+            {/* Painel do Funil Real de Aquisição (Regra 25) */}
+            <FunilAquisicaoCohortView
+              parties={parties}
+              onSelectStageFilter={(stg) => {
+                if (stg === 'LEADS' || stg === 'QUALIFICADOS' || stg === 'PROSPECTS') {
+                  setActiveSection('leads-prospects')
+                } else if (stg === 'CADASTROS') {
+                  setActiveSection('cadastros')
+                } else {
+                  setActiveSection('lista-clientes')
+                }
+              }}
+            />
 
-      {activeTab === 'mapa_brasil' && (
-        <ClientGeoMapPanel
-          clientes={authorizedCustomers}
-          regionalMetrics={regionalMetrics}
-          onSelectClient={handleOpenClientDetail}
-        />
-      )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ClientGeoMapPanel
+                clientes={customerManagementService.getCustomers()}
+                regionalMetrics={customerManagementService.getRegionalMetrics()}
+                onSelectClient={(client) => handleOpenParty360(client.id)}
+              />
+              <EspeculacoesPanel
+                especulacoes={customerManagementService.getEspeculacoes()}
+                onUpdateList={() => {}}
+              />
+            </div>
+          </TabsContent>
 
-      {activeTab === 'catalogo' && <CatalogManagementPanel catalog={catalog} />}
+          {/* SEÇÃO 2: QUEM DEVO CONTATAR HOJE? */}
+          <TabsContent value="quem-contatar" className="space-y-4">
+            <WhoToContactPanel
+              suggestions={customerManagementService.getWhoToContactToday(
+                customerManagementService.getCustomers(),
+              )}
+              onSelectClient={(client) => handleOpenParty360(client.id)}
+            />
+          </TabsContent>
 
-      {activeTab === 'especulacoes' && (
-        <EspeculacoesPanel especulacoes={especulacoes} onUpdateList={reloadData} />
-      )}
+          {/* SEÇÃO 3: LEADS & PROSPECTS (Regra 1 a 11) */}
+          <TabsContent value="leads-prospects" className="space-y-4">
+            <LeadsProspectsTab
+              parties={parties}
+              onOpenParty={(id) => handleOpenParty360(id)}
+              onOpenCadastroModal={() => setIsCadastroLeadOpen(true)}
+              onOpenQualificarModal={(p) => {
+                setSelectedParty(p)
+                setIsQualificarOpen(true)
+              }}
+              onOpenFichaModal={(p) => {
+                setSelectedParty(p)
+                setIsFichaCadastralOpen(true)
+              }}
+            />
+          </TabsContent>
 
-      {/* 5. MODAL EXECUTIVO CLIENTE 360 & INTERAÇÃO */}
-      <Client360ExecutiveModal
-        cliente={selectedClientModal}
-        open={isClientModalOpen}
-        onOpenChange={setIsClientModalOpen}
-        onContactRegistered={reloadData}
+          {/* SEÇÃO 4: LISTA DE CLIENTES (Tabela Principal Mantida) */}
+          <TabsContent value="lista-clientes" className="space-y-4">
+            <ClientManagementTable
+              clientes={customerManagementService.getCustomers()}
+              onSelectClient={(client) => handleOpenParty360(client.id)}
+            />
+          </TabsContent>
+
+          {/* SEÇÃO 5: CENTRAL DE CADASTROS (Regra 18) */}
+          <TabsContent value="cadastros" className="space-y-4">
+            <CentralCadastrosView
+              parties={parties}
+              onOpenParty={(id) => handleOpenParty360(id)}
+              onOpenFichaModal={(p) => {
+                setSelectedParty(p)
+                setIsFichaCadastralOpen(true)
+              }}
+              onOpenAnaliseFinanceiraModal={(p) => {
+                setSelectedParty(p)
+                setIsAnaliseFinanceiraOpen(true)
+              }}
+              onRefreshParties={loadParties}
+            />
+          </TabsContent>
+
+          {/* SEÇÃO 6: COBERTURA POR VENDEDOR */}
+          <TabsContent value="cobertura-vendedor" className="space-y-4">
+            <SellerCoverageRanking
+              sellers={customerManagementService.calculateSellerCoverage(
+                customerManagementService.getCustomers(),
+              )}
+            />
+          </TabsContent>
+
+          {/* TAB EXTRA: FUNIL & COHORT EXPANDIDO */}
+          <TabsContent value="funil-cohort" className="space-y-4">
+            <FunilAquisicaoCohortView
+              parties={parties}
+              onSelectStageFilter={(stg) => {
+                if (stg === 'LEADS' || stg === 'QUALIFICADOS') setActiveSection('leads-prospects')
+                else if (stg === 'CADASTROS') setActiveSection('cadastros')
+                else setActiveSection('lista-clientes')
+              }}
+            />
+          </TabsContent>
+
+          {/* TAB EXTRA: CENTRAL DE AÇÕES INTELIGENTES (Regra 26) */}
+          <TabsContent value="central-acoes" className="space-y-4">
+            <CentralAcoesInteligentesView
+              parties={parties}
+              onOpenParty={(id) => handleOpenParty360(id)}
+              onOpenNovaCotacao={(p) => handleOpenNovaCotacao(p)}
+              onOpenQualificarModal={(p) => {
+                setSelectedParty(p)
+                setIsQualificarOpen(true)
+              }}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* 3. MODAIS CENTRAIS DA JORNADA COMERCIAL ÚNICA (Regras 1 a 34) */}
+
+      {/* Modal 1: Cadastro Simples de Lead (Regra 5, 6, 7) */}
+      <CadastroLeadModal
+        open={isCadastroLeadOpen}
+        onOpenChange={setIsCadastroLeadOpen}
+        onLeadCreated={(newLead) => {
+          loadParties()
+          setSelectedParty(newLead)
+          setIsCrmPartyModalOpen(true)
+        }}
+        onOpenExistingParty={(id) => handleOpenParty360(id)}
       />
+
+      {/* Modal 2: Qualificação Comercial com IA Score (Regra 10) */}
+      <QualificarLeadModal
+        party={selectedParty}
+        open={isQualificarOpen}
+        onOpenChange={setIsQualificarOpen}
+        onQualified={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+        }}
+        onInitiateOnboarding={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+          setIsFichaCadastralOpen(true)
+        }}
+      />
+
+      {/* Modal 3: Portal do Cliente / Ficha Cadastral Wizard (Regra 13, 14, 15, 16) */}
+      <PortalFichaCadastralModal
+        party={selectedParty}
+        open={isFichaCadastralOpen}
+        onOpenChange={setIsFichaCadastralOpen}
+        onSaved={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+        }}
+      />
+
+      {/* Modal 4: Análise Financeira & Crédito com Alçada Humana (Regra 19, 20) */}
+      <AnaliseFinanceiraCreditoModal
+        party={selectedParty}
+        open={isAnaliseFinanceiraOpen}
+        onOpenChange={setIsAnaliseFinanceiraOpen}
+        onApproved={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+        }}
+      />
+
+      {/* Modal 5: Ficha Mestre CRM Party 360º (Regra 27) */}
+      <CrmParty360FichaModal
+        party={selectedParty}
+        open={isCrmPartyModalOpen}
+        onOpenChange={setIsCrmPartyModalOpen}
+        onOpenNovaCotacao={(p) => handleOpenNovaCotacao(p)}
+        onOpenFichaModal={(p) => {
+          setSelectedParty(p)
+          setIsFichaCadastralOpen(true)
+        }}
+        onOpenQualificarModal={(p) => {
+          setSelectedParty(p)
+          setIsQualificarOpen(true)
+        }}
+        onOpenAnaliseFinanceiraModal={(p) => {
+          setSelectedParty(p)
+          setIsAnaliseFinanceiraOpen(true)
+        }}
+        onOpenTransferenciaModal={(p) => {
+          setSelectedParty(p)
+          setIsTransferenciaOpen(true)
+        }}
+        onOpenReativarModal={(p) => {
+          setSelectedParty(p)
+          setIsReativarOpen(true)
+        }}
+        onRefreshParties={loadParties}
+      />
+
+      {/* Modal 6: Transferência Administrativa de Carteira (Regra 28) */}
+      <TransferenciaCarteiraModal
+        party={selectedParty}
+        open={isTransferenciaOpen}
+        onOpenChange={setIsTransferenciaOpen}
+        onTransferred={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+        }}
+      />
+
+      {/* Modal 7: Reativação / Novo Ciclo Comercial (Regra 28) */}
+      <ReativarOportunidadeModal
+        party={selectedParty}
+        open={isReativarOpen}
+        onOpenChange={setIsReativarOpen}
+        onReactivated={(updated) => {
+          loadParties()
+          setSelectedParty(updated)
+        }}
+      />
+
+      {/* Modal Legado Preservado */}
+      {selectedItemFor360 && (
+        <Client360ExecutiveModal
+          cliente={selectedItemFor360}
+          open={is360ExecutiveModalOpen}
+          onOpenChange={setIs360ExecutiveModalOpen}
+          onContactRegistered={loadParties}
+        />
+      )}
     </div>
   )
 }

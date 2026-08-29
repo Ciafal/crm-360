@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   ArrowLeft,
   Search,
@@ -114,6 +114,7 @@ export const formatTons = (val: number | undefined) => {
 
 export default function NovaCotacao() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { id } = useParams<{ id?: string }>()
   const { toast } = useToast()
 
@@ -188,7 +189,7 @@ export default function NovaCotacao() {
   const [copilotLoading, setCopilotLoading] = useState(false)
   const [approvalModalOpen, setApprovalModalOpen] = useState(false)
 
-  // Carregar Cotação existente se ID estiver na URL
+  // Carregar Cotação existente se ID estiver na URL ou pré-preencher via navegação de Gestão de Clientes
   useEffect(() => {
     if (id) {
       quotationService.getQuotationById(id).then((q) => {
@@ -216,8 +217,82 @@ export default function NovaCotacao() {
           fetchCreditData(q.customer_sap_code, q.customer_id)
         }
       })
+    } else if (location.state) {
+      const st = location.state as any
+      if (st.razaoSocial || st.codigoSap || st.clienteId) {
+        // Tenta encontrar nos clientes pré-carregados ou constrói um sob demanda
+        let match = PRELOADED_CUSTOMERS.find(
+          (c) =>
+            (st.codigoSap && c.sapCode === st.codigoSap) ||
+            (st.clienteId && c.id === st.clienteId) ||
+            (st.razaoSocial && c.razaoSocial.toLowerCase() === st.razaoSocial.toLowerCase()),
+        )
+
+        if (!match) {
+          match = {
+            id: st.clienteId || 'cust-' + Date.now(),
+            sapCode: st.codigoSap || '000000',
+            razaoSocial: st.razaoSocial || 'Cliente CRM',
+            nomeFantasia: st.razaoSocial || 'Cliente CRM',
+            cnpj: st.cnpj || '',
+            cidade: 'Contagem',
+            uf: 'MG',
+            vendedor: st.vendedorNome || 'Carlos Mendonça',
+            salesOrg: 'BR01',
+            distributionChannel: '10',
+            division: '01',
+            condicoesPagamento: [st.condicaoPagamento || '30/60 DDL (Boleto)'],
+            shipToAddresses: [
+              {
+                code: 'SHIP-01',
+                label: 'Sede Principal / Unidade Fabril',
+                address: 'Sede Comercial / Unidade Fabril Principal',
+              },
+            ],
+            limiteCreditoDisponivel: st.limiteDisponivel || 250000,
+            contatos: [
+              {
+                nome: st.contatoNome || 'Contato Comercial',
+                cargo: 'Compras',
+                telefone: st.contatoTel || '',
+                email: st.contatoEmail || '',
+              },
+            ],
+            archetype: 'INDÚSTRIA',
+            abcHistorico: 'A',
+          }
+        }
+
+        setSelectedCustomer(match)
+        if (st.contatoNome) {
+          setSelectedContact({
+            nome: st.contatoNome,
+            cargo: 'Compras',
+            telefone: st.contatoTel || '',
+            email: st.contatoEmail || '',
+          })
+        } else if (match.contatos[0]) {
+          setSelectedContact(match.contatos[0])
+        }
+
+        if (st.condicaoPagamento) {
+          setPaymentTerms(st.condicaoPagamento)
+        }
+        if (match.shipToAddresses[0]) {
+          setSelectedShipTo(match.shipToAddresses[0].code)
+        }
+
+        if (st.codigoSap && st.codigoSap !== '000000') {
+          fetchCreditData(st.codigoSap, match.id)
+        }
+
+        toast({
+          title: 'Cliente Pré-preenchido',
+          description: `${match.razaoSocial} carregado a partir do Registro Comercial Único.`,
+        })
+      }
     }
-  }, [id])
+  }, [id, location.state])
 
   // Filtragem de clientes para autocomplete
   const filteredCustomers = useMemo(() => {
