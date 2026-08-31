@@ -48,7 +48,7 @@ describe('CRM 360º — Fluxo de Autenticação e Auto-Provisionamento MFA QAS',
     for (const otp of wrongOtps) {
       const result = await verifyMfaOtp(email, otp)
       expect(result.valid).toBe(false)
-      expect(result.error).toBe('Código inválido')
+      expect(result.error).toBe('Código de verificação inválido.')
     }
   })
 

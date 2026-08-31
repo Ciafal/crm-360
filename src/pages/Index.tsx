@@ -30,9 +30,9 @@ import {
   Layers,
 } from 'lucide-react'
 import {
+  initiateLoginAndMfa,
   requestMfaOtp,
   verifyMfaOtp,
-  requiresMfa,
   isFixedTestOtpEnabled,
 } from '@/services/mfa_service'
 
@@ -46,6 +46,8 @@ export default function Index() {
   const [step, setStep] = useState<'LOGIN' | 'MFA'>('LOGIN')
   const [otp, setOtp] = useState('')
   const [challengeToken, setChallengeToken] = useState<string | null>(null)
+  const [mfaMode, setMfaMode] = useState<string>('TEST_FIXED')
+  const [preAuthUser, setPreAuthUser] = useState<any>(null)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,10 +56,10 @@ export default function Index() {
 
   const otpInputRef = useRef<HTMLInputElement>(null)
 
-  // Se já autenticado, redireciona uma única vez para o Meu Dia
+  // Se já autenticado, redireciona uma única vez para o Meu Dia (/home)
   useEffect(() => {
     if (!authLoading && user) {
-      const from = (location.state as any)?.from?.pathname || '/crm'
+      const from = (location.state as any)?.from?.pathname || '/home'
       navigate(from, { replace: true })
     }
   }, [user, authLoading, navigate, location])
@@ -82,11 +84,13 @@ export default function Index() {
   // Etapa 1: Validação de Credenciais
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setError(null)
     setSuccessNotice(null)
 
     const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail || !password) {
+    const cleanPass = password.trim()
+    if (!cleanEmail || !cleanPass) {
       setError('Por favor, preencha o e-mail e a senha corporativa.')
       return
     }
@@ -94,34 +98,20 @@ export default function Index() {
     setLoading(true)
 
     try {
-      // 1. Sempre exige MFA por padrão no fluxo CIAFAL 360 ou conforme perfil
-      const mfaNeeded = requiresMfa(cleanEmail) || true
+      // Inicia login e gera MFA challenge no backend
+      const loginRes = await initiateLoginAndMfa(cleanEmail, cleanPass)
 
-      if (mfaNeeded) {
-        // Gera o desafio MFA e avança para a etapa 2
-        const reqResult = await requestMfaOtp(cleanEmail)
-        if (reqResult.success) {
-          setChallengeToken(reqResult.challenge_token || null)
-          setStep('MFA')
-          setResendCooldown(30)
-          setLoading(false)
-          return
-        } else {
-          setError(reqResult.error || 'Erro ao gerar desafio de segurança. Tente novamente.')
-          setLoading(false)
-          return
-        }
-      }
-
-      // Se não precisasse de MFA (fallback direto)
-      const { error: signInError } = await signIn(cleanEmail, password)
-      if (signInError) {
-        setError('Usuário ou senha inválidos.')
+      if (loginRes.success && loginRes.mfa_required) {
+        setChallengeToken(loginRes.challenge_id || null)
+        setMfaMode(loginRes.mfa_mode || 'TEST_FIXED')
+        setPreAuthUser(loginRes.user || null)
+        setStep('MFA')
+        setResendCooldown(30)
       } else {
-        navigate('/crm', { replace: true })
+        setError(loginRes.error || 'Usuário ou senha inválidos.')
       }
     } catch {
-      setError('Ocorreu um erro ao processar sua solicitação. Verifique sua conexão.')
+      setError('Usuário ou senha inválidos.')
     } finally {
       setLoading(false)
     }
@@ -130,6 +120,7 @@ export default function Index() {
   // Etapa 2: Validação do Código OTP
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setError(null)
     setSuccessNotice(null)
 
@@ -143,7 +134,7 @@ export default function Index() {
     }
 
     if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
-      setError('O código de verificação deve conter exatamente 6 números.')
+      setError('Código de verificação inválido.')
       return
     }
 
@@ -153,23 +144,33 @@ export default function Index() {
       const verifyResult = await verifyMfaOtp(cleanEmail, cleanOtp, challengeToken || undefined)
 
       if (verifyResult.valid) {
-        // Efetiva a sessão autenticada com as credenciais validadas
-        const { error: authErr } = await signIn(cleanEmail, password)
+        // Armazenar JWT se retornado
+        if (verifyResult.token) {
+          try {
+            localStorage.setItem('ciafal_jwt_token', verifyResult.token)
+          } catch {
+            /* intentionally ignored */
+          }
+        }
+
+        // Efetiva a sessão autenticada com as credenciais/usuário autorizado
+        const authenticatedUserData = verifyResult.user_details || preAuthUser
+        const { error: authErr } = await signIn(cleanEmail, password, authenticatedUserData)
         if (authErr) {
-          setError(authErr.message || 'Falha ao autenticar sessão. Tente novamente.')
+          setError('Falha ao autenticar sessão. Tente novamente.')
           setLoading(false)
           return
         }
 
-        setSuccessNotice('Acesso autorizado! Carregando cockpit comercial...')
+        setSuccessNotice('Acesso autorizado! Redirecionando para o Meu Dia...')
         setTimeout(() => {
-          navigate('/crm', { replace: true })
-        }, 300)
+          navigate('/home', { replace: true })
+        }, 200)
       } else {
         setError(verifyResult.error || 'Código de verificação inválido.')
       }
     } catch {
-      setError('Erro de comunicação com o serviço de autenticação.')
+      setError('Código de verificação inválido.')
     } finally {
       setLoading(false)
     }
@@ -177,7 +178,7 @@ export default function Index() {
 
   // Reenviar código OTP
   const handleResendOtp = async () => {
-    if (resendCooldown > 0) return
+    if (resendCooldown > 0 || loading) return
     setError(null)
     setLoading(true)
 
@@ -187,10 +188,14 @@ export default function Index() {
       if (req.success) {
         setChallengeToken(req.challenge_token || null)
         setResendCooldown(30)
-        setSuccessNotice('Um novo código de verificação foi emitido.')
+        setSuccessNotice(
+          mfaMode === 'TEST_FIXED'
+            ? 'Desafio de homologação renovado.'
+            : 'Um novo código de verificação foi emitido.',
+        )
         setTimeout(() => setSuccessNotice(null), 4000)
       } else {
-        setError(req.error || 'Erro ao reenviar código.')
+        setError(req.error || 'Não foi possível reenviar o código.')
       }
     } catch {
       setError('Não foi possível reenviar o código.')
@@ -356,7 +361,9 @@ export default function Index() {
                 <CardDescription className="text-xs text-slate-500">
                   {step === 'LOGIN'
                     ? 'Informe seu e-mail corporativo institucional e senha.'
-                    : 'Digite o código de 6 dígitos enviado para seu e-mail institucional seguro.'}
+                    : mfaMode === 'TEST_FIXED'
+                      ? 'Validação MFA do ambiente de homologação.'
+                      : 'Digite o código de 6 dígitos enviado para seu e-mail institucional seguro.'}
                 </CardDescription>
               </CardHeader>
 
@@ -402,7 +409,7 @@ export default function Index() {
                         <Input
                           id="email"
                           type="email"
-                          placeholder="usuario@ciafal.com.br"
+                          placeholder="usuario@ciafal.local"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="pl-9 text-sm h-10 border-slate-200 focus:border-blue-600 focus:ring-blue-600"
@@ -462,7 +469,9 @@ export default function Index() {
                         <span className="text-blue-700 font-semibold">{email}</span>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        Um código numérico de 6 dígitos foi gerado para confirmação do seu acesso.
+                        {mfaMode === 'TEST_FIXED'
+                          ? 'Informe o código MFA configurado para seu usuário de homologação.'
+                          : 'Um código numérico de 6 dígitos foi gerado para confirmação do seu acesso.'}
                       </p>
                     </div>
 
@@ -477,11 +486,17 @@ export default function Index() {
                         inputMode="numeric"
                         autoComplete="one-time-code"
                         maxLength={6}
-                        placeholder="123456"
+                        placeholder="••••••"
                         value={otp}
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, '').slice(0, 6)
                           setOtp(val)
+                        }}
+                        onPaste={(e) => {
+                          e.preventDefault()
+                          const pastedData = e.clipboardData.getData('text')
+                          const cleanPasted = pastedData.replace(/\D/g, '').slice(0, 6)
+                          setOtp(cleanPasted)
                         }}
                         className="text-center font-mono text-xl tracking-[0.4em] font-bold h-12 border-slate-300 focus:border-blue-700 focus:ring-blue-700 bg-white"
                         required
@@ -556,7 +571,7 @@ export default function Index() {
                 </div>
                 <p className="text-slate-600 leading-normal">
                   Usuários oficiais de teste aceitam a senha institucional de homologação e o código
-                  OTP padrão.
+                  OTP configurado para o ambiente.
                 </p>
               </div>
             )}

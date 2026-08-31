@@ -57,12 +57,12 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     expect(resultAlias.mfa_mode).toBe('FIXED_QAS')
   })
 
-  // 2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código inválido")
-  it('2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código inválido")', async () => {
+  // 2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código de verificação inválido.")
+  it('2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código de verificação inválido.")', async () => {
     const email = 'admin.teste@ciafal.local'
     const result = await verifyOtp(email, '654321')
     expect(result.valid).toBe(false)
-    expect(result.error).toBe('Código inválido')
+    expect(result.error).toBe('Código de verificação inválido.')
   })
 
   // 3. QAS: senha errada -> NÃO chegar à etapa MFA (fluxo de credencial obrigatório)
@@ -130,7 +130,7 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     const email = 'usuario.corporativo@ciafal.com.br'
     const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(false)
-    expect(result.error).toBe('Código inválido')
+    expect(result.error).toBe('Código de verificação inválido.')
   })
 
   // 7. ENABLE_FIXED_TEST_OTP=false em QAS desabilita o OTP fixo
@@ -181,7 +181,7 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     for (let i = 0; i < 4; i++) {
       const res = await verifyOtp(testEmail, '999999')
       expect(res.valid).toBe(false)
-      expect(res.error).toBe('Código inválido')
+      expect(res.error).toBe('Código de verificação inválido.')
     }
 
     // 5ª tentativa errada -> atinge limite

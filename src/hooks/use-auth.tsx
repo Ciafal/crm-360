@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { isFixedTestOtpEnabled } from '@/services/mfa_service'
+import { isFixedTestOtpEnabled, OFFICIAL_HOMOLOGATION_USERS } from '@/services/mfa_service'
 
 export interface CiafalAuthUser {
   id: string
@@ -24,7 +24,7 @@ interface AuthContextType {
     email: string,
     password: string,
   ) => Promise<{ error: any; status?: number }>
-  signIn: (email: string, password: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string, preValidatedUser?: any) => Promise<{ error: any }>
   resetPassword: (email: string) => Promise<{ error: any }>
   signOut: () => void
   loading: boolean
@@ -36,65 +36,6 @@ export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
-}
-
-// Mapa unificado dos usuários oficiais de homologação
-const OFFICIAL_HOMOLOGATION_USERS: Record<string, Partial<CiafalAuthUser>> = {
-  'admin.teste@ciafal.local': {
-    id: 'usr-admin-teste',
-    name: 'Administrador Teste CRM',
-    role: 'ADMIN',
-    employee_id: 'TEST-ADM-01',
-    seller_code: 'ADM-TESTE',
-    ramal: '4099',
-    telefone_corporativo: '(11) 98888-0000',
-    active: true,
-    is_test_user: true,
-  },
-  'supervisor.teste@ciafal.local': {
-    id: 'usr-supervisor-teste',
-    name: 'Supervisor Teste CRM',
-    role: 'SUPERVISOR',
-    employee_id: 'TEST-SUP-01',
-    seller_code: 'SUP-TESTE',
-    ramal: '4090',
-    telefone_corporativo: '(11) 98888-0001',
-    active: true,
-    is_test_user: true,
-  },
-  'vendedor.teste@ciafal.local': {
-    id: 'usr-vendedor-teste',
-    name: 'Vendedor Teste CRM',
-    role: 'VENDEDOR',
-    employee_id: 'TEST-VEND-01',
-    seller_code: 'VEND-TEST-01',
-    ramal: '4091',
-    telefone_corporativo: '(11) 98888-0002',
-    active: true,
-    is_test_user: true,
-  },
-  'vendedor2.teste@ciafal.local': {
-    id: 'usr-vendedor2-teste',
-    name: 'Vendedor 2 Teste CRM',
-    role: 'VENDEDOR',
-    employee_id: 'TEST-VEND-02',
-    seller_code: 'VEND-TEST-02',
-    ramal: '4092',
-    telefone_corporativo: '(11) 98888-0003',
-    active: true,
-    is_test_user: true,
-  },
-  'representante.teste@crm360.local': {
-    id: 'usr-rep-teste',
-    name: 'Representante Externo Teste',
-    role: 'REPRESENTANTE_EXTERNO',
-    employee_id: 'TEST-REP-01',
-    seller_code: 'REP-EXT-01',
-    ramal: '4095',
-    telefone_corporativo: '(11) 98888-0005',
-    active: true,
-    is_test_user: true,
-  },
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -119,7 +60,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Se existir sessão no localStorage
+    // 1. Tentar validar sessão ativa via GET /backend/v1/auth/me se houver token JWT
+    const token = localStorage.getItem('ciafal_jwt_token')
+    if (token) {
+      pb.send('/backend/v1/auth/me', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res: any) => {
+          if (res?.authenticated && res?.user) {
+            setUser(res.user)
+            localStorage.setItem('ciafal_crm_session', JSON.stringify(res.user))
+          }
+        })
+        .catch(() => {
+          // Em caso de falha do token, mantém sessão persistida em homologação ou limpa
+        })
+    }
+
+    // 2. Se existir sessão no localStorage
     const savedSession =
       localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
     if (savedSession) {
@@ -135,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 2. Se houver autenticação PocketBase válida
+    // 3. Se houver autenticação PocketBase padrão válida
     const unsubscribe = pb.authStore.onChange((_token, record) => {
       if (record) {
         const mappedRole = (record.role || 'ADMIN').toUpperCase()
@@ -188,14 +147,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, preValidatedUser?: any) => {
     const normalizedEmail = (email || '').trim().toLowerCase()
+
+    // Se já recebemos o usuário autenticado e autorizado do passo de verificação MFA
+    if (preValidatedUser) {
+      const authUser: CiafalAuthUser = {
+        id: preValidatedUser.id || `usr-${normalizedEmail.split('@')[0]}`,
+        email: normalizedEmail,
+        name: preValidatedUser.name || 'Usuário CIAFAL',
+        role: (preValidatedUser.role || 'VENDEDOR').toUpperCase(),
+        employee_id: preValidatedUser.employee_id,
+        seller_code: preValidatedUser.seller_code,
+        ramal: preValidatedUser.ramal,
+        telefone_corporativo: preValidatedUser.telefone_corporativo,
+        active: true,
+        is_test_user: Boolean(OFFICIAL_HOMOLOGATION_USERS[normalizedEmail]),
+        environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+      }
+
+      try {
+        localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
+        localStorage.setItem('qas_session', JSON.stringify(authUser))
+      } catch {
+        /* ignore */
+      }
+
+      setUser(authUser)
+      return { error: null }
+    }
+
     const isTestDomain =
       normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
     const isTestPassword = password === 'teste123'
 
     // Para credenciais de teste homologação
-    if (isTestDomain) {
+    if (isTestDomain && isFixedTestOtpEnabled()) {
       if (isTestPassword) {
         const official = OFFICIAL_HOMOLOGATION_USERS[normalizedEmail] || {
           id: `usr-${normalizedEmail.split('@')[0]}`,
@@ -207,7 +194,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: official.id || `usr-${normalizedEmail.split('@')[0]}`,
           email: normalizedEmail,
           name: official.name || 'Usuário CRM',
-          role: official.role || 'VENDEDOR',
+          role: (official.role || 'VENDEDOR').toUpperCase(),
           employee_id: official.employee_id,
           seller_code: official.seller_code,
           ramal: official.ramal,
@@ -266,7 +253,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser(authUser)
       return { error: null }
-    } catch (error: any) {
+    } catch {
       return { error: new Error('Usuário ou senha inválidos.') }
     }
   }
@@ -290,8 +277,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = () => {
     try {
+      const token = localStorage.getItem('ciafal_jwt_token')
+      if (token) {
+        pb.send('/backend/v1/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {})
+      }
+    } catch {
+      /* intentionally ignored */
+    }
+
+    try {
       localStorage.removeItem('ciafal_crm_session')
       localStorage.removeItem('qas_session')
+      localStorage.removeItem('ciafal_jwt_token')
+      sessionStorage.clear()
     } catch {
       /* ignore */
     }
