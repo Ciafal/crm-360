@@ -54,6 +54,10 @@ import {
 import { SolicitarSegundaViaModal } from '@/components/consultas/SolicitarSegundaViaModal'
 import { TmsTransporteModal } from '@/components/consultas/TmsTransporteModal'
 import { IndicadoresConsultasPanel } from '@/components/consultas/IndicadoresConsultasPanel'
+import { ConsultaProdutosOficiaisView } from '@/components/consultas/ConsultaProdutosOficiaisView'
+import { ConsultaEstoqueIndividualView } from '@/components/consultas/ConsultaEstoqueIndividualView'
+import { HistoricoCatalogosView } from '@/components/consultas/HistoricoCatalogosView'
+import { GerarCatalogoWizardModal } from '@/components/consultas/GerarCatalogoWizardModal'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
@@ -61,10 +65,21 @@ export default function ConsultasPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Aba ativa: unificada, nfs, boletos, certificados, pacotes, indicadores
+  // 5 Pilares de Consultas: 1 Produtos, 2 Estoque Individual, 3 Pedidos/Documentos (unificada, nfs, boletos, certificados, pacotes), 4 Transportes TMS, 5 Gerar Catálogo + Indicadores
   const [activeTab, setActiveTab] = useState<
-    'unificada' | 'nfs' | 'boletos' | 'certificados' | 'pacotes' | 'indicadores'
-  >('unificada')
+    | 'produtos'
+    | 'estoque-individual'
+    | 'unificada'
+    | 'nfs'
+    | 'boletos'
+    | 'certificados'
+    | 'pacotes'
+    | 'transportes'
+    | 'catalogos'
+    | 'indicadores'
+  >('produtos')
+
+  const [showGerarCatalogoModal, setShowGerarCatalogoModal] = useState(false)
 
   // Filtros
   const [termoBusca, setTermoBusca] = useState('')
@@ -335,17 +350,16 @@ export default function ConsultasPage() {
               className="bg-blue-50 text-blue-800 border-blue-200 text-xs py-1 px-2.5"
             >
               <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-              Carteira Comercial: <strong>{user?.name || 'Vendedor'}</strong>
+              Carteira: <strong>{user?.name || 'Vendedor'}</strong>
             </Badge>
           )}
           <Button
-            variant="outline"
             size="sm"
-            onClick={() => setActiveTab('indicadores')}
-            className="text-xs h-8 border-slate-300 gap-1.5"
+            onClick={() => setShowGerarCatalogoModal(true)}
+            className="text-xs h-8 bg-[#003A70] hover:bg-[#002850] text-white font-bold gap-1.5 shadow-2xs"
           >
-            <BarChart3 className="w-3.5 h-3.5 text-primary" />
-            Indicadores & Auditoria
+            <Layers className="w-3.5 h-3.5" />
+            Gerar Catálogo
           </Button>
         </div>
       </div>
@@ -475,57 +489,99 @@ export default function ConsultasPage() {
         </CardContent>
       </Card>
 
-      {/* 3. Navegação em Abas do Submódulo */}
+      {/* 3. Navegação em Abas dos 5 Pilares de Consultas */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
-        <TabsList className="bg-slate-100/80 p-1 rounded-2xl grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-auto">
+        <TabsList className="bg-slate-100 p-1 rounded-2xl flex flex-wrap gap-1 h-auto border border-slate-200">
+          <TabsTrigger
+            value="produtos"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            1. Produtos Oficiais
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="estoque-individual"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            2. Estoque Individual
+          </TabsTrigger>
+
           <TabsTrigger
             value="unificada"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
             <Search className="w-3.5 h-3.5" />
-            Consulta Unificada
+            3. Pedidos & Documentos
           </TabsTrigger>
 
           <TabsTrigger
             value="nfs"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
-            <FileText className="w-3.5 h-3.5" />
-            Notas Fiscais ({nfs.length})
+            NF-e ({nfs.length})
           </TabsTrigger>
 
           <TabsTrigger
             value="boletos"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
-            <CreditCard className="w-3.5 h-3.5" />
             Boletos ({boletos.length})
           </TabsTrigger>
 
           <TabsTrigger
             value="certificados"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
-            <Award className="w-3.5 h-3.5" />
             Certificados ({certificados.length})
           </TabsTrigger>
 
           <TabsTrigger
             value="pacotes"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
-            <Layers className="w-3.5 h-3.5" />
-            Central de Documentos
+            Central Docs
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="transportes"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
+          >
+            <Truck className="w-3.5 h-3.5" />
+            4. Transportes (TMS)
+          </TabsTrigger>
+
+          <TabsTrigger
+            value="catalogos"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
+          >
+            <Award className="w-3.5 h-3.5" />
+            5. Gerar Catálogo
           </TabsTrigger>
 
           <TabsTrigger
             value="indicadores"
-            className="rounded-xl text-xs py-2 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-xs font-semibold gap-1.5"
+            className="rounded-xl text-xs py-2 px-3 data-[state=active]:bg-[#003A70] data-[state=active]:text-white font-semibold gap-1.5 transition-all"
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            Indicadores Gestão
+            Auditoria
           </TabsTrigger>
         </TabsList>
+
+        {/* ========================================================================= */}
+        {/* PILAR 1: PRODUTOS OFICIAIS */}
+        {/* ========================================================================= */}
+        <TabsContent value="produtos" className="space-y-4">
+          <ConsultaProdutosOficiaisView />
+        </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* PILAR 2: ESTOQUE INDIVIDUAL (CONSULTA SEGURA DE UM MATERIAL POR VEZ) */}
+        {/* ========================================================================= */}
+        <TabsContent value="estoque-individual" className="space-y-4">
+          <ConsultaEstoqueIndividualView />
+        </TabsContent>
 
         {/* ========================================================================= */}
         {/* ABA 1: CONSULTA UNIFICADA (Visão consolidada para resolução em segundos) */}
@@ -1325,7 +1381,66 @@ export default function ConsultasPage() {
         </TabsContent>
 
         {/* ========================================================================= */}
-        {/* ABA 6: INDICADORES PARA GESTORES & AUDITORIA */}
+        {/* PILAR 4: TRANSPORTES TMS */}
+        {/* ========================================================================= */}
+        <TabsContent value="transportes" className="space-y-4">
+          <Card className="border border-slate-200 shadow-xs bg-white rounded-2xl p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Truck className="w-4 h-4 text-blue-700" />
+                Rastreamento Integrado TMS / Logística CIAFAL
+              </h3>
+              <p className="text-xs text-slate-500">
+                Acompanhe o status das carretas e entregas de frete CIF/FOB autorizadas.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              {nfs
+                .filter((n) => n.numeroTransporte)
+                .map((nf) => (
+                  <div
+                    key={nf.id}
+                    className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 hover:border-blue-400 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-blue-900">
+                        TMS #{nf.numeroTransporte}
+                      </span>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px] font-bold">
+                        Em Trânsito
+                      </Badge>
+                    </div>
+                    <div className="font-bold text-slate-900">{nf.clienteNome}</div>
+                    <div className="text-slate-600 text-[11px]">
+                      NF nº {nf.numeroNF} · Pedido {nf.pedidoSap} · {nf.pesoTon} t
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedNf(nf)
+                        setTmsModalOpen(true)
+                      }}
+                      className="w-full h-7 text-xs text-blue-700 border-blue-200 hover:bg-blue-50 mt-1"
+                    >
+                      Ver Rota & Ocorrências
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* PILAR 5: GERAR CATÁLOGO & HISTÓRICO COMERCIAL */}
+        {/* ========================================================================= */}
+        <TabsContent value="catalogos" className="space-y-4">
+          <HistoricoCatalogosView />
+        </TabsContent>
+
+        {/* ========================================================================= */}
+        {/* ABA DE AUDITORIA & INDICADORES GLOBAIS */}
         {/* ========================================================================= */}
         <TabsContent value="indicadores" className="space-y-4">
           <IndicadoresConsultasPanel />
@@ -1403,6 +1518,15 @@ export default function ConsultasPage() {
       />
 
       <TmsTransporteModal nf={selectedNf} open={tmsModalOpen} onOpenChange={setTmsModalOpen} />
+
+      {/* Assistente de Criação de Catálogos */}
+      {showGerarCatalogoModal && (
+        <GerarCatalogoWizardModal
+          open={showGerarCatalogoModal}
+          onOpenChange={setShowGerarCatalogoModal}
+          onCatalogoCriado={() => setActiveTab('catalogos')}
+        />
+      )}
     </div>
   )
 }
