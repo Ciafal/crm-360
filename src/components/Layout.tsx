@@ -36,17 +36,18 @@ export default function Layout() {
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
 
-  // Atalhos rápidos no TopNav na ordem exata solicitada (Regra 3 da especificação):
-  // 1. Meu Dia; 2. Contatos; 3. Gestão Clientes; 4. Cotações; 5. CRM 360; 6. Tarefas; 7. KPI's; 8. Estoque; 9. Satisfação Clientes.
+  // Atalhos rápidos no TopNav na ordem exata solicitada:
+  // Meu Dia → Contatos → Cotações → CRM 360 → Tarefas → KPI's → Gestão de Clientes → Consultas → demais módulos
   const QUICK_TOP_NAV = [
     { name: 'Meu Dia', path: '/home' },
-    { name: 'Central de Ações', path: '/central-acoes', badge: 'IA Ação' },
     { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
-    { name: 'Gestão Clientes', path: '/gestao-clientes' },
     { name: 'Cotações', path: '/crm/cotacoes' },
     { name: 'CRM 360', path: '/crm' },
     { name: 'Tarefas', path: '/tarefas' },
     { name: "KPI's", path: '/kpis-comerciais' },
+    { name: 'Gestão de Clientes', path: '/gestao-clientes' },
+    { name: 'Consultas', path: '/consultas', badge: 'Autosserviço' },
+    { name: 'Central de Ações', path: '/central-acoes', badge: 'IA Ação' },
     { name: 'Estoque', path: '/estoque' },
     { name: 'S&OP / Forecast', path: '/planejamento-sop', badge: 'S&OP' },
     { name: 'Satisfação Clientes', path: '/satisfacao-clientes' },
@@ -170,6 +171,17 @@ export default function Layout() {
                     <strong className="text-primary font-bold">Gestão de Clientes</strong>
                     <span className="text-[10px] text-muted-foreground">
                       Carteira, Cobertura, IA 360, Catálogo
+                    </span>
+                  </Link>
+                  <Link
+                    to="/consultas"
+                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-blue-50/70 border border-blue-300/70"
+                  >
+                    <strong className="text-blue-900 font-bold flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-blue-700" /> CONSULTAS 360º
+                    </strong>
+                    <span className="text-[10px] text-blue-800/80">
+                      NFs, Boletos, Certificados CQ & TMS
                     </span>
                   </Link>
                   <Link

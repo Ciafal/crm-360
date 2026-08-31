@@ -38,6 +38,7 @@ import EstoquePage from './pages/EstoquePage'
 import CentralAcoesPage from './pages/CentralAcoesPage'
 import GestaoClientesPage from './pages/GestaoClientesPage'
 import PlanejamentoSop from './pages/PlanejamentoSop'
+import ConsultasPage from './pages/ConsultasPage'
 import NotFound from './pages/NotFound'
 
 const ProtectedRoute = () => {
@@ -71,6 +72,11 @@ const App = () => (
                 <Route path="/clientes" element={<GestaoClientesPage />} />
                 <Route path="/carteira" element={<GestaoClientesPage />} />
                 <Route path="/cobertura" element={<GestaoClientesPage />} />
+                <Route path="/consultas" element={<ConsultasPage />} />
+                <Route path="/consultas/nfs" element={<ConsultasPage />} />
+                <Route path="/consultas/boletos" element={<ConsultasPage />} />
+                <Route path="/consultas/certificados" element={<ConsultasPage />} />
+                <Route path="/consultas/documentos" element={<ConsultasPage />} />
                 <Route path="/cliente/:id" element={<Cliente360 />} />
                 <Route path="/crm/:id" element={<Cliente360 />} />
                 <Route path="/conversas" element={<Conversas />} />
