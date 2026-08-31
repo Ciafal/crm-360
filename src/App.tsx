@@ -40,11 +40,25 @@ import GestaoClientesPage from './pages/GestaoClientesPage'
 import PlanejamentoSop from './pages/PlanejamentoSop'
 import ConsultasPage from './pages/ConsultasPage'
 import NotFound from './pages/NotFound'
+import UnauthorizedPage from './pages/UnauthorizedPage'
 
-const ProtectedRoute = () => {
+interface ProtectedRouteProps {
+  allowedRoles?: string[]
+}
+
+const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const { user, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/" replace />
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRole = (user.role || '').toString().toUpperCase()
+    const isAllowed = allowedRoles.some((r) => r.toUpperCase() === userRole)
+    if (!isAllowed) {
+      return <Navigate to="/nao-autorizado" replace />
+    }
+  }
+
   return <Outlet />
 }
 
@@ -59,6 +73,8 @@ const App = () => (
             {/* Routes without Global Layout */}
             <Route path="/" element={<Index />} />
             <Route path="/setup" element={<Setup />} />
+            <Route path="/nao-autorizado" element={<UnauthorizedPage />} />
+            <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Routes with Global Layout */}
             <Route element={<ProtectedRoute />}>
@@ -111,7 +127,6 @@ const App = () => (
                 <Route path="/fred" element={<AgenteFredPage />} />
                 <Route path="/satisfacao-clientes" element={<SatisfacaoClientes />} />
                 <Route path="/satisfacao" element={<SatisfacaoClientes />} />
-                <Route path="/setup" element={<Setup />} />
                 <Route path="/kpis" element={<IndicadoresComerciais />} />
                 <Route path="/indicadores" element={<IndicadoresComerciais />} />
                 <Route path="/metas" element={<ImportacaoPlanejamentoEstrategico />} />

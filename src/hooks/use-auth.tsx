@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { isFixedTestOtpEnabled, OFFICIAL_HOMOLOGATION_USERS } from '@/services/mfa_service'
+import { isFixedTestOtpEnabled } from '@/services/mfa_service'
 
 export interface CiafalAuthUser {
   id: string
@@ -15,10 +15,18 @@ export interface CiafalAuthUser {
   is_test_user?: boolean
   environment?: string
   avatar?: string
+  account_id?: string
+  department?: string
+  cargo?: string
+  profile?: string
+  cost_center?: string
+  manager_id?: string
+  manager_name?: string
+  [key: string]: any
 }
 
 interface AuthContextType {
-  user: any
+  user: CiafalAuthUser | null
   signUp: (
     name: string,
     email: string,
@@ -39,28 +47,42 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any>(() => {
+  const [user, setUser] = useState<CiafalAuthUser | null>(() => {
     try {
       const qasSession =
         localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
       if (qasSession) {
         const parsed = JSON.parse(qasSession)
-        if (parsed) return parsed
+        if (parsed && parsed.email) {
+          const role = (parsed.role || 'VENDEDOR').toUpperCase()
+          return { ...parsed, role }
+        }
       }
     } catch {
       /* ignore parse error */
     }
 
     const rec = pb.authStore.record
-    if (rec && !rec.role) {
-      return { ...rec, role: 'ADMIN' }
+    if (rec) {
+      return {
+        id: rec.id,
+        email: rec.email,
+        name: rec.name || 'Colaborador CIAFAL',
+        role: (rec.role || 'ADMIN').toUpperCase(),
+        employee_id: rec.employee_id,
+        seller_code: rec.seller_code,
+        ramal: rec.ramal,
+        telefone_corporativo: rec.telefone_corporativo,
+        active: rec.active !== false,
+        is_test_user: rec.is_test_user === true,
+      }
     }
-    return rec
+    return null
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Tentar validar sessão ativa via GET /backend/v1/auth/me se houver token JWT
+    // 1. Validar sessão ativa via backend /backend/v1/auth/me se houver token JWT
     const token = localStorage.getItem('ciafal_jwt_token')
     if (token) {
       pb.send('/backend/v1/auth/me', {
@@ -69,12 +91,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
         .then((res: any) => {
           if (res?.authenticated && res?.user) {
-            setUser(res.user)
-            localStorage.setItem('ciafal_crm_session', JSON.stringify(res.user))
+            const safeUser: CiafalAuthUser = {
+              ...res.user,
+              role: (res.user.role || 'VENDEDOR').toUpperCase(),
+            }
+            setUser(safeUser)
+            localStorage.setItem('ciafal_crm_session', JSON.stringify(safeUser))
           }
         })
         .catch(() => {
-          // Em caso de falha do token, mantém sessão persistida em homologação ou limpa
+          // Em caso de falha de token expirado
         })
     }
 
@@ -84,8 +110,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (savedSession) {
       try {
         const parsed = JSON.parse(savedSession)
-        if (parsed) {
-          setUser(parsed)
+        if (parsed && parsed.email) {
+          const role = (parsed.role || 'VENDEDOR').toUpperCase()
+          setUser({ ...parsed, role })
           setLoading(false)
           return
         }
@@ -94,16 +121,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // 3. Se houver autenticação PocketBase padrão válida
+    // 3. Se houver autenticação PocketBase nativa
     const unsubscribe = pb.authStore.onChange((_token, record) => {
       if (record) {
         const mappedRole = (record.role || 'ADMIN').toUpperCase()
-        setUser({ ...record, role: mappedRole })
+        setUser({
+          id: record.id,
+          email: record.email,
+          name: record.name || 'Colaborador CIAFAL',
+          role: mappedRole,
+          employee_id: record.employee_id,
+          seller_code: record.seller_code,
+          ramal: record.ramal,
+          telefone_corporativo: record.telefone_corporativo,
+          active: record.active !== false,
+          is_test_user: record.is_test_user === true,
+        })
       } else {
         const fallback = localStorage.getItem('ciafal_crm_session')
         if (fallback) {
           try {
-            setUser(JSON.parse(fallback))
+            const parsed = JSON.parse(fallback)
+            setUser(parsed)
           } catch {
             setUser(null)
           }
@@ -119,7 +158,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .then((authData) => {
           const rec = authData.record
           const mappedRole = (rec?.role || 'ADMIN').toUpperCase()
-          setUser({ ...rec, role: mappedRole })
+          setUser({
+            id: rec.id,
+            email: rec.email,
+            name: rec.name || 'Colaborador CIAFAL',
+            role: mappedRole,
+            employee_id: rec.employee_id,
+            seller_code: rec.seller_code,
+            ramal: rec.ramal,
+            telefone_corporativo: rec.telefone_corporativo,
+            active: rec.active !== false,
+            is_test_user: rec.is_test_user === true,
+          })
         })
         .catch(() => {
           if (!localStorage.getItem('ciafal_crm_session')) {
@@ -150,7 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string, preValidatedUser?: any) => {
     const normalizedEmail = (email || '').trim().toLowerCase()
 
-    // Se já recebemos o usuário autenticado e autorizado do passo de verificação MFA
+    // Se já recebemos o usuário autenticado e autorizado do backend (após validação de MFA)
     if (preValidatedUser) {
       const authUser: CiafalAuthUser = {
         id: preValidatedUser.id || `usr-${normalizedEmail.split('@')[0]}`,
@@ -162,7 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ramal: preValidatedUser.ramal,
         telefone_corporativo: preValidatedUser.telefone_corporativo,
         active: true,
-        is_test_user: Boolean(OFFICIAL_HOMOLOGATION_USERS[normalizedEmail]),
+        is_test_user: preValidatedUser.is_test_user === true || normalizedEmail.endsWith('.local'),
         environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
       }
 
@@ -177,56 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: null }
     }
 
-    const isTestDomain =
-      normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
-    const isTestPassword = password === 'teste123'
-
-    // Para credenciais de teste homologação
-    if (isTestDomain && isFixedTestOtpEnabled()) {
-      if (isTestPassword) {
-        const official = OFFICIAL_HOMOLOGATION_USERS[normalizedEmail] || {
-          id: `usr-${normalizedEmail.split('@')[0]}`,
-          name: 'Usuário Homologação',
-          role: 'VENDEDOR',
-        }
-
-        const authUser: CiafalAuthUser = {
-          id: official.id || `usr-${normalizedEmail.split('@')[0]}`,
-          email: normalizedEmail,
-          name: official.name || 'Usuário CRM',
-          role: (official.role || 'VENDEDOR').toUpperCase(),
-          employee_id: official.employee_id,
-          seller_code: official.seller_code,
-          ramal: official.ramal,
-          telefone_corporativo: official.telefone_corporativo,
-          active: true,
-          is_test_user: true,
-          environment: 'HOMOLOGAÇÃO',
-        }
-
-        try {
-          localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
-          localStorage.setItem('qas_session', JSON.stringify(authUser))
-        } catch {
-          /* ignore storage error */
-        }
-
-        setUser(authUser)
-
-        // Tentar autenticar silenciosamente no PocketBase para token de API se existir
-        try {
-          await pb.collection('users').authWithPassword(email, password)
-        } catch {
-          /* PocketBase auth opcional em homologação */
-        }
-
-        return { error: null }
-      } else {
-        return { error: new Error('Usuário ou senha inválidos.') }
-      }
-    }
-
-    // Fluxo padrão para usuários institucionais (@ciafal.com.br)
+    // Fluxo de autenticação padrão via PocketBase SDK
     try {
       const res = await pb.collection('users').authWithPassword(email, password)
       const rec = res.record
