@@ -189,7 +189,7 @@ export default function Index() {
         setChallengeToken(req.challenge_token || null)
         setResendCooldown(30)
         setSuccessNotice(
-          mfaMode === 'TEST_FIXED'
+          isHomologation
             ? 'Desafio de homologação renovado.'
             : 'Um novo código de verificação foi emitido.',
         )
@@ -361,7 +361,7 @@ export default function Index() {
                 <CardDescription className="text-xs text-slate-500">
                   {step === 'LOGIN'
                     ? 'Informe seu e-mail corporativo institucional e senha.'
-                    : mfaMode === 'TEST_FIXED'
+                    : isHomologation
                       ? 'Validação MFA do ambiente de homologação.'
                       : 'Digite o código de 6 dígitos enviado para seu e-mail institucional seguro.'}
                 </CardDescription>
@@ -466,11 +466,13 @@ export default function Index() {
                     <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1">
                       <div className="flex items-center justify-between font-medium text-slate-700">
                         <span>Usuário autenticado:</span>
-                        <span className="text-blue-700 font-semibold">{email}</span>
+                        <span className="text-blue-700 font-semibold">
+                          {email.trim().toLowerCase()}
+                        </span>
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        {mfaMode === 'TEST_FIXED'
-                          ? 'Informe o código MFA configurado para seu usuário de homologação.'
+                        {isHomologation
+                          ? 'Validação MFA do ambiente de homologação.'
                           : 'Um código numérico de 6 dígitos foi gerado para confirmação do seu acesso.'}
                       </p>
                     </div>

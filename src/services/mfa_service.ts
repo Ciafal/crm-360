@@ -32,7 +32,10 @@ export interface MfaVerifyResult {
 
 /**
  * Utilitário de detecção de ambiente para fins de homologação vs produção.
- * Em produção (APP_ENV=production ou prod), o modo de testes/OTP fixo é ESTRITAMENTE desativado.
+ * Em produção real (quando APP_ENV ou VITE_APP_ENV for explicitamente 'production' ou 'prod'),
+ * o modo de testes/OTP fixo é ESTRITAMENTE desativado.
+ * No bundle padrão publicado onde o backend Skip Cloud não está provisionado/conectado,
+ * o fluxo opera em modo de homologação seguro para as contas de teste oficiais.
  */
 export function isFixedTestOtpEnabled(): boolean {
   const getEnvVal = (key: string): string | undefined => {
@@ -58,6 +61,7 @@ export function isFixedTestOtpEnabled(): boolean {
     .trim()
     .toLowerCase()
 
+  // Bloqueio incondicional se explicitamente configurado como produção
   const isProduction = appEnv === 'production' || appEnv === 'prod'
   if (isProduction) {
     return false
@@ -192,7 +196,7 @@ export function requiresMfa(email: string, role?: string): boolean {
  * Base autoritativa de usuários oficiais de homologação para autenticação e RBAC
  * As senhas oficiais no ambiente de testes são validadas de forma restrita e estrita.
  */
-const HOMOLOGATION_ACCOUNTS: Record<
+export const HOMOLOGATION_ACCOUNTS: Record<
   string,
   {
     id: string
@@ -258,6 +262,34 @@ const HOMOLOGATION_ACCOUNTS: Record<
 }
 
 /**
+ * Verifica se um email pertence aos domínios e contas oficiais de teste/homologação
+ */
+export function isOfficialTestAccount(email: string): boolean {
+  const normalized = (email || '').trim().toLowerCase()
+  return (
+    Boolean(HOMOLOGATION_ACCOUNTS[normalized]) ||
+    normalized.endsWith('@ciafal.local') ||
+    normalized.endsWith('@crm360.local')
+  )
+}
+
+/**
+ * Helper para executar chamadas de backend com timeout curto (ex: 800ms)
+ * para falhar rápido e seguro quando o backend estiver inacessível ou desconectado.
+ */
+async function withFastTimeout<T>(promise: Promise<T>, timeoutMs = 800): Promise<T> {
+  let timer: any
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Backend timeout')), timeoutMs)
+  })
+  try {
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * Inicia o login com credenciais (validação e geração de challenge)
  */
 export async function initiateLoginAndMfa(
@@ -278,62 +310,75 @@ export async function initiateLoginAndMfa(
     return { success: false, error: 'Usuário ou senha inválidos.' }
   }
 
-  // 1. Tentar autenticação via hook do PocketBase (/backend/v1/auth/login) se disponível
-  try {
-    const res = await pb.send('/backend/v1/auth/login', {
-      method: 'POST',
-      body: { email: cleanEmail, password: cleanPassword },
-    })
+  const isHomologation = isFixedTestOtpEnabled()
+  const isOfficial = isOfficialTestAccount(cleanEmail)
 
-    if (res && res.success) {
-      return {
-        success: true,
-        mfa_required: true,
-        challenge_id: res.challenge_id,
-        mfa_mode: res.mfa_mode,
-        user: res.user,
+  // 1. Tentar autenticação via hook do PocketBase (/backend/v1/auth/login) se houver backend configurado
+  const hasConfiguredBackend = Boolean(
+    pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+  )
+  if (hasConfiguredBackend) {
+    try {
+      const res = await withFastTimeout(
+        pb.send('/backend/v1/auth/login', {
+          method: 'POST',
+          body: { email: cleanEmail, password: cleanPassword },
+        }),
+        1000,
+      )
+
+      if (res && res.success) {
+        return {
+          success: true,
+          mfa_required: true,
+          challenge_id: res.challenge_id,
+          mfa_mode: res.mfa_mode,
+          user: res.user,
+        }
+      }
+    } catch (err: any) {
+      if (err?.status === 401 || err?.status === 403) {
+        return { success: false, error: err?.response?.error || 'Usuário ou senha inválidos.' }
       }
     }
-  } catch (err: any) {
-    if (err?.status === 401 || err?.status === 403) {
-      return { success: false, error: err?.response?.error || 'Usuário ou senha inválidos.' }
-    }
-  }
 
-  // 2. Tentar autenticação direta via PocketBase SDK authWithPassword
-  try {
-    const authRes = await pb.collection('users').authWithPassword(cleanEmail, cleanPassword)
-    if (authRes && authRes.record) {
-      const rec = authRes.record
-      const challengeToken = `mfa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-      return {
-        success: true,
-        mfa_required: true,
-        challenge_id: challengeToken,
-        mfa_mode: rec.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
-        user: {
-          id: rec.id,
-          email: rec.email,
-          name: rec.name || 'Colaborador CIAFAL',
-          role: (rec.role || 'VENDEDOR').toUpperCase(),
-          employee_id: rec.employee_id,
-          seller_code: rec.seller_code,
-          ramal: rec.ramal,
-          telefone_corporativo: rec.telefone_corporativo,
-          active: rec.active !== false,
-          is_test_user: rec.is_test_user === true,
-        },
+    // 2. Tentar autenticação direta via PocketBase SDK authWithPassword
+    try {
+      const authRes = await withFastTimeout(
+        pb.collection('users').authWithPassword(cleanEmail, cleanPassword),
+        1000,
+      )
+      if (authRes && authRes.record) {
+        const rec = authRes.record
+        const challengeToken = `mfa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+        return {
+          success: true,
+          mfa_required: true,
+          challenge_id: challengeToken,
+          mfa_mode: rec.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
+          user: {
+            id: rec.id,
+            email: rec.email,
+            name: rec.name || 'Colaborador CIAFAL',
+            role: (rec.role || 'VENDEDOR').toUpperCase(),
+            employee_id: rec.employee_id,
+            seller_code: rec.seller_code,
+            ramal: rec.ramal,
+            telefone_corporativo: rec.telefone_corporativo,
+            active: rec.active !== false,
+            is_test_user: rec.is_test_user === true,
+          },
+        }
       }
+    } catch {
+      /* ignore fallback error */
     }
-  } catch {
-    /* ignore fallback error */
   }
 
   // 3. Fallback controlado para ambiente de HOMOLOGAÇÃO com os 5 usuários oficiais de teste
-  // Ocorre de forma segura APENAS fora de produção
-  const isHomologation = isFixedTestOtpEnabled()
-  if (isHomologation && HOMOLOGATION_ACCOUNTS[cleanEmail]) {
-    // Validar senha de homologação
+  // Barreira clara: se o ambiente for PRODUÇÃO REAL OU o email não for de homologação, NUNCA usar
+  if (isHomologation && isOfficial && HOMOLOGATION_ACCOUNTS[cleanEmail]) {
+    // Validar senha de homologação restrita
     if (cleanPassword === 'teste123') {
       const account = HOMOLOGATION_ACCOUNTS[cleanEmail]
       const challengeToken = `mfa_hml_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
@@ -411,44 +456,54 @@ export async function verifyOtp(
     }
   }
 
-  // 1. Chamada ao endpoint real do Backend PocketBase (/backend/v1/auth/verify-mfa)
-  try {
-    const res = await pb.send('/backend/v1/auth/verify-mfa', {
-      method: 'POST',
-      body: {
-        email: normalizedEmail,
-        otp: trimmedCode,
-        challenge_id: challengeToken,
-      },
-    })
+  const isHomologation = isFixedTestOtpEnabled()
+  const isOfficial = isOfficialTestAccount(normalizedEmail)
 
-    if (res && res.authenticated) {
-      resetRateLimit(normalizedEmail)
-      return {
-        valid: true,
-        mfa_mode: res.user?.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
-        token: res.token,
-        user_details: res.user,
-        message: 'Acesso autorizado.',
+  // 1. Chamada ao endpoint real do Backend PocketBase (/backend/v1/auth/verify-mfa) se houver backend configurado
+  const hasConfiguredBackend = Boolean(
+    pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+  )
+  if (hasConfiguredBackend) {
+    try {
+      const res = await withFastTimeout(
+        pb.send('/backend/v1/auth/verify-mfa', {
+          method: 'POST',
+          body: {
+            email: normalizedEmail,
+            otp: trimmedCode,
+            challenge_id: challengeToken,
+          },
+        }),
+        1000,
+      )
+
+      if (res && res.authenticated) {
+        resetRateLimit(normalizedEmail)
+        return {
+          valid: true,
+          mfa_mode: res.user?.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
+          token: res.token,
+          user_details: res.user,
+          message: 'Acesso autorizado.',
+        }
       }
-    }
-  } catch (err: any) {
-    if (err?.status === 400 || err?.status === 429) {
-      recordFailedAttempt(normalizedEmail)
-      return {
-        valid: false,
-        error: err?.response?.error || 'Código de verificação inválido.',
+    } catch (err: any) {
+      if (err?.status === 400 || err?.status === 429) {
+        recordFailedAttempt(normalizedEmail)
+        return {
+          valid: false,
+          error: err?.response?.error || 'Código de verificação inválido.',
+        }
       }
     }
   }
 
   // 2. Validação para ambiente de HOMOLOGAÇÃO (usuários de teste oficiais e OTP 123456)
-  if (isFixedTestOtpEnabled()) {
+  // Barreira incondicional para PRODUÇÃO REAL: se isHomologation for false ou email não for oficial de teste, rejeitar
+  if (isHomologation && isOfficial) {
     const fixedCode = getFixedTestOtpCode()
-    const isOfficialTestUser =
-      Boolean(HOMOLOGATION_ACCOUNTS[normalizedEmail]) || normalizedEmail.endsWith('.local')
 
-    if (trimmedCode === fixedCode && isOfficialTestUser) {
+    if (trimmedCode === fixedCode && fixedCode !== '') {
       resetRateLimit(normalizedEmail)
       const account = HOMOLOGATION_ACCOUNTS[normalizedEmail]
       return {

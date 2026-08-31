@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { isFixedTestOtpEnabled } from '@/services/mfa_service'
+import {
+  isFixedTestOtpEnabled,
+  HOMOLOGATION_ACCOUNTS,
+  isOfficialTestAccount,
+} from '@/services/mfa_service'
 
 export interface CiafalAuthUser {
   id: string
@@ -82,9 +86,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Validar sessão ativa via backend /backend/v1/auth/me se houver token JWT
+    // 1. Se existir sessão no localStorage, restaurá-la imediatamente
+    const savedSession =
+      localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession)
+        if (parsed && parsed.email) {
+          const email = (parsed.email || '').trim().toLowerCase()
+          // Se for usuário oficial de homologação, garantir perfil canônico restrito
+          if (HOMOLOGATION_ACCOUNTS[email]) {
+            const acc = HOMOLOGATION_ACCOUNTS[email]
+            const safeUser: CiafalAuthUser = {
+              id: acc.id,
+              email: email,
+              name: acc.name,
+              role: acc.role,
+              employee_id: acc.employee_id,
+              seller_code: acc.seller_code,
+              ramal: acc.ramal,
+              telefone_corporativo: acc.telefone_corporativo,
+              active: true,
+              is_test_user: true,
+              environment: 'HOMOLOGAÇÃO',
+            }
+            setUser(safeUser)
+          } else {
+            const role = (parsed.role || 'VENDEDOR').toUpperCase()
+            setUser({ ...parsed, role })
+          }
+          setLoading(false)
+          return
+        }
+      } catch {
+        /* ignore parse error */
+      }
+    }
+
+    // 2. Se houver backend PocketBase configurado e token JWT, validar sessão ativa via backend
+    const hasConfiguredBackend = Boolean(
+      pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+    )
     const token = localStorage.getItem('ciafal_jwt_token')
-    if (token) {
+    if (hasConfiguredBackend && token) {
       pb.send('/backend/v1/auth/me', {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
@@ -104,80 +148,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
     }
 
-    // 2. Se existir sessão no localStorage
-    const savedSession =
-      localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
-    if (savedSession) {
-      try {
-        const parsed = JSON.parse(savedSession)
-        if (parsed && parsed.email) {
-          const role = (parsed.role || 'VENDEDOR').toUpperCase()
-          setUser({ ...parsed, role })
-          setLoading(false)
-          return
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
     // 3. Se houver autenticação PocketBase nativa
-    const unsubscribe = pb.authStore.onChange((_token, record) => {
-      if (record) {
-        const mappedRole = (record.role || 'ADMIN').toUpperCase()
-        setUser({
-          id: record.id,
-          email: record.email,
-          name: record.name || 'Colaborador CIAFAL',
-          role: mappedRole,
-          employee_id: record.employee_id,
-          seller_code: record.seller_code,
-          ramal: record.ramal,
-          telefone_corporativo: record.telefone_corporativo,
-          active: record.active !== false,
-          is_test_user: record.is_test_user === true,
-        })
-      } else {
-        const fallback = localStorage.getItem('ciafal_crm_session')
-        if (fallback) {
-          try {
-            const parsed = JSON.parse(fallback)
-            setUser(parsed)
-          } catch {
-            setUser(null)
-          }
-        } else {
-          setUser(null)
-        }
-      }
-    })
-
-    if (pb.authStore.isValid) {
-      pb.collection('users')
-        .authRefresh()
-        .then((authData) => {
-          const rec = authData.record
-          const mappedRole = (rec?.role || 'ADMIN').toUpperCase()
+    let unsubscribe = () => {}
+    if (hasConfiguredBackend) {
+      unsubscribe = pb.authStore.onChange((_token, record) => {
+        if (record) {
+          const mappedRole = (record.role || 'ADMIN').toUpperCase()
           setUser({
-            id: rec.id,
-            email: rec.email,
-            name: rec.name || 'Colaborador CIAFAL',
+            id: record.id,
+            email: record.email,
+            name: record.name || 'Colaborador CIAFAL',
             role: mappedRole,
-            employee_id: rec.employee_id,
-            seller_code: rec.seller_code,
-            ramal: rec.ramal,
-            telefone_corporativo: rec.telefone_corporativo,
-            active: rec.active !== false,
-            is_test_user: rec.is_test_user === true,
+            employee_id: record.employee_id,
+            seller_code: record.seller_code,
+            ramal: record.ramal,
+            telefone_corporativo: record.telefone_corporativo,
+            active: record.active !== false,
+            is_test_user: record.is_test_user === true,
           })
-        })
-        .catch(() => {
-          if (!localStorage.getItem('ciafal_crm_session')) {
-            pb.authStore.clear()
+        } else {
+          const fallback = localStorage.getItem('ciafal_crm_session')
+          if (fallback) {
+            try {
+              const parsed = JSON.parse(fallback)
+              setUser(parsed)
+            } catch {
+              setUser(null)
+            }
+          } else {
             setUser(null)
           }
-        })
-        .finally(() => setLoading(false))
+        }
+      })
+
+      if (pb.authStore.isValid) {
+        pb.collection('users')
+          .authRefresh()
+          .then((authData) => {
+            const rec = authData.record
+            const mappedRole = (rec?.role || 'ADMIN').toUpperCase()
+            setUser({
+              id: rec.id,
+              email: rec.email,
+              name: rec.name || 'Colaborador CIAFAL',
+              role: mappedRole,
+              employee_id: rec.employee_id,
+              seller_code: rec.seller_code,
+              ramal: rec.ramal,
+              telefone_corporativo: rec.telefone_corporativo,
+              active: rec.active !== false,
+              is_test_user: rec.is_test_user === true,
+            })
+          })
+          .catch(() => {
+            if (!localStorage.getItem('ciafal_crm_session')) {
+              pb.authStore.clear()
+              setUser(null)
+            }
+          })
+          .finally(() => setLoading(false))
+      } else {
+        setLoading(false)
+      }
     } else {
       setLoading(false)
     }
@@ -200,20 +232,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string, preValidatedUser?: any) => {
     const normalizedEmail = (email || '').trim().toLowerCase()
 
-    // Se já recebemos o usuário autenticado e autorizado do backend (após validação de MFA)
+    // Se já recebemos o usuário autenticado e autorizado (após validação de MFA)
     if (preValidatedUser) {
-      const authUser: CiafalAuthUser = {
-        id: preValidatedUser.id || `usr-${normalizedEmail.split('@')[0]}`,
-        email: normalizedEmail,
-        name: preValidatedUser.name || 'Usuário CIAFAL',
-        role: (preValidatedUser.role || 'VENDEDOR').toUpperCase(),
-        employee_id: preValidatedUser.employee_id,
-        seller_code: preValidatedUser.seller_code,
-        ramal: preValidatedUser.ramal,
-        telefone_corporativo: preValidatedUser.telefone_corporativo,
-        active: true,
-        is_test_user: preValidatedUser.is_test_user === true || normalizedEmail.endsWith('.local'),
-        environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+      // Se for uma conta oficial de homologação, garantir role e dados canônicos da tabela autoritativa
+      let authUser: CiafalAuthUser
+      if (HOMOLOGATION_ACCOUNTS[normalizedEmail]) {
+        const acc = HOMOLOGATION_ACCOUNTS[normalizedEmail]
+        authUser = {
+          id: acc.id,
+          email: normalizedEmail,
+          name: acc.name,
+          role: acc.role,
+          employee_id: acc.employee_id,
+          seller_code: acc.seller_code,
+          ramal: acc.ramal,
+          telefone_corporativo: acc.telefone_corporativo,
+          active: true,
+          is_test_user: true,
+          environment: 'HOMOLOGAÇÃO',
+        }
+      } else {
+        authUser = {
+          id: preValidatedUser.id || `usr-${normalizedEmail.split('@')[0]}`,
+          email: normalizedEmail,
+          name: preValidatedUser.name || 'Usuário CIAFAL',
+          role: (preValidatedUser.role || 'VENDEDOR').toUpperCase(),
+          employee_id: preValidatedUser.employee_id,
+          seller_code: preValidatedUser.seller_code,
+          ramal: preValidatedUser.ramal,
+          telefone_corporativo: preValidatedUser.telefone_corporativo,
+          active: true,
+          is_test_user:
+            preValidatedUser.is_test_user === true || isOfficialTestAccount(normalizedEmail),
+          environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+        }
       }
 
       try {
@@ -227,36 +279,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: null }
     }
 
-    // Fluxo de autenticação padrão via PocketBase SDK
-    try {
-      const res = await pb.collection('users').authWithPassword(email, password)
-      const rec = res.record
-      const mappedRole = (rec?.role || 'VENDEDOR').toUpperCase()
-
-      const authUser: CiafalAuthUser = {
-        id: rec.id,
-        email: rec.email,
-        name: rec.name || rec.username || 'Colaborador CIAFAL',
-        role: mappedRole,
-        employee_id: rec.employee_id,
-        seller_code: rec.seller_code,
-        ramal: rec.ramal,
-        telefone_corporativo: rec.telefone_corporativo,
-        active: rec.active !== false,
-        environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
-      }
-
+    // Fluxo de autenticação via PocketBase SDK se houver backend configurado
+    const hasConfiguredBackend = Boolean(
+      pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+    )
+    if (hasConfiguredBackend) {
       try {
-        localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
-      } catch {
-        /* ignore */
-      }
+        const res = await pb.collection('users').authWithPassword(email, password)
+        const rec = res.record
+        const mappedRole = (rec?.role || 'VENDEDOR').toUpperCase()
 
-      setUser(authUser)
-      return { error: null }
-    } catch {
-      return { error: new Error('Usuário ou senha inválidos.') }
+        const authUser: CiafalAuthUser = {
+          id: rec.id,
+          email: rec.email,
+          name: rec.name || rec.username || 'Colaborador CIAFAL',
+          role: mappedRole,
+          employee_id: rec.employee_id,
+          seller_code: rec.seller_code,
+          ramal: rec.ramal,
+          telefone_corporativo: rec.telefone_corporativo,
+          active: rec.active !== false,
+          environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+        }
+
+        try {
+          localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
+        } catch {
+          /* ignore */
+        }
+
+        setUser(authUser)
+        return { error: null }
+      } catch {
+        return { error: new Error('Usuário ou senha inválidos.') }
+      }
     }
+
+    return { error: new Error('Usuário ou senha inválidos.') }
   }
 
   const resetPassword = async (email: string) => {
@@ -268,25 +327,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { error: null }
     }
 
-    try {
-      await pb.collection('users').requestPasswordReset(email)
-      return { error: null }
-    } catch (error: any) {
-      return { error }
+    const hasConfiguredBackend = Boolean(
+      pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+    )
+    if (hasConfiguredBackend) {
+      try {
+        await pb.collection('users').requestPasswordReset(email)
+        return { error: null }
+      } catch (error: any) {
+        return { error }
+      }
     }
+    return { error: null }
   }
 
   const signOut = () => {
-    try {
-      const token = localStorage.getItem('ciafal_jwt_token')
-      if (token) {
-        pb.send('/backend/v1/auth/logout', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-        }).catch(() => {})
+    const hasConfiguredBackend = Boolean(
+      pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
+    )
+    if (hasConfiguredBackend) {
+      try {
+        const token = localStorage.getItem('ciafal_jwt_token')
+        if (token) {
+          pb.send('/backend/v1/auth/logout', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => {})
+        }
+      } catch {
+        /* intentionally ignored */
       }
-    } catch {
-      /* intentionally ignored */
     }
 
     try {
