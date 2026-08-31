@@ -107,6 +107,9 @@ export default function SatisfacaoClientes() {
   const [selectedCliente, setSelectedCliente] = useState<ClienteSatisfacao360 | null>(null)
   const [entenderISCCliente, setEntenderISCCliente] = useState<ClienteSatisfacao360 | null>(null)
   const [analisarIACliente, setAnalisarIACliente] = useState<ClienteSatisfacao360 | null>(null)
+  const [otifDrilldownOpen, setOtifDrilldownOpen] = useState(false)
+  const [pesquisaEntregaOpen, setPesquisaEntregaOpen] = useState(false)
+  const [selectedOtifDelivery, setSelectedOtifDelivery] = useState<any | null>(null)
   const [criarPlanoModalOpen, setCriarPlanoModalOpen] = useState(false)
   const [clienteParaPlano, setClienteParaPlano] = useState<ClienteSatisfacao360 | null>(null)
 
@@ -286,28 +289,28 @@ export default function SatisfacaoClientes() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 pb-20">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
       {/* BANNER OFICIAL DE DEMONSTRAÇÃO & INTEGRAÇÃO MOTOR ISC */}
-      <div className="bg-gradient-to-r from-sky-950/80 via-slate-900 to-slate-950 border-b border-sky-900/40 px-4 py-2 text-xs flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="bg-white border-b border-slate-200 px-4 py-2 text-xs flex flex-col sm:flex-row items-center justify-between gap-2 shadow-2xs">
         <div className="flex items-center gap-2">
-          <Badge className="bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[10px] font-mono uppercase tracking-wider">
-            DADOS DE DEMONSTRAÇÃO (is_mock=true)
+          <Badge className="bg-sky-50 text-[#003A70] border border-sky-200 text-[10px] font-mono uppercase tracking-wider">
+            AMBIENTE INTEGRADO CIAFAL
           </Badge>
-          <span className="text-slate-300 text-[11px] hidden md:inline">
-            Motor ISC Operante · Conexão SAP ECC (14:20), TMS Frota (14:18), SAC Qualidade (14:15)
+          <span className="text-slate-600 text-[11px] hidden md:inline">
+            Motor ISC Operante · Conexão SAP ECC (14:20), Fred TMS (14:18), SAC Qualidade (14:15)
           </span>
         </div>
 
         {/* SELETOR DE PERFIL RBAC */}
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-400">Perfil:</span>
-          <div className="flex bg-slate-950 p-0.5 rounded-xl border border-slate-800">
+          <span className="text-slate-500 font-medium">Perfil:</span>
+          <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200">
             <button
               onClick={() => setUserRole('vendedor')}
               className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
                 userRole === 'vendedor'
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#003A70] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Minha Carteira (Vendedor)
@@ -315,7 +318,9 @@ export default function SatisfacaoClientes() {
             <button
               onClick={() => setUserRole('gestor')}
               className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
-                userRole === 'gestor' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
+                userRole === 'gestor'
+                  ? 'bg-[#003A70] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Visão Gestor (Equipe)
@@ -323,7 +328,9 @@ export default function SatisfacaoClientes() {
             <button
               onClick={() => setUserRole('master')}
               className={`px-2.5 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
-                userRole === 'master' ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-white'
+                userRole === 'master'
+                  ? 'bg-[#003A70] text-white shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Admin Master
@@ -334,21 +341,21 @@ export default function SatisfacaoClientes() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
         {/* CABEÇALHO PRINCIPAL DO MÓDULO SATISFAÇÃO DE CLIENTES */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-800">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-slate-200">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-[#003A70]/40 border border-[#005a9c]/50 text-sky-400 shadow-sm">
+              <div className="p-2.5 rounded-2xl bg-[#003A70] text-white shadow-xs">
                 <HeartHandshake className="w-7 h-7" />
               </div>
               <div>
-                <h1 className="font-serif text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <h1 className="font-serif text-2xl font-bold tracking-tight text-[#003A70] flex items-center gap-2">
                   Satisfação de Clientes
-                  <Badge className="bg-[#003A70] text-sky-200 border-[#005a9c] text-xs font-mono">
+                  <Badge className="bg-sky-50 text-[#003A70] border-sky-200 text-xs font-mono">
                     Índice ISC Oficial
                   </Badge>
                 </h1>
-                <p className="text-xs text-slate-400">
-                  CRM 360 CIAFAL · Inteligência proativa de relacionamento, retenção e recuperação
+                <p className="text-xs text-slate-500">
+                  CRM 360º CIAFAL · Inteligência proativa de relacionamento, retenção e recuperação
                   de carteira.
                 </p>
               </div>
@@ -360,16 +367,16 @@ export default function SatisfacaoClientes() {
             <Button
               size="sm"
               onClick={() => navigate('/central-acoes')}
-              className="h-9 bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
+              className="h-9 bg-[#003A70] hover:bg-[#002850] text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
             >
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-amber-300" />
               <span>Central de Ações</span>
             </Button>
 
             <Button
               size="sm"
               onClick={() => handleOpenCriarPlano()}
-              className="h-9 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
+              className="h-9 bg-rose-700 hover:bg-rose-800 text-white font-semibold text-xs rounded-2xl shadow-xs gap-1.5"
             >
               <PlusCircle className="w-4 h-4" /> Criar Plano de Recuperação
             </Button>
@@ -378,15 +385,15 @@ export default function SatisfacaoClientes() {
               size="sm"
               variant="outline"
               onClick={() => setActiveSection('configuracoes')}
-              className="h-9 text-xs text-slate-300 border-slate-800 hover:bg-slate-900 rounded-2xl gap-1.5"
+              className="h-9 text-xs text-slate-700 border-slate-300 hover:bg-slate-100 rounded-2xl gap-1.5 font-semibold"
             >
-              <Sliders className="w-3.5 h-3.5 text-sky-400" /> Configurar Pesos ISC
+              <Sliders className="w-3.5 h-3.5 text-[#003A70]" /> Configurar Pesos ISC
             </Button>
           </div>
         </div>
 
         {/* 10 ÁREAS DO MÓDULO (BARRA DE NAVEGAÇÃO INTERNA) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin border-b border-slate-800/80">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin border-b border-slate-200">
           {[
             {
               id: 'visao-geral',
@@ -399,21 +406,21 @@ export default function SatisfacaoClientes() {
               label: 'Clientes em Atenção',
               icon: AlertTriangle,
               count: kpis.atencao,
-              badgeClass: 'text-amber-400',
+              badgeClass: 'text-amber-700 bg-amber-50',
             },
             {
               id: 'risco',
               label: 'Clientes em Risco',
               icon: ShieldAlert,
               count: kpis.risco,
-              badgeClass: 'text-orange-400',
+              badgeClass: 'text-orange-700 bg-orange-50',
             },
             {
               id: 'criticos',
               label: 'Clientes Críticos',
               icon: ShieldAlert,
               count: kpis.criticos,
-              badgeClass: 'text-rose-400',
+              badgeClass: 'text-rose-700 bg-rose-50',
             },
             { id: 'evolucao', label: 'Evolução da Satisfação', icon: TrendingUp },
             {
@@ -445,16 +452,16 @@ export default function SatisfacaoClientes() {
                 onClick={() => setActiveSection(tab.id as ActiveSection)}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-semibold whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-[#003A70] text-white shadow-xs border border-sky-400/40'
-                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800/80'
+                    ? 'bg-[#003A70] text-white shadow-xs border border-[#003A70]'
+                    : 'bg-white text-slate-700 hover:text-[#003A70] hover:bg-slate-100 border border-slate-200'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-sky-300' : 'text-slate-400'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span
-                    className={`px-1.5 py-0.2 text-[10px] rounded-full bg-slate-900/90 border border-slate-700/60 font-mono ${
-                      tab.badgeClass || 'text-slate-300'
+                    className={`px-1.5 py-0.2 text-[10px] rounded-full border border-slate-200 font-mono ${
+                      tab.badgeClass || 'bg-slate-100 text-slate-700'
                     }`}
                   >
                     {tab.count}
@@ -468,12 +475,12 @@ export default function SatisfacaoClientes() {
         {/* DASHBOARD EXECUTIVO PRINCIPAL (VISÃO DE TENDÊNCIA & CARDS DE CONTROLE) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* ISC MÉDIO DA CARTEIRA */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
               ISC Médio Carteira
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-serif text-white">
+              <span className="text-2xl font-bold font-serif text-[#003A70]">
                 {kpis.iscMedio}
                 <span className="text-xs font-sans text-slate-400">/100</span>
               </span>
@@ -481,102 +488,102 @@ export default function SatisfacaoClientes() {
                 variant="outline"
                 className={`text-[10px] font-bold ${
                   kpis.iscMedio >= 80
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                     : kpis.iscMedio >= 70
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-rose-50 text-rose-800 border-rose-200'
                 }`}
               >
                 {kpis.iscMedio >= 80 ? 'Satisfeito' : kpis.iscMedio >= 70 ? 'Atenção' : 'Risco'}
               </Badge>
             </div>
-            <div className="flex items-center gap-1 text-[10px] text-emerald-400">
+            <div className="flex items-center gap-1 text-[10px] text-emerald-700">
               <TrendingUp className="w-3 h-3" />
-              <span>+2.4 pts vs mês anterior (YTD: 81)</span>
+              <span>+2,4 pts vs mês anterior (YTD: 81)</span>
             </div>
           </Card>
 
           {/* CLIENTES EXCELENTES & SATISFEITOS */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
               Excelente / Satisfeito
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-serif text-emerald-400">
+              <span className="text-2xl font-bold font-serif text-emerald-700">
                 {kpis.excelentes + kpis.satisfeitos}
               </span>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-slate-500">
                 ({Math.round(((kpis.excelentes + kpis.satisfeitos) / (kpis.total || 1)) * 100)}%)
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 block">
+            <span className="text-[10px] text-slate-500 block">
               {kpis.excelentes} Excelente · {kpis.satisfeitos} Satisfeito
             </span>
           </Card>
 
           {/* CLIENTES EM ATENÇÃO */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 block">
               Clientes em Atenção
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-serif text-amber-400">{kpis.atencao}</span>
-              <span className="text-xs text-slate-400">Faixa 70–79</span>
+              <span className="text-2xl font-bold font-serif text-amber-700">{kpis.atencao}</span>
+              <span className="text-xs text-slate-500">Faixa 70–79</span>
             </div>
-            <span className="text-[10px] text-slate-400 block">Alerta preventivo ativo</span>
+            <span className="text-[10px] text-slate-500 block">Alerta preventivo ativo</span>
           </Card>
 
           {/* CLIENTES EM RISCO */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700 block">
               Clientes em Risco
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-serif text-orange-400">{kpis.risco}</span>
-              <span className="text-xs text-slate-400">Faixa 60–69</span>
+              <span className="text-2xl font-bold font-serif text-orange-700">{kpis.risco}</span>
+              <span className="text-xs text-slate-500">Faixa 60–69</span>
             </div>
-            <span className="text-[10px] text-orange-400/80 block">Prioridade comercial</span>
+            <span className="text-[10px] text-orange-700/80 block">Prioridade comercial</span>
           </Card>
 
           {/* CLIENTES CRÍTICOS */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-rose-900/40 bg-rose-950/10 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-rose-200 bg-rose-50/20 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 block">
               Clientes Críticos
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold font-serif text-rose-400">{kpis.criticos}</span>
-              <span className="text-xs text-slate-400">Abaixo de 60</span>
+              <span className="text-2xl font-bold font-serif text-rose-700">{kpis.criticos}</span>
+              <span className="text-xs text-slate-500">Abaixo de 60</span>
             </div>
-            <span className="text-[10px] text-rose-400 font-semibold block">
+            <span className="text-[10px] text-rose-700 font-semibold block">
               {planos.length} Planos de recuperação
             </span>
           </Card>
 
           {/* RECLAMAÇÕES & LOGÍSTICA */}
-          <Card className="p-4 rounded-3xl bg-slate-950 border border-slate-800 space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+          <Card className="p-4 rounded-3xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
               Gargalos Ativos
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold font-serif text-white">
+              <span className="text-xl font-bold font-serif text-slate-800">
                 {kpis.reclamacoesAbertas} SAC / {kpis.ocorrenciasLog} TMS
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 block">
+            <span className="text-[10px] text-slate-500 block">
               {kpis.quedaVolumeCount} clientes c/ queda volume
             </span>
           </Card>
         </div>
 
         {/* FILTROS E BUSCA RÁPIDA (QUANDO VISÃO GERAL OU LISTAS) */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs">
           <div className="relative w-full sm:w-80">
-            <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar cliente, SAP, CNPJ ou vendedor..."
-              className="pl-8 h-8 text-xs bg-slate-900 border-slate-800 text-white rounded-xl"
+              className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 text-slate-800 rounded-xl"
             />
           </div>
 
@@ -585,7 +592,7 @@ export default function SatisfacaoClientes() {
               <select
                 value={selectedVendedor}
                 onChange={(e) => setSelectedVendedor(e.target.value)}
-                className="h-8 text-xs bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-2.5 focus:outline-hidden"
+                className="h-8 text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-2.5 focus:outline-hidden"
               >
                 <option value="todos">Todos os Vendedores</option>
                 <option value="Carlos Mendonça">Carlos Mendonça</option>
@@ -598,7 +605,7 @@ export default function SatisfacaoClientes() {
             <select
               value={selectedSegmento}
               onChange={(e) => setSelectedSegmento(e.target.value)}
-              className="h-8 text-xs bg-slate-900 border border-slate-800 text-slate-200 rounded-xl px-2.5 focus:outline-hidden"
+              className="h-8 text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-xl px-2.5 focus:outline-hidden"
             >
               <option value="todos">Todos os Segmentos</option>
               <option value="Construção Civil">Construção Civil</option>
@@ -623,20 +630,20 @@ export default function SatisfacaoClientes() {
             )}
 
             {/* TABELA PRINCIPAL DE CLIENTES */}
-            <Card className="p-6 rounded-3xl bg-slate-950 border border-slate-800 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+            <Card className="p-6 rounded-3xl bg-white border border-slate-200 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div>
-                  <h3 className="text-sm font-bold text-white font-serif flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-sky-400" />
+                  <h3 className="text-sm font-bold text-[#003A70] font-serif flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#003A70]" />
                     Carteira de Clientes — Ficha de Satisfação 360º & Scores
                   </h3>
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-500">
                     Clique no cliente para abrir a ficha completa 360º com histórico, qualidade,
                     logística e plano.
                   </span>
                 </div>
 
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-500">
                   Exibindo {filteredClientes.length} de {clientes.length} clientes
                 </span>
               </div>
@@ -644,7 +651,7 @@ export default function SatisfacaoClientes() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs text-left">
                   <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 font-semibold uppercase text-[10px]">
+                    <tr className="border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px] bg-slate-50/50">
                       <th className="py-2.5 px-3">Cliente / SAP</th>
                       <th className="py-2.5 px-3">Segmento / Região</th>
                       <th className="py-2.5 px-3">Vendedor</th>
@@ -656,39 +663,39 @@ export default function SatisfacaoClientes() {
                       <th className="py-2.5 px-3 text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredClientes.map((cliente) => (
                       <tr
                         key={cliente.id}
                         onClick={() => setSelectedCliente(cliente)}
-                        className="hover:bg-slate-900/60 transition-all cursor-pointer group"
+                        className="hover:bg-sky-50/40 transition-all cursor-pointer group"
                       >
                         <td className="py-3 px-3">
-                          <div className="font-bold text-white group-hover:text-sky-300 transition-colors">
+                          <div className="font-bold text-slate-800 group-hover:text-[#003A70] transition-colors">
                             {cliente.razaoSocial}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono">
+                          <div className="text-[11px] text-slate-500 font-mono">
                             SAP #{cliente.sapCode} · {cliente.cnpj}
                           </div>
                         </td>
 
                         <td className="py-3 px-3">
-                          <div className="text-slate-300">{cliente.segmento}</div>
+                          <div className="text-slate-700">{cliente.segmento}</div>
                           <div className="text-[11px] text-slate-400">
                             {cliente.regiao} · Curva {cliente.classificacaoCliente}
                           </div>
                         </td>
 
-                        <td className="py-3 px-3 text-slate-300">{cliente.vendedorNome}</td>
+                        <td className="py-3 px-3 text-slate-700">{cliente.vendedorNome}</td>
 
-                        <td className="py-3 px-3 text-center font-mono text-slate-200">
+                        <td className="py-3 px-3 text-center font-mono text-slate-800">
                           R${' '}
                           {cliente.faturamentoYTD.toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,
                           })}
                         </td>
 
-                        <td className="py-3 px-3 text-center font-mono text-slate-200">
+                        <td className="py-3 px-3 text-center font-mono text-slate-800">
                           {cliente.volumeYTD.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}{' '}
                           t
                         </td>
@@ -698,14 +705,14 @@ export default function SatisfacaoClientes() {
                             variant="outline"
                             className={`font-mono font-bold text-xs ${
                               cliente.faixaISC === 'EXCELENTE'
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                                 : cliente.faixaISC === 'SATISFEITO'
-                                  ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200'
                                   : cliente.faixaISC === 'ATENCAO'
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
                                     : cliente.faixaISC === 'RISCO'
-                                      ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
-                                      : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                                      ? 'bg-orange-50 text-orange-800 border-orange-200'
+                                      : 'bg-rose-50 text-rose-800 border-rose-200'
                             }`}
                           >
                             {cliente.iscAtual}/100 [{cliente.faixaISC}]
@@ -715,18 +722,18 @@ export default function SatisfacaoClientes() {
                         <td className="py-3 px-3 text-center">
                           <div className="flex items-center justify-center gap-1">
                             {cliente.iscVariacao > 0 ? (
-                              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                             ) : cliente.iscVariacao < 0 ? (
-                              <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+                              <TrendingDown className="w-3.5 h-3.5 text-rose-600" />
                             ) : (
                               <span className="text-slate-400 text-xs">—</span>
                             )}
                             <span
                               className={`text-[11px] font-semibold ${
                                 cliente.iscVariacao > 0
-                                  ? 'text-emerald-400'
+                                  ? 'text-emerald-700'
                                   : cliente.iscVariacao < 0
-                                    ? 'text-rose-400'
+                                    ? 'text-rose-700'
                                     : 'text-slate-400'
                               }`}
                             >
@@ -739,11 +746,11 @@ export default function SatisfacaoClientes() {
 
                         <td className="py-3 px-3 text-center">
                           {cliente.impactosNegativos.length > 0 ? (
-                            <span className="text-[11px] text-amber-300 truncate max-w-[180px] block">
+                            <span className="text-[11px] text-amber-800 truncate max-w-[180px] block">
                               {cliente.impactosNegativos[0]}
                             </span>
                           ) : (
-                            <span className="text-[11px] text-emerald-400">Regular / Estável</span>
+                            <span className="text-[11px] text-emerald-700">Regular / Estável</span>
                           )}
                         </td>
 
@@ -756,7 +763,7 @@ export default function SatisfacaoClientes() {
                               size="sm"
                               variant="ghost"
                               onClick={() => setEntenderISCCliente(cliente)}
-                              className="h-7 px-2 text-[11px] text-sky-400 hover:text-white hover:bg-slate-800 rounded-lg"
+                              className="h-7 px-2 text-[11px] text-[#003A70] hover:text-[#002850] hover:bg-sky-50 rounded-lg font-semibold"
                             >
                               Entender ISC
                             </Button>
@@ -765,9 +772,9 @@ export default function SatisfacaoClientes() {
                               size="sm"
                               variant="ghost"
                               onClick={() => setAnalisarIACliente(cliente)}
-                              className="h-7 px-2 text-[11px] text-purple-400 hover:text-purple-300 hover:bg-slate-800 rounded-lg"
+                              className="h-7 px-2 text-[11px] text-[#003A70] hover:bg-sky-50 rounded-lg"
                             >
-                              <Sparkles className="w-3 h-3" />
+                              <Sparkles className="w-3 h-3 text-amber-500" />
                             </Button>
                           </div>
                         </td>

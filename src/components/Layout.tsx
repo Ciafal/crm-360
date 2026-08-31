@@ -36,21 +36,57 @@ export default function Layout() {
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
 
-  // Atalhos rápidos no TopNav na ordem exata solicitada:
-  // Meu Dia → Contatos → Cotações → CRM 360 → Tarefas → KPI's → Gestão de Clientes → Consultas → demais módulos
-  const QUICK_TOP_NAV = [
-    { name: 'Meu Dia', path: '/home' },
-    { name: 'Contatos', path: '/contatos', badge: 'Omnichannel' },
-    { name: 'Cotações', path: '/crm/cotacoes' },
-    { name: 'CRM 360', path: '/crm' },
-    { name: 'Tarefas', path: '/tarefas' },
-    { name: "KPI's", path: '/kpis-comerciais' },
-    { name: 'Gestão de Clientes', path: '/gestao-clientes' },
-    { name: 'Consultas', path: '/consultas', badge: 'Autosserviço' },
-    { name: 'Central de Ações', path: '/central-acoes', badge: 'IA Ação' },
-    { name: 'Estoque', path: '/estoque' },
-    { name: 'S&OP / Forecast', path: '/planejamento-sop', badge: 'S&OP' },
-    { name: 'Satisfação Clientes', path: '/satisfacao-clientes' },
+  // Ordem principal do menu corporativo CIAFAL (1 a 11):
+  // 1 Meu Dia, 2 Contatos, 3 Cotações, 4 CRM 360, 5 Tarefas, 6 KPIs, 7 Gestão de Clientes, 8 Satisfação de Clientes, 9 Consultas, 10 Central de Ações, 11 Estoque.
+  const MAIN_NAV_ITEMS = [
+    { id: 'meu-dia', name: 'Meu Dia', path: '/home', priority: 1 },
+    {
+      id: 'contatos',
+      name: 'Contatos',
+      path: '/contatos',
+      badge: 'Omnichannel',
+      badgeType: 'omni',
+      priority: 2,
+    },
+    { id: 'cotacoes', name: 'Cotações', path: '/crm/cotacoes', priority: 3 },
+    { id: 'crm', name: 'CRM 360', path: '/crm', priority: 4 },
+    { id: 'tarefas', name: 'Tarefas', path: '/tarefas', priority: 5 },
+    { id: 'kpis', name: 'KPIs', path: '/kpis-comerciais', priority: 6 },
+    { id: 'gestao-clientes', name: 'Gestão de Clientes', path: '/gestao-clientes', priority: 7 },
+    { id: 'satisfacao', name: 'Satisfação de Clientes', path: '/satisfacao-clientes', priority: 8 },
+    {
+      id: 'consultas',
+      name: 'Consultas',
+      path: '/consultas',
+      badge: 'Autosserviço',
+      badgeType: 'auto',
+      priority: 9,
+    },
+    {
+      id: 'central-acoes',
+      name: 'Central de Ações',
+      path: '/central-acoes',
+      badge: 'IA',
+      badgeType: 'ia',
+      priority: 10,
+    },
+    { id: 'estoque', name: 'Estoque', path: '/estoque', priority: 11 },
+  ]
+
+  // Módulos complementares para o menu "Mais"
+  const SECONDARY_NAV_ITEMS = [
+    { name: 'S&OP / Forecast', path: '/planejamento-sop', desc: 'Demanda F0-F4, FVA & Waterfall' },
+    { name: 'Equipe Comercial', path: '/equipe', desc: 'Vendedores, Metas & Hierarquia' },
+    { name: 'Visitas & Rotas', path: '/visitas', desc: 'Roteirização & Geolocalização' },
+    { name: 'Agentes de IA', path: '/agentes', desc: 'Copilotos & Automações' },
+    { name: 'Gestão de Inativos', path: '/gestao-inativos', desc: 'Reativação Comercial' },
+    { name: 'Agente Fred (TMS)', path: '/agente-fred', desc: 'Rastreabilidade Logística' },
+    {
+      name: 'Central de Integrações',
+      path: '/central-integracoes',
+      desc: 'SAP ECC, Qlik, TMS & SAC',
+    },
+    { name: 'Parâmetros & Acessos', path: '/administracao', desc: 'Configurações do CRM' },
   ]
 
   return (
@@ -70,29 +106,28 @@ export default function Layout() {
       )}
 
       {/* TopNav */}
-      <div className="fixed top-0 inset-x-0 z-50 p-4 flex justify-center">
-        <nav className="glass-nav w-full max-w-6xl px-4 py-2 flex items-center justify-between transition-all duration-300">
-          {/* Lado Esquerdo: Botão Menu Sidebar + Logo CIAFAL */}
-          <div className="flex items-center gap-2">
-            {/* Logo CRM 360º */}
-            <Link to="/home" className="flex items-center gap-2.5 px-2 shrink-0 group">
-              <div className="bg-primary text-primary-foreground p-1.5 rounded-lg shadow-sm group-hover:bg-primary/90 transition-colors">
-                <Building2 className="w-5 h-5 text-primary-foreground" />
+      <div className="fixed top-0 inset-x-0 z-50 p-2 sm:p-3 flex justify-center">
+        <header className="glass-nav w-full max-w-[1600px] px-3 sm:px-4 py-2 flex items-center justify-between transition-all duration-300 rounded-2xl shadow-sm border border-slate-200/80 bg-white/95 backdrop-blur-md">
+          {/* Lado Esquerdo: Logo CIAFAL + Identificação */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Link to="/home" className="flex items-center gap-2.5 px-1.5 shrink-0 group">
+              <div className="bg-[#003A70] text-white p-1.5 rounded-lg shadow-xs group-hover:bg-[#002850] transition-colors">
+                <Building2 className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="font-serif font-bold text-lg text-primary tracking-tight">
+                <span className="font-serif font-bold text-base sm:text-lg text-[#003A70] tracking-tight whitespace-nowrap">
                   CRM 360º
                 </span>
-                <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">
+                <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold whitespace-nowrap">
                   CIAFAL FERRO & AÇO
                 </span>
               </div>
             </Link>
           </div>
 
-          {/* Desktop Links Principais */}
-          <div className="hidden lg:flex items-center gap-1 px-2">
-            {QUICK_TOP_NAV.map((link) => {
+          {/* Centro: Menu Principal Responsivo com Overflow "Mais ▾" */}
+          <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 px-1">
+            {MAIN_NAV_ITEMS.map((link) => {
               const isActive =
                 link.path === '/home'
                   ? location.pathname === '/home' || location.pathname === '/meu-dia'
@@ -100,189 +135,264 @@ export default function Layout() {
 
               return (
                 <Link
-                  key={link.path}
+                  key={link.id}
                   to={link.path}
                   className={cn(
-                    'px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1.5',
+                    'px-2.5 2xl:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 shrink-0 select-none',
                     isActive
-                      ? 'bg-white shadow-sm text-primary font-bold'
-                      : 'text-muted-foreground hover:text-primary hover:bg-white/60',
+                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
                   )}
                 >
-                  <span>{link.name}</span>
+                  <span className="whitespace-nowrap">{link.name}</span>
                   {link.badge && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold">
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/60 text-[9px] font-bold leading-none shrink-0">
                       {link.badge}
                     </span>
                   )}
                 </Link>
               )
             })}
-          </div>
 
-          {/* Dropdown Módulos do CRM no TopNav */}
-          <div className="hidden md:flex items-center">
+            {/* Menu "Mais ▾" para módulos secundários no Desktop Amplo */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-xs font-semibold rounded-full gap-1 text-slate-700 hover:text-primary"
+                  className="h-8 px-2 text-xs font-semibold rounded-lg gap-1 text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70 shrink-0"
                 >
-                  <span>Módulos</span>
+                  <span className="whitespace-nowrap">Mais</span>
                   <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-72 p-3 rounded-2xl shadow-lg border border-border/60 bg-white"
+                className="w-72 p-2.5 rounded-2xl shadow-lg border border-slate-200 bg-white"
               >
-                <DropdownMenuLabel className="font-serif text-xs font-bold text-primary uppercase tracking-wider">
-                  Módulos CRM 360º
+                <DropdownMenuLabel className="font-serif text-xs font-bold text-[#003A70] uppercase tracking-wider">
+                  Módulos Complementares
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="grid grid-cols-2 gap-1.5 py-1">
-                  <Link
-                    to="/cotacoes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-amber-50/60 border border-amber-300/60"
-                  >
-                    <strong className="text-amber-900 font-bold flex items-center gap-1">
-                      <FileText className="w-3.5 h-3.5 text-amber-600" /> COTAÇÕES
-                    </strong>
-                    <span className="text-[10px] text-amber-800/80">
-                      Propostas, Aprovações & Cross Sell
-                    </span>
-                  </Link>
-                  <Link
-                    to="/planejamento-sop"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-emerald-50/60 border border-emerald-300/60"
-                  >
-                    <strong className="text-emerald-900 font-bold flex items-center gap-1">
-                      S&OP / FORECAST
-                    </strong>
-                    <span className="text-[10px] text-emerald-800/80">
-                      Demanda F0-F4, FVA & Waterfall
-                    </span>
-                  </Link>
-                  <Link
-                    to="/gestao-clientes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-primary/5 border border-primary/20"
-                  >
-                    <strong className="text-primary font-bold">Gestão de Clientes</strong>
-                    <span className="text-[10px] text-muted-foreground">
-                      Carteira, Cobertura, IA 360, Catálogo
-                    </span>
-                  </Link>
-                  <Link
-                    to="/consultas"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-blue-50/70 border border-blue-300/70"
-                  >
-                    <strong className="text-blue-900 font-bold flex items-center gap-1">
-                      <FileText className="w-3.5 h-3.5 text-blue-700" /> CONSULTAS 360º
-                    </strong>
-                    <span className="text-[10px] text-blue-800/80">
-                      NFs, Boletos, Certificados CQ & TMS
-                    </span>
-                  </Link>
-                  <Link
-                    to="/estoque"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900 font-bold">Gestão de Estoque</strong>
-                    <span className="text-[10px] text-muted-foreground">
-                      Aging, Parados, Oportunidades
-                    </span>
-                  </Link>
-                  <Link
-                    to="/equipe"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Equipe</strong>
-                    <span className="text-[10px] text-muted-foreground">Vendedores & Metas</span>
-                  </Link>
-                  <Link
-                    to="/visitas"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Visitas & Rotas</strong>
-                    <span className="text-[10px] text-muted-foreground">Geolocalização</span>
-                  </Link>
-                  <Link
-                    to="/agentes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Agentes de IA</strong>
-                    <span className="text-[10px] text-muted-foreground">Copilotos Comerciais</span>
-                  </Link>
-                  <Link
-                    to="/gestao-inativos"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Inativos</strong>
-                    <span className="text-[10px] text-muted-foreground">Reativação Comercial</span>
-                  </Link>
-                  <Link
-                    to="/conversas"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Omnichannel</strong>
-                    <span className="text-[10px] text-muted-foreground">WhatsApp & VoIP</span>
-                  </Link>
-                  <Link
-                    to="/agente-fred"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col bg-blue-50/40 border border-blue-200/50"
-                  >
-                    <strong className="text-blue-900 font-bold">Agente Fred (TMS)</strong>
-                    <span className="text-[10px] text-muted-foreground">
-                      Rastreamento & Logística
-                    </span>
-                  </Link>
-                  <Link
-                    to="/central-integracoes"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Integrações</strong>
-                    <span className="text-[10px] text-muted-foreground">SAP ECC, Qlik, TMS</span>
-                  </Link>
-                  <Link
-                    to="/administracao"
-                    className="p-2 rounded-xl text-xs hover:bg-slate-50 transition-colors flex flex-col"
-                  >
-                    <strong className="text-slate-900">Configurações</strong>
-                    <span className="text-[10px] text-muted-foreground">Parâmetros & Acessos</span>
-                  </Link>
+                <div className="grid grid-cols-1 gap-1 py-1">
+                  {SECONDARY_NAV_ITEMS.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="p-2 rounded-xl text-xs hover:bg-sky-50/70 transition-colors flex flex-col group"
+                    >
+                      <strong className="text-slate-800 font-bold group-hover:text-[#003A70]">
+                        {item.name}
+                      </strong>
+                      <span className="text-[10px] text-slate-500">{item.desc}</span>
+                    </Link>
+                  ))}
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
 
-          {/* Lado Direito: Ações & Usuário */}
-          <div className="flex items-center gap-2">
+          {/* Desktop Médio (lg até xl): Itens Prioritários (1-8) + "Mais ▾" com os demais */}
+          <div className="hidden lg:flex xl:hidden items-center gap-0.5 px-1">
+            {MAIN_NAV_ITEMS.slice(0, 8).map((link) => {
+              const isActive =
+                link.path === '/home'
+                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path)
+
+              return (
+                <Link
+                  key={link.id}
+                  to={link.path}
+                  className={cn(
+                    'px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 shrink-0 select-none',
+                    isActive
+                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
+                  )}
+                >
+                  <span className="whitespace-nowrap">{link.name}</span>
+                </Link>
+              )
+            })}
+
+            {/* Menu "Mais ▾" no Desktop Médio com Consultas, Central de Ações, Estoque e secundários */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs font-semibold rounded-lg gap-1 text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70 shrink-0"
+                >
+                  <span className="whitespace-nowrap">Mais</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-80 p-2.5 rounded-2xl shadow-lg border border-slate-200 bg-white"
+              >
+                <DropdownMenuLabel className="font-serif text-xs font-bold text-[#003A70] uppercase tracking-wider">
+                  Módulos do Sistema
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="grid grid-cols-2 gap-1.5 py-1">
+                  {MAIN_NAV_ITEMS.slice(8).map((link) => (
+                    <Link
+                      key={link.id}
+                      to={link.path}
+                      className="p-2 rounded-xl text-xs hover:bg-sky-50/70 bg-slate-50/60 border border-slate-200/70 transition-colors flex flex-col"
+                    >
+                      <strong className="text-slate-800 font-bold text-[11px] flex items-center gap-1">
+                        {link.name}
+                        {link.badge && (
+                          <span className="px-1 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[8px] font-bold">
+                            {link.badge}
+                          </span>
+                        )}
+                      </strong>
+                    </Link>
+                  ))}
+                </div>
+                <DropdownMenuSeparator className="my-1.5" />
+                <DropdownMenuLabel className="font-serif text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Demais Módulos
+                </DropdownMenuLabel>
+                <div className="grid grid-cols-1 gap-1 py-1">
+                  {SECONDARY_NAV_ITEMS.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="p-1.5 rounded-lg text-xs hover:bg-sky-50/70 transition-colors flex items-center justify-between group"
+                    >
+                      <span className="text-slate-700 font-medium text-xs group-hover:text-[#003A70]">
+                        {item.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {item.desc.slice(0, 24)}...
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Desktop Compacto / Tablet (md até lg): Itens Top 5 + "Menu Módulos ▾" */}
+          <div className="hidden md:flex lg:hidden items-center gap-0.5 px-1">
+            {MAIN_NAV_ITEMS.slice(0, 5).map((link) => {
+              const isActive =
+                link.path === '/home'
+                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path)
+
+              return (
+                <Link
+                  key={link.id}
+                  to={link.path}
+                  className={cn(
+                    'px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 shrink-0 select-none',
+                    isActive
+                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
+                  )}
+                >
+                  <span className="whitespace-nowrap">{link.name}</span>
+                </Link>
+              )
+            })}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs font-semibold rounded-lg gap-1 text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70 shrink-0"
+                >
+                  <span className="whitespace-nowrap">Módulos ▾</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-80 p-2.5 rounded-2xl shadow-lg border border-slate-200 bg-white"
+              >
+                <DropdownMenuLabel className="font-serif text-xs font-bold text-[#003A70] uppercase tracking-wider">
+                  Todos os Módulos CIAFAL
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <div className="grid grid-cols-2 gap-1.5 py-1">
+                  {MAIN_NAV_ITEMS.slice(5).map((link) => (
+                    <Link
+                      key={link.id}
+                      to={link.path}
+                      className="p-2 rounded-xl text-xs hover:bg-sky-50/70 bg-slate-50/60 border border-slate-200/70 transition-colors flex flex-col"
+                    >
+                      <strong className="text-slate-800 font-bold text-[11px] flex items-center gap-1">
+                        {link.name}
+                        {link.badge && (
+                          <span className="px-1 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[8px] font-bold">
+                            {link.badge}
+                          </span>
+                        )}
+                      </strong>
+                    </Link>
+                  ))}
+                </div>
+                <DropdownMenuSeparator className="my-1.5" />
+                <div className="grid grid-cols-1 gap-1 py-1">
+                  {SECONDARY_NAV_ITEMS.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="p-1.5 rounded-lg text-xs hover:bg-sky-50/70 transition-colors flex items-center justify-between group"
+                    >
+                      <span className="text-slate-700 font-medium text-xs group-hover:text-[#003A70]">
+                        {item.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {item.desc.slice(0, 24)}...
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Lado Direito: Perfil & Menu Mobile */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar className="h-8 w-8 border-2 border-white shadow-xs">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full p-0 hover:bg-sky-50"
+                  >
+                    <Avatar className="h-8 w-8 border border-slate-200 shadow-2xs">
                       <AvatarImage src={avatarUrl} alt={user.name || 'User'} />
-                      <AvatarFallback>{user.name?.charAt(0) || 'U'}</AvatarFallback>
+                      <AvatarFallback className="bg-[#003A70] text-white text-xs font-bold">
+                        {user.name?.charAt(0) || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-56 rounded-2xl p-2 shadow-lg"
+                  className="w-56 rounded-2xl p-2 shadow-lg border border-slate-200 bg-white"
                   align="end"
                   forceMount
                 >
                   <DropdownMenuLabel className="font-normal p-2">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-semibold leading-none">{user.name}</p>
+                      <p className="text-sm font-semibold leading-none text-slate-800">
+                        {user.name}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground truncate">
                         {user.email}
                       </p>
                       {user.role && (
                         <Badge
                           variant="outline"
-                          className="w-fit text-[9px] mt-1 uppercase font-mono"
+                          className="w-fit text-[9px] mt-1 uppercase font-mono bg-sky-50 text-[#003A70] border-sky-200"
                         >
                           {user.role}
                         </Badge>
@@ -324,27 +434,31 @@ export default function Layout() {
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden text-primary"
+              className="md:hidden text-[#003A70] hover:bg-sky-50"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5 text-[#003A70]" />
+              )}
             </Button>
           </div>
-        </nav>
+        </header>
       </div>
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-background/95 backdrop-blur-sm md:hidden pt-24 px-4 flex flex-col gap-3 animate-fade-in-down overflow-y-auto pb-12">
-          <div className="p-3 bg-primary/10 rounded-2xl flex items-center justify-between">
-            <span className="font-serif font-bold text-sm text-primary">CRM 360º CIAFAL</span>
-            <Badge variant="outline" className="text-xs bg-white text-primary">
-              Módulos CRM
+        <div className="fixed inset-0 z-40 bg-white/95 backdrop-blur-md md:hidden pt-20 px-4 flex flex-col gap-3 animate-fade-in-down overflow-y-auto pb-12">
+          <div className="p-3 bg-sky-50 rounded-2xl flex items-center justify-between border border-sky-100">
+            <span className="font-serif font-bold text-sm text-[#003A70]">CRM 360º CIAFAL</span>
+            <Badge variant="outline" className="text-xs bg-white text-[#003A70] border-sky-200">
+              Navegação
             </Badge>
           </div>
 
           <div className="space-y-1">
-            {QUICK_TOP_NAV.map((link) => {
+            {MAIN_NAV_ITEMS.map((link) => {
               const active =
                 link.path === '/home'
                   ? location.pathname === '/home' || location.pathname === '/meu-dia'
@@ -352,14 +466,14 @@ export default function Layout() {
 
               return (
                 <Link
-                  key={link.path}
+                  key={link.id}
                   to={link.path}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-colors',
                     active
-                      ? 'bg-white shadow-sm text-primary border border-border font-bold'
-                      : 'text-muted-foreground hover:bg-white/50',
+                      ? 'bg-sky-100/80 text-[#003A70] border border-sky-200 font-bold'
+                      : 'text-slate-700 hover:bg-slate-100',
                   )}
                 >
                   <span className="font-semibold">{link.name}</span>
@@ -372,52 +486,21 @@ export default function Layout() {
               )
             })}
 
-            <div className="pt-2 border-t border-border/40 mt-2 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground px-3 block">
-                Outros Módulos
+            <div className="pt-2 border-t border-slate-200 mt-2 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400 px-3 block">
+                Módulos Complementares
               </span>
-              <Link
-                to="/estoque"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-primary bg-primary/10 font-semibold"
-              >
-                <span>Gestão Comercial de Estoque</span>
-              </Link>
-              <Link
-                to="/equipe"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <span>Equipe Comercial</span>
-              </Link>
-              <Link
-                to="/visitas"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <span>Visitas & Rotas</span>
-              </Link>
-              <Link
-                to="/agentes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <span>Agentes de IA</span>
-              </Link>
-              <Link
-                to="/gestao-inativos"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <span>Gestão de Inativos</span>
-              </Link>
-              <Link
-                to="/central-integracoes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-between p-3 rounded-xl text-sm text-muted-foreground hover:bg-white/50"
-              >
-                <span>Central de Integrações</span>
-              </Link>
+              {SECONDARY_NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between p-2.5 rounded-xl text-xs text-slate-600 hover:bg-slate-100"
+                >
+                  <span className="font-medium">{item.name}</span>
+                  <span className="text-[10px] text-slate-400">{item.desc}</span>
+                </Link>
+              ))}
             </div>
           </div>
 

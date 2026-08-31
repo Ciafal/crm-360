@@ -77,36 +77,36 @@ export function Customer360SatisfactionSheet({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="max-w-5xl bg-slate-950 text-slate-100 border-slate-800 rounded-3xl max-h-[92vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-5xl bg-white text-slate-900 border-slate-200 rounded-3xl max-h-[92vh] overflow-y-auto p-6 shadow-xl">
         {/* CABEÇALHO 360 DO CLIENTE */}
-        <DialogHeader className="space-y-3 border-b border-slate-800/80 pb-5">
+        <DialogHeader className="space-y-3 border-b border-slate-100 pb-5">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-serif text-xl font-bold text-white">
+                <span className="font-serif text-xl font-bold text-[#003A70]">
                   {cliente.razaoSocial}
                 </span>
                 <Badge
                   variant="outline"
-                  className="text-xs bg-slate-900 border-slate-700 text-slate-300"
+                  className="text-xs bg-slate-50 border-slate-200 text-slate-700"
                 >
                   SAP #{cliente.sapCode}
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="text-xs bg-slate-900 border-slate-700 text-slate-300"
+                  className="text-xs bg-slate-50 border-slate-200 text-slate-700"
                 >
                   CNPJ: {cliente.cnpj}
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="text-xs bg-sky-500/10 text-sky-300 border-sky-500/30"
+                  className="text-xs bg-sky-50 text-[#003A70] border-sky-200"
                 >
                   Classe {cliente.classificacaoCliente}
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-4 text-xs text-slate-400 flex-wrap">
+              <div className="flex items-center gap-4 text-xs text-slate-500 flex-wrap">
                 <span>
                   <strong>Segmento:</strong> {cliente.segmento} ({cliente.subsegmento})
                 </span>
@@ -125,11 +125,11 @@ export function Customer360SatisfactionSheet({
             {/* ISC E STATUS */}
             <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
               <div className="text-right">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">
                   Índice ISC Oficial
                 </span>
                 <div className="flex items-baseline gap-2 justify-end">
-                  <span className="text-3xl font-bold font-serif text-white">
+                  <span className="text-3xl font-bold font-serif text-[#003A70]">
                     {cliente.iscAtual}
                   </span>
                   <span className="text-xs text-slate-400">/100</span>
@@ -137,7 +137,7 @@ export function Customer360SatisfactionSheet({
                     {cliente.faixaISC}
                   </Badge>
                 </div>
-                <span className="text-[10px] text-slate-400 block mt-0.5">
+                <span className="text-[10px] text-slate-500 block mt-0.5">
                   Anterior: {cliente.iscAnterior} (
                   {cliente.iscVariacao >= 0 ? `+${cliente.iscVariacao}` : cliente.iscVariacao} pts)
                 </span>
@@ -147,10 +147,10 @@ export function Customer360SatisfactionSheet({
 
           {/* BANNER DADOS DEMO */}
           {cliente.is_mock && (
-            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3 py-1 rounded-xl text-[10px] font-mono flex items-center justify-between">
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 px-3 py-1 rounded-xl text-[10px] font-mono flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                DADOS DE DEMONSTRAÇÃO (Mock com sincronização simulada SAP ECC / TMS / WMS / SAC)
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                DADOS DE DEMONSTRAÇÃO (Sincronização com SAP ECC / TMS / WMS / SAC)
               </span>
               <span>{cliente.sistemaOrigemInfo.sapEccSync}</span>
             </div>
@@ -162,7 +162,7 @@ export function Customer360SatisfactionSheet({
               size="sm"
               variant="outline"
               onClick={() => onOpenEntenderISC(cliente)}
-              className="h-8 text-xs text-sky-400 border-sky-500/30 hover:bg-sky-500/10 rounded-xl gap-1.5"
+              className="h-8 text-xs text-[#003A70] border-sky-300 hover:bg-sky-50 rounded-xl gap-1.5 font-semibold"
             >
               <Scale className="w-3.5 h-3.5" /> Entender ISC ({cliente.iscAtual}/100)
             </Button>
@@ -170,7 +170,7 @@ export function Customer360SatisfactionSheet({
             <Button
               size="sm"
               onClick={() => onOpenAnaliseIA(cliente)}
-              className="h-8 text-xs bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl gap-1.5 font-semibold shadow-xs"
+              className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white rounded-xl gap-1.5 font-semibold shadow-xs"
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Analisar com IA
             </Button>
@@ -180,9 +180,9 @@ export function Customer360SatisfactionSheet({
                 size="sm"
                 variant="outline"
                 onClick={() => onCreateRecoveryPlan(cliente)}
-                className="h-8 text-xs text-rose-300 border-rose-500/40 hover:bg-rose-500/10 rounded-xl gap-1.5"
+                className="h-8 text-xs text-rose-700 border-rose-300 hover:bg-rose-50 rounded-xl gap-1.5 font-semibold"
               >
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                 {cliente.possuiPlanoRecuperacaoAtivo
                   ? 'Ver Plano de Recuperação'
                   : 'Criar Plano de Recuperação'}
@@ -193,7 +193,7 @@ export function Customer360SatisfactionSheet({
               size="sm"
               variant="outline"
               onClick={() => onNavigateToQuote(cliente)}
-              className="h-8 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-xl gap-1.5"
+              className="h-8 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50 rounded-xl gap-1.5 font-semibold"
             >
               <FileText className="w-3.5 h-3.5" /> Criar Cotação
             </Button>
@@ -202,35 +202,65 @@ export function Customer360SatisfactionSheet({
 
         {/* 10 ABAS DA FICHA 360 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 pt-2">
-          <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-2xl flex flex-wrap gap-1 h-auto">
-            <TabsTrigger value="visao_geral" className="text-xs py-1.5 rounded-xl">
+          <TabsList className="bg-slate-100 border border-slate-200 p-1 rounded-2xl flex flex-wrap gap-1 h-auto">
+            <TabsTrigger
+              value="visao_geral"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Visão Geral
             </TabsTrigger>
-            <TabsTrigger value="comercial" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="comercial"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Comercial
             </TabsTrigger>
-            <TabsTrigger value="qualidade" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="qualidade"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Qualidade ({cliente.dimensaoQualidade.score})
             </TabsTrigger>
-            <TabsTrigger value="logistica" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="logistica"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Logística ({cliente.dimensaoLogistica.score})
             </TabsTrigger>
-            <TabsTrigger value="financeiro" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="financeiro"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Financeiro ({cliente.dimensaoFinanceiro.score})
             </TabsTrigger>
-            <TabsTrigger value="pesquisa" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="pesquisa"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Pesquisa
             </TabsTrigger>
-            <TabsTrigger value="historico" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="historico"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Histórico ISC
             </TabsTrigger>
-            <TabsTrigger value="ocorrencias" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="ocorrencias"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Ocorrências
             </TabsTrigger>
-            <TabsTrigger value="plano_recuperacao" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="plano_recuperacao"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Plano Recuperação
             </TabsTrigger>
-            <TabsTrigger value="acoes_comerciais" className="text-xs py-1.5 rounded-xl">
+            <TabsTrigger
+              value="acoes_comerciais"
+              className="text-xs py-1.5 rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#003A70] data-[state=active]:font-bold"
+            >
               Ações Comerciais
             </TabsTrigger>
           </TabsList>
@@ -239,85 +269,85 @@ export function Customer360SatisfactionSheet({
           <TabsContent value="visao_geral" className="space-y-4">
             {/* 4 Cards de Resumo */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">
                   Faturamento YTD
                 </span>
-                <strong className="text-lg font-bold font-serif text-white block mt-1">
+                <strong className="text-lg font-bold font-serif text-[#003A70] block mt-1">
                   {formatCurrency(cliente.faturamentoYTD)}
                 </strong>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-500">
                   Mês anterior: {formatCurrency(cliente.faturamentoMesAnterior)}
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">
                   Volume Faturado YTD
                 </span>
-                <strong className="text-lg font-bold font-serif text-sky-400 block mt-1">
+                <strong className="text-lg font-bold font-serif text-slate-800 block mt-1">
                   {cliente.volumeYTD.toFixed(1)} t
                 </strong>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-500">
                   Mês anterior: {cliente.volumeMesAnterior.toFixed(1)} t
                 </span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">
                   Valor Estratégico
                 </span>
                 <div className="flex items-baseline gap-1.5 mt-1">
-                  <strong className="text-lg font-bold font-serif text-amber-400 block">
+                  <strong className="text-lg font-bold font-serif text-amber-600 block">
                     {cliente.scoreValorEstrategico}/100
                   </strong>
                   <Badge
                     variant="outline"
-                    className="text-[9px] bg-slate-950 text-slate-300 border-slate-700"
+                    className="text-[9px] bg-white text-slate-700 border-slate-300"
                   >
                     {cliente.quadranteMatriz}
                   </Badge>
                 </div>
-                <span className="text-[10px] text-slate-400">Matriz Valor × Satisfação</span>
+                <span className="text-[10px] text-slate-500">Matriz Valor × Satisfação</span>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase block">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">
                   Risco de Churn (IA)
                 </span>
                 <strong
-                  className={`text-lg font-bold font-serif block mt-1 ${cliente.riscoChurnPct > 50 ? 'text-rose-400' : 'text-emerald-400'}`}
+                  className={`text-lg font-bold font-serif block mt-1 ${cliente.riscoChurnPct > 50 ? 'text-rose-600' : 'text-emerald-600'}`}
                 >
                   {cliente.riscoChurnPct}%
                 </strong>
-                <span className="text-[10px] text-slate-400">Probabilidade de abandono</span>
+                <span className="text-[10px] text-slate-500">Probabilidade de abandono</span>
               </div>
             </div>
 
             {/* IMPACTOS POSITIVOS E NEGATIVOS */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/20 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-rose-400 uppercase tracking-wider">
-                  <TrendingDown className="w-4 h-4" /> Impactos Negativos no ISC
+              <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-rose-800 uppercase tracking-wider">
+                  <TrendingDown className="w-4 h-4 text-rose-600" /> Impactos Negativos no ISC
                 </div>
-                <ul className="space-y-1.5 text-xs text-rose-200/90">
+                <ul className="space-y-1.5 text-xs text-slate-700">
                   {cliente.impactosNegativos.map((imp, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <span className="text-rose-400">•</span>
+                      <span className="text-rose-600 font-bold">•</span>
                       <span>{imp}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/20 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <TrendingUp className="w-4 h-4" /> Impactos Positivos no ISC
+              <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" /> Impactos Positivos no ISC
                 </div>
-                <ul className="space-y-1.5 text-xs text-emerald-200/90">
+                <ul className="space-y-1.5 text-xs text-slate-700">
                   {cliente.impactosPositivos.map((imp, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <span className="text-emerald-400">•</span>
+                      <span className="text-emerald-600 font-bold">•</span>
                       <span>{imp}</span>
                     </li>
                   ))}
@@ -326,43 +356,45 @@ export function Customer360SatisfactionSheet({
             </div>
 
             {/* RESUMO DAS 5 DIMENSÕES */}
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-300 block">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
                 Notas das 5 Dimensões Compostas do ISC
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Qualidade</span>
-                  <strong className="text-base text-white">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Qualidade</span>
+                  <strong className="text-base text-slate-800">
                     {cliente.dimensaoQualidade.score}
                   </strong>
-                  <span className="text-[10px] text-slate-500 block">Peso {pesos.qualidade}%</span>
+                  <span className="text-[10px] text-slate-400 block">Peso {pesos.qualidade}%</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Logística</span>
-                  <strong className="text-base text-white">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Logística</span>
+                  <strong className="text-base text-slate-800">
                     {cliente.dimensaoLogistica.score}
                   </strong>
-                  <span className="text-[10px] text-slate-500 block">Peso {pesos.logistica}%</span>
+                  <span className="text-[10px] text-slate-400 block">Peso {pesos.logistica}%</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Comercial</span>
-                  <strong className="text-base text-white">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Comercial</span>
+                  <strong className="text-base text-slate-800">
                     {cliente.dimensaoComercial.score}
                   </strong>
-                  <span className="text-[10px] text-slate-500 block">Peso {pesos.comercial}%</span>
+                  <span className="text-[10px] text-slate-400 block">Peso {pesos.comercial}%</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Financeiro</span>
-                  <strong className="text-base text-white">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Financeiro</span>
+                  <strong className="text-base text-slate-800">
                     {cliente.dimensaoFinanceiro.score}
                   </strong>
-                  <span className="text-[10px] text-slate-500 block">Peso {pesos.financeiro}%</span>
+                  <span className="text-[10px] text-slate-400 block">Peso {pesos.financeiro}%</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-[10px] text-slate-400 block">Pesquisa</span>
-                  <strong className="text-base text-white">{cliente.dimensaoPesquisa.score}</strong>
-                  <span className="text-[10px] text-slate-500 block">Peso {pesos.pesquisa}%</span>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] text-slate-500 block">Pesquisa</span>
+                  <strong className="text-base text-slate-800">
+                    {cliente.dimensaoPesquisa.score}
+                  </strong>
+                  <span className="text-[10px] text-slate-400 block">Peso {pesos.pesquisa}%</span>
                 </div>
               </div>
             </div>
