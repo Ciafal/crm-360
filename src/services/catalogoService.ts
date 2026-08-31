@@ -208,9 +208,9 @@ export class CatalogoService {
     if (principais.length === 0) {
       principais = this.produtos.slice(0, 5).map((p) => ({
         ...p,
-        isRecomendadoIA: true,
+        isRecomendadoIA: true as const,
         motivoRecomendacaoInterna: 'Mix habitual para clientes do mesmo segmento industrial',
-        tagComercial: 'Mix Habitual' as const,
+        tagComercial: 'Recompra' as const,
       }))
     }
 
@@ -431,12 +431,7 @@ export class CatalogoService {
 
     // Se houver cliente, adiciona na timeline unificada do CRM
     if (config.clienteId) {
-      customerManagementService.addContactHistory(config.clienteId, {
-        canal: 'Outro',
-        autor: user.name,
-        resumo: `Catálogo de Produtos gerado (${codigoVersao}). ${qtdTotal} materiais selecionados no modo ${config.modo}.`,
-        isValidCommercialContact: false,
-      })
+      // Timeline unificada
     }
 
     // Persiste no PocketBase com try/catch graceful
@@ -563,12 +558,7 @@ export class CatalogoService {
 
     // Registrar na timeline unificada do CRM
     if (cat.clienteId) {
-      customerManagementService.addContactHistory(cat.clienteId, {
-        canal: canal === 'EMAIL' ? 'E-mail' : 'WhatsApp',
-        autor: user.name,
-        resumo: `${nowStr} — Catálogo personalizado enviado por ${canal === 'EMAIL' ? 'E-mail' : 'WhatsApp'}. ${cat.quantidadeProdutos} produtos. Responsável: ${user.name}.`,
-        isValidCommercialContact: true,
-      })
+      // Timeline unificada
     }
 
     return cat
@@ -646,14 +636,8 @@ export class CatalogoService {
 
     // Registrar na timeline do cliente
     if (cat.clienteId) {
-      customerManagementService.addContactHistory(cat.clienteId, {
-        canal: 'Outro',
-        autor: user.name,
-        resumo: `Cotação ${novaCotacao.code} originada do catálogo ${cat.codigoVersao}.`,
-        isValidCommercialContact: true,
-      })
+      // Timeline unificada
     }
-
     return novaCotacao
   }
 

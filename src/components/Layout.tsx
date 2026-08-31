@@ -360,68 +360,90 @@ export default function Layout() {
           </div>
 
           {/* Lado Direito: Perfil & Menu Mobile */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-9 w-9 rounded-full p-0 hover:bg-sky-50"
+                    className="flex items-center gap-2 h-10 px-2.5 rounded-full hover:bg-sky-50 border border-slate-200/80 bg-white/60 transition-all"
                   >
-                    <Avatar className="h-8 w-8 border border-slate-200 shadow-2xs">
+                    <Avatar className="h-7 w-7 border border-slate-200 shadow-2xs">
                       <AvatarImage src={avatarUrl} alt={user.name || 'User'} />
                       <AvatarFallback className="bg-[#003A70] text-white text-xs font-bold">
                         {user.name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
+                    <div className="hidden sm:flex flex-col text-left leading-tight">
+                      <span className="text-xs font-bold text-slate-800 max-w-[120px] truncate">
+                        {user.name || user.email}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium capitalize">
+                        {user.role?.toLowerCase() || 'Vendedor'}
+                      </span>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-56 rounded-2xl p-2 shadow-lg border border-slate-200 bg-white"
+                  className="w-64 rounded-2xl p-2.5 shadow-xl border border-slate-200 bg-white"
                   align="end"
                   forceMount
                 >
-                  <DropdownMenuLabel className="font-normal p-2">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-semibold leading-none text-slate-800">
-                        {user.name}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground truncate">
+                  <DropdownMenuLabel className="font-normal p-2 bg-slate-50 rounded-xl mb-1 border border-slate-100">
+                    <div className="flex flex-col space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold leading-none text-slate-900">
+                          {user.name || 'Usuário CRM'}
+                        </p>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100/90 text-amber-900 border border-amber-300 text-[9px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          HOMOLOGAÇÃO
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-none text-slate-500 truncate">
                         {user.email}
                       </p>
-                      {user.role && (
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <span className="text-[10px] text-slate-500 font-semibold">Perfil:</span>
                         <Badge
                           variant="outline"
-                          className="w-fit text-[9px] mt-1 uppercase font-mono bg-sky-50 text-[#003A70] border-sky-200"
+                          className="w-fit text-[9px] px-1.5 py-0 uppercase font-mono bg-sky-50 text-[#003A70] border-sky-200"
                         >
-                          {user.role}
+                          {user.role || 'VENDEDOR'}
                         </Badge>
-                      )}
+                      </div>
                     </div>
                   </DropdownMenuLabel>
+
                   <DropdownMenuSeparator />
+
+                  <DropdownMenuItem
+                    onClick={() => navigate('/home')}
+                    className="cursor-pointer text-xs rounded-lg py-1.5"
+                  >
+                    Meu Painel (Meu Dia)
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem
                     onClick={() => navigate('/administracao')}
-                    className="cursor-pointer text-xs rounded-lg"
+                    className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
-                    Administração & Acessos
+                    Perfil de Acesso & Configurações
                   </DropdownMenuItem>
+
                   <DropdownMenuItem
                     onClick={() => navigate('/hypercare')}
-                    className="cursor-pointer text-xs rounded-lg"
+                    className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
                     Cockpit de Hypercare
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => navigate('/relatorio-release')}
-                    className="cursor-pointer text-xs rounded-lg"
-                  >
-                    Relatório da Release
-                  </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
+
                   <DropdownMenuItem
                     onClick={handleLogout}
-                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer text-xs rounded-lg"
+                    className="text-destructive focus:bg-destructive focus:text-destructive-foreground cursor-pointer text-xs rounded-lg py-1.5 font-semibold"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sair da conta</span>

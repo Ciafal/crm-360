@@ -1,715 +1,574 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { z } from 'zod'
-import {
-  CheckCircle2,
-  QrCode,
-  Loader2,
-  Sparkles,
-  Milestone,
-  Kanban,
-  UsersRound,
-  Tags,
-  RefreshCcw,
-} from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { useAuth } from '@/hooks/use-auth'
-import { cn } from '@/lib/utils'
-import { useQrConnection } from '@/hooks/use-qr-connection'
-import pb from '@/lib/pocketbase/client'
 import {
-  isFixedTestOtpEnabled,
-  getFixedTestOtpCode,
-  requiresMfa,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  ShieldCheck,
+  Lock,
+  Mail,
+  ArrowRight,
+  RefreshCw,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Building2,
+  Zap,
+  Users,
+  Sparkles,
+  BarChart3,
+  Layers,
+} from 'lucide-react'
+import {
   requestMfaOtp,
   verifyMfaOtp,
+  requiresMfa,
+  isFixedTestOtpEnabled,
 } from '@/services/mfa_service'
 
-const isCustomEmailValid = (val: string) => {
-  const isTestUsersEnabled =
-    import.meta.env.VITE_ENABLE_TEST_USERS === 'true' ||
-    import.meta.env.MODE !== 'production' ||
-    true // Ativado para DEV / Homologação
-
-  if (isTestUsersEnabled && (val.includes('@ciafal.local') || val.includes('@crm360.local'))) {
-    return /^[^@\s]+@[^@\s]+$/.test(val)
-  }
-  return z.string().email().safeParse(val).success
-}
-
-const signUpSchema = z.object({
-  name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
-  email: z
-    .string()
-    .min(3, 'E-mail inválido')
-    .refine(isCustomEmailValid, { message: 'E-mail institucional inválido' }),
-  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres'),
-})
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(3, 'E-mail inválido')
-    .refine(isCustomEmailValid, { message: 'E-mail institucional inválido' }),
-  password: z.string().min(1, 'Senha é obrigatória'),
-})
-
-const FEATURES = [
-  {
-    icon: 'whatsapp',
-    title: 'Inbox Omnichannel',
-    desc: 'WhatsApp, Microsoft 365 e histórico unificado',
-    color: 'text-blue-400',
-    dot: 'bg-blue-400',
-    glow: '0 0 16px rgba(96,165,250,0.6)',
-    idleDelay: '0s',
-  },
-  {
-    icon: Sparkles,
-    title: 'Inteligência Comercial com IA',
-    desc: 'Análise de intenções, cotações e recomendações',
-    color: 'text-sky-400',
-    dot: 'bg-sky-400',
-    glow: '0 0 16px rgba(56,189,248,0.6)',
-    idleDelay: '0.4s',
-  },
-  {
-    icon: Milestone,
-    title: 'CRM 360º',
-    desc: 'Pipeline completo e visão 360º do cliente',
-    color: 'text-indigo-400',
-    dot: 'bg-indigo-400',
-    glow: '0 0 16px rgba(129,140,248,0.6)',
-    idleDelay: '0.8s',
-  },
-  {
-    icon: Kanban,
-    title: 'Execução Comercial',
-    desc: 'Meu Dia, Gestão do Dia e automações',
-    color: 'text-blue-300',
-    dot: 'bg-blue-300',
-    glow: '0 0 16px rgba(147,197,253,0.6)',
-    idleDelay: '0.2s',
-  },
-  {
-    icon: UsersRound,
-    title: 'Equipe Comercial',
-    desc: 'Gestão de carteiras, metas e alçadas',
-    color: 'text-cyan-400',
-    dot: 'bg-cyan-400',
-    glow: '0 0 16px rgba(34,211,238,0.6)',
-    idleDelay: '0.6s',
-  },
-  {
-    icon: Tags,
-    title: 'Integração Corporativa',
-    desc: 'SAP ECC, Qlik Cloud e Microsoft 365',
-    color: 'text-slate-300',
-    dot: 'bg-slate-300',
-    glow: '0 0 16px rgba(203,213,225,0.6)',
-    idleDelay: '1s',
-  },
-]
-
-function WhatsAppIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      className={className}
-      fill="currentColor"
-    >
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.888-.788-1.489-1.761-1.663-2.06-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-    </svg>
-  )
-}
-
 export default function Index() {
+  const { user, signIn, loading: authLoading } = useAuth()
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const { signIn, user, loading, resetPassword } = useAuth()
+  const location = useLocation()
 
-  const [step, setStep] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isForgotMode, setIsForgotMode] = useState(false)
-  const [syncProgress, setSyncProgress] = useState(0)
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [mfaRequired, setMfaRequired] = useState(false)
-  const [otpCode, setOtpCode] = useState('')
-  const [mfaEmail, setMfaEmail] = useState('')
-  const [mfaFixedActive, setMfaFixedActive] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [step, setStep] = useState<'LOGIN' | 'MFA'>('LOGIN')
+  const [otp, setOtp] = useState('')
+  const [challengeToken, setChallengeToken] = useState<string | null>(null)
 
-  const glowRef = useRef<HTMLDivElement>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const [successNotice, setSuccessNotice] = useState<string | null>(null)
+
+  const otpInputRef = useRef<HTMLInputElement>(null)
+
+  // Se já autenticado, redireciona uma única vez para o Meu Dia
   useEffect(() => {
-    const move = (e: MouseEvent) => {
-      if (!glowRef.current) return
-      glowRef.current.style.transform = `translate(${e.clientX - 250}px, ${e.clientY - 250}px)`
+    if (!authLoading && user) {
+      const from = (location.state as any)?.from?.pathname || '/crm'
+      navigate(from, { replace: true })
     }
-    window.addEventListener('mousemove', move)
-    return () => window.removeEventListener('mousemove', move)
-  }, [])
+  }, [user, authLoading, navigate, location])
 
+  // Foco automático no campo OTP quando passar para etapa MFA
   useEffect(() => {
-    if (user && !loading && step === 1) navigate('/home', { replace: true })
-  }, [user, loading, step, navigate])
-
-  const handleConnected = React.useCallback(() => setStep(3), [])
-
-  const { qrCodeBase64, isGenerating, pollErrors, generateQrCode } =
-    useQrConnection(handleConnected)
-
-  useEffect(() => {
-    if (step === 2 && !qrCodeBase64 && !isGenerating && pollErrors === 0) generateQrCode()
-  }, [step, qrCodeBase64, isGenerating, pollErrors, generateQrCode])
-
-  const handleStep1Submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    try {
-      if (isForgotMode) {
-        if (!formData.email) throw new Error('Informe seu e-mail institucional')
-        const { error } = await resetPassword(formData.email)
-        if (error) throw new Error('Não foi possível enviar o link de recuperação')
-        toast({
-          title: 'Instruções enviadas',
-          description: 'Se o e-mail existir na base comercial, as instruções foram enviadas.',
-        })
-        setIsForgotMode(false)
-      } else {
-        loginSchema.parse(formData)
-        const normalizedEmail = formData.email.trim().toLowerCase()
-
-        // Fluxo completo obrigatório: Email -> senha válida -> MFA -> digitar OTP -> sessão criada
-        // Se o usuário requer MFA (ex: contas de teste / representante externo)
-        const isMfaTarget = requiresMfa(normalizedEmail)
-
-        const isTestDomain =
-          normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
-
-        if (isTestDomain) {
-          if (formData.password !== 'teste123') {
-            throw new Error('Credenciais inválidas')
-          }
-          // Para contas de teste QAS, solicitar MFA diretamente sem chamada ao PocketBase
-          const reqResult = await requestMfaOtp(normalizedEmail)
-          setMfaEmail(normalizedEmail)
-          setMfaFixedActive(reqResult.is_qas_fixed_active ?? isFixedTestOtpEnabled())
-          setMfaRequired(true)
-          toast({
-            title: 'Etapa de Verificação (MFA)',
-            description:
-              'Credenciais validadas. Digite o código de verificação para concluir o acesso.',
-          })
-          return
-        }
-
-        // Credenciais não-teste (produção/PB): valida credenciais
-        const { error } = await signIn(formData.email, formData.password)
-        if (error) throw new Error('Credenciais inválidas')
-
-        if (!isMfaTarget) {
-          toast({ title: 'Login realizado com sucesso!' })
-          navigate('/home')
-          return
-        } else {
-          // Se requer MFA, limpa authStore até validar o OTP
-          try {
-            pb.authStore.clear()
-          } catch {
-            /* ignore */
-          }
-          const reqResult = await requestMfaOtp(normalizedEmail)
-          setMfaEmail(normalizedEmail)
-          setMfaFixedActive(reqResult.is_qas_fixed_active ?? isFixedTestOtpEnabled())
-          setMfaRequired(true)
-          toast({
-            title: 'Etapa de Verificação (MFA)',
-            description:
-              'Credenciais validadas. Digite o código de verificação para concluir o acesso.',
-          })
-        }
-      }
-    } catch (err: any) {
-      const message =
-        err instanceof z.ZodError ? err.issues[0]?.message || 'Erro de validação' : err.message
-      toast({ title: 'Atenção', description: message, variant: 'destructive' })
-    } finally {
-      setIsLoading(false)
+    if (step === 'MFA') {
+      setTimeout(() => {
+        otpInputRef.current?.focus()
+      }, 150)
     }
-  }
+  }, [step])
 
-  const handleMfaSubmit = async (e: React.FormEvent) => {
+  // Temporizador de reenvio
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendCooldown])
+
+  // Etapa 1: Validação de Credenciais
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!otpCode || otpCode.length < 6) {
-      toast({
-        title: 'Código inválido',
-        description: 'Digite o código de 6 dígitos recebido.',
-        variant: 'destructive',
-      })
+    setError(null)
+    setSuccessNotice(null)
+
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail || !password) {
+      setError('Por favor, preencha o e-mail e a senha corporativa.')
       return
     }
 
-    setIsLoading(true)
-    try {
-      const verifyResult = await verifyMfaOtp(mfaEmail, otpCode)
+    setLoading(true)
 
-      if (!verifyResult.valid) {
-        throw new Error(verifyResult.error || 'Código inválido')
+    try {
+      // 1. Sempre exige MFA por padrão no fluxo CIAFAL 360 ou conforme perfil
+      const mfaNeeded = requiresMfa(cleanEmail) || true
+
+      if (mfaNeeded) {
+        // Gera o desafio MFA e avança para a etapa 2
+        const reqResult = await requestMfaOtp(cleanEmail)
+        if (reqResult.success) {
+          setChallengeToken(reqResult.challenge_token || null)
+          setStep('MFA')
+          setResendCooldown(30)
+          setLoading(false)
+          return
+        } else {
+          setError(reqResult.error || 'Erro ao gerar desafio de segurança. Tente novamente.')
+          setLoading(false)
+          return
+        }
       }
 
-      // Conclui a sessão de autenticação após validação bem-sucedida do OTP
-      const { error } = await signIn(formData.email, formData.password)
-      if (error) throw new Error('Falha ao autenticar credenciais validadas.')
-
-      toast({
-        title: 'Acesso autorizado com sucesso!',
-        description:
-          verifyResult.mfa_mode === 'FIXED_QAS'
-            ? 'Sessão iniciada via OTP QAS.'
-            : 'Sessão iniciada com sucesso.',
-      })
-      navigate('/home')
-    } catch (err: any) {
-      toast({
-        title: 'Código inválido',
-        description: err.message || 'Código de verificação incorreto.',
-        variant: 'destructive',
-      })
+      // Se não precisasse de MFA (fallback direto)
+      const { error: signInError } = await signIn(cleanEmail, password)
+      if (signInError) {
+        setError('Usuário ou senha inválidos.')
+      } else {
+        navigate('/crm', { replace: true })
+      }
+    } catch {
+      setError('Ocorreu um erro ao processar sua solicitação. Verifique sua conexão.')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (step === 3) {
-      const steps = 4000 / 50
-      let cur = 0
-      const timer = setInterval(() => {
-        cur++
-        setSyncProgress(Math.min(100, Math.round((cur / steps) * 100)))
-        if (cur >= steps) {
-          clearInterval(timer)
-          navigate('/home')
-        }
-      }, 50)
-      return () => clearInterval(timer)
+  // Etapa 2: Validação do Código OTP
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSuccessNotice(null)
+
+    const cleanEmail = email.trim().toLowerCase()
+    // Tratamento estrito como string de 6 caracteres (sem conversão para Number)
+    const cleanOtp = (otp || '').toString().trim()
+
+    if (!cleanOtp) {
+      setError('Por favor, digite o código de 6 dígitos.')
+      return
     }
-  }, [step, navigate])
+
+    if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+      setError('O código de verificação deve conter exatamente 6 números.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const verifyResult = await verifyMfaOtp(cleanEmail, cleanOtp, challengeToken || undefined)
+
+      if (verifyResult.valid) {
+        // Efetiva a sessão autenticada com as credenciais validadas
+        const { error: authErr } = await signIn(cleanEmail, password)
+        if (authErr) {
+          setError(authErr.message || 'Falha ao autenticar sessão. Tente novamente.')
+          setLoading(false)
+          return
+        }
+
+        setSuccessNotice('Acesso autorizado! Carregando cockpit comercial...')
+        setTimeout(() => {
+          navigate('/crm', { replace: true })
+        }, 300)
+      } else {
+        setError(verifyResult.error || 'Código de verificação inválido.')
+      }
+    } catch {
+      setError('Erro de comunicação com o serviço de autenticação.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Reenviar código OTP
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return
+    setError(null)
+    setLoading(true)
+
+    try {
+      const cleanEmail = email.trim().toLowerCase()
+      const req = await requestMfaOtp(cleanEmail)
+      if (req.success) {
+        setChallengeToken(req.challenge_token || null)
+        setResendCooldown(30)
+        setSuccessNotice('Um novo código de verificação foi emitido.')
+        setTimeout(() => setSuccessNotice(null), 4000)
+      } else {
+        setError(req.error || 'Erro ao reenviar código.')
+      }
+    } catch {
+      setError('Não foi possível reenviar o código.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isHomologation = isFixedTestOtpEnabled()
 
   return (
-    <div className="min-h-screen flex bg-[#020B17] overflow-hidden">
-      <div
-        ref={glowRef}
-        className="fixed top-0 left-0 w-[500px] h-[500px] pointer-events-none z-0 will-change-transform"
-        style={{
-          background: 'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)',
-          transition: 'transform 0.12s ease-out',
-        }}
-      />
-
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-1/3 -left-32 w-[500px] h-[500px] bg-[#0A2647] rounded-full mix-blend-screen filter blur-[140px] opacity-40 animate-blob" />
-        <div className="absolute bottom-0 right-0 w-[350px] h-[350px] bg-[#1E3A8A] rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-blob animation-delay-4000" />
-      </div>
-
-      {/* LEFT */}
-      <div className="relative z-10 hidden lg:flex flex-col justify-between w-[55%] px-14 xl:px-20 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50/40 to-slate-100 flex flex-col justify-between text-slate-800">
+      {/* Barra de Topo Institucional */}
+      <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur px-6 py-3.5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
-            <WhatsAppIcon className="w-5 h-5 text-blue-400" />
+          <div className="h-9 w-9 rounded-lg bg-blue-700 flex items-center justify-center text-white font-black text-xl shadow-sm tracking-wider">
+            C
           </div>
-          <span className="font-serif font-bold text-xl text-white tracking-tight">CRM 360º</span>
-        </div>
-
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-5">
-            <h1 className="font-serif text-5xl xl:text-6xl font-bold text-white leading-[1.08] tracking-tight">
-              CRM 360º
-            </h1>
-            <p className="text-white/70 text-lg leading-relaxed max-w-lg">
-              Relacionamento, inteligência comercial e execução de vendas em uma única plataforma.
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900 text-lg tracking-tight">CIAFAL</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                CRM 360º
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 hidden sm:block">
+              Aços Planos, Tubos e Soluções Siderúrgicas Industriais
             </p>
           </div>
+        </div>
 
-          <div className="h-px w-full bg-gradient-to-r from-white/12 via-white/5 to-transparent" />
+        <div className="flex items-center gap-3">
+          {isHomologation && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              <span>Ambiente de Homologação</span>
+            </div>
+          )}
+          <div className="text-xs text-slate-500 font-medium">Portal Corporativo Seguro</div>
+        </div>
+      </header>
 
-          <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-            {FEATURES.map((f, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3.5 group cursor-default"
-                style={{
-                  opacity: 0,
-                  animation: 'fadeInUp 0.5s ease forwards',
-                  animationDelay: `${0.1 + i * 0.08}s`,
-                }}
-              >
-                <div
-                  className={cn('w-5 h-5 mt-0.5 shrink-0', f.color)}
-                  style={{
-                    filter: 'drop-shadow(0 0 0px transparent)',
-                    transition: 'transform 0.25s ease, filter 0.25s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.filter = `drop-shadow(${f.glow})`
-                    ;(e.currentTarget as HTMLElement).style.transform = 'scale(1.25)'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.filter =
-                      'drop-shadow(0 0 0px transparent)'
-                    ;(e.currentTarget as HTMLElement).style.transform = 'scale(1)'
-                  }}
-                >
-                  {f.icon === 'whatsapp' ? (
-                    <WhatsAppIcon className="w-5 h-5" />
-                  ) : (
-                    <f.icon className="w-5 h-5" />
-                  )}
+      {/* Conteúdo Central */}
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full">
+          {/* Coluna Esquerda: Apresentação Institucional CIAFAL */}
+          <div className="lg:col-span-7 space-y-6 lg:pr-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-xs font-semibold">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+              Plataforma Comercial Unificada de Alta Performance
+            </div>
+
+            <div className="space-y-3">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                CRM 360º CIAFAL
+              </h1>
+              <p className="text-lg text-slate-600 font-normal leading-relaxed">
+                Relacionamento, inteligência comercial e execução de vendas em uma única plataforma
+                integrada.
+              </p>
+            </div>
+
+            {/* Grid de Benefícios Organizados */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                  <Zap className="h-5 w-5" />
                 </div>
-                <div className="min-w-0 flex flex-col gap-0.5">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn('w-1.5 h-1.5 rounded-full shrink-0', f.dot)}
-                      style={{ animation: `pulse 2.5s ease-in-out ${f.idleDelay} infinite` }}
-                    />
-                    <p className="text-white/85 font-semibold text-sm leading-snug">{f.title}</p>
-                  </div>
-                  <p className="text-white/35 text-xs leading-relaxed pl-3.5">{f.desc}</p>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">Inbox Omnichannel</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    WhatsApp Oficial & Mensageria centralizada com histórico.
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        <p className="text-white/30 text-xs tracking-wide">
-          CRM 360º · CIAFAL Gestão Comercial Integrada
-        </p>
-      </div>
-
-      {/* RIGHT */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full lg:w-[45%] px-6 lg:px-12 py-10">
-        <div className="flex lg:hidden items-center gap-2 mb-6">
-          <div className="w-8 h-8 bg-blue-500/15 rounded-xl border border-blue-400/30 flex items-center justify-center">
-            <WhatsAppIcon className="w-4 h-4 text-blue-400" />
-          </div>
-          <span className="font-serif font-bold text-lg text-white">CRM 360º</span>
-        </div>
-
-        <div className="flex lg:hidden gap-2 flex-wrap justify-center mb-6">
-          {FEATURES.map((f, i) => (
-            <span
-              key={i}
-              className={cn(
-                'flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium',
-                f.color,
-              )}
-            >
-              {f.icon === 'whatsapp' ? (
-                <WhatsAppIcon className="w-3 h-3" />
-              ) : (
-                <f.icon className="w-3 h-3" />
-              )}
-              <span className="text-white/60">{f.title}</span>
-            </span>
-          ))}
-        </div>
-
-        {step > 1 && (
-          <div className="flex items-center gap-2 mb-6 w-full max-w-[360px]">
-            {[1, 2, 3].map((s) => (
-              <React.Fragment key={s}>
-                <div
-                  className={cn(
-                    'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300',
-                    step > s
-                      ? 'bg-primary text-white'
-                      : step === s
-                        ? 'bg-primary text-white ring-4 ring-primary/30'
-                        : 'bg-white/8 text-white/25',
-                  )}
-                >
-                  {step > s ? <CheckCircle2 className="w-3.5 h-3.5" /> : s}
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Layers className="h-5 w-5" />
                 </div>
-                {s < 3 && (
-                  <div
-                    className={cn(
-                      'flex-1 h-px transition-all duration-500',
-                      step > s ? 'bg-primary' : 'bg-white/10',
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">CRM 360º</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Visão completa da carteira, RFV, NPS e risco de churn.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">Equipe Comercial</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Cockpit individual do vendedor e supervisão em tempo real.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-violet-50 text-violet-700 flex items-center justify-center shrink-0">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">Inteligência com IA</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Recomendações preditivas, Smart Cross-Sell e pricing dinâmico.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">Execução Comercial</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Cotações ágeis com cálculo de peso teórico e margem líquida.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-start gap-3">
+                <div className="h-9 w-9 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm">Integração Corporativa</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Conexão nativa com SAP ERP, TMS e rastreabilidade total.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Coluna Direita: Card de Autenticação / MFA */}
+          <div className="lg:col-span-5 w-full max-w-md mx-auto">
+            <Card className="border-slate-200/90 shadow-xl bg-white/95 backdrop-blur overflow-hidden rounded-2xl">
+              <div className="h-2 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600" />
+
+              <CardHeader className="space-y-1.5 pb-4 pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700">
+                    {step === 'LOGIN' ? (
+                      <Lock className="h-5 w-5" />
+                    ) : (
+                      <ShieldCheck className="h-5 w-5 text-emerald-600" />
                     )}
-                  />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        )}
-
-        <div className="w-full max-w-[360px] rounded-2xl border border-white/10 bg-[#08182B]/85 backdrop-blur-xl p-8 shadow-2xl shadow-black/60">
-          {step === 1 && (
-            <div className="flex flex-col gap-6">
-              {mfaRequired ? (
-                <div className="flex flex-col gap-6">
-                  <div>
-                    <h2 className="font-serif text-2xl font-bold text-white">
-                      Verificação em Duas Etapas (MFA)
-                    </h2>
-                    <p className="text-white/40 text-sm mt-1">
-                      Digite o código de 6 dígitos enviado para o seu e-mail institucional seguro.
-                    </p>
                   </div>
-
-                  <form onSubmit={handleMfaSubmit} className="flex flex-col gap-4 dark-inputs">
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="otp"
-                        className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                      >
-                        Código OTP (6 dígitos)
-                      </Label>
-                      <Input
-                        id="otp"
-                        type="text"
-                        maxLength={6}
-                        placeholder={mfaFixedActive ? getFixedTestOtpCode() || '123456' : '••••••'}
-                        required
-                        value={otpCode}
-                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                        className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl tracking-widest text-center text-lg font-mono"
-                      />
-                      {isFixedTestOtpEnabled() ? (
-                        <div className="flex flex-col gap-1 items-center justify-center text-center mt-1.5 p-2 rounded-lg bg-blue-500/10 border border-blue-400/20">
-                          <p className="text-[11px] text-blue-300 font-medium leading-tight">
-                            Ambiente de testes — utilize o código MFA definido para QAS.
-                          </p>
-                          <span className="text-[11px] text-white/70 font-mono">
-                            Código QAS:{' '}
-                            <strong className="text-white font-bold tracking-wider">
-                              {getFixedTestOtpCode() || '123456'}
-                            </strong>
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-white/30 text-center mt-1">
-                          Código de 6 dígitos enviado por e-mail corporativo.
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
-                    >
-                      {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        'Validar e Entrar'
-                      )}
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => {
-                        setMfaRequired(false)
-                        setOtpCode('')
-                      }}
-                      className="text-white/50 hover:text-white text-xs h-9"
-                    >
-                      ← Voltar ao login
-                    </Button>
-                  </form>
+                  {isHomologation && (
+                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-blue-100/80 text-blue-900 border border-blue-200">
+                      Homologação QAS
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-6">
-                  <div>
-                    <h2 className="font-serif text-2xl font-bold text-white">
-                      {isForgotMode ? 'Recuperar Acesso' : 'Acesse o CRM 360º'}
-                    </h2>
-                    <p className="text-white/40 text-sm mt-1">
-                      {isForgotMode
-                        ? 'Informe seu e-mail corporativo cadastrado'
-                        : 'Digite suas credenciais institucionais'}
-                    </p>
-                  </div>
 
-                  {/* dark-inputs: CSS abaixo garante fundo escuro + texto branco em todos os inputs */}
-                  <form onSubmit={handleStep1Submit} className="flex flex-col gap-4 dark-inputs">
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="email"
-                        className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                      >
-                        E-mail Corporativo
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu.nome@ciafal.com.br"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
-                      />
+                <CardTitle className="text-xl font-bold text-slate-900 pt-2">
+                  {step === 'LOGIN' ? 'Acesso ao Sistema' : 'Verificação em Duas Etapas'}
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  {step === 'LOGIN'
+                    ? 'Informe seu e-mail corporativo institucional e senha.'
+                    : 'Digite o código de 6 dígitos enviado para seu e-mail institucional seguro.'}
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                {/* Alertas de Erro ou Sucesso */}
+                {error && (
+                  <Alert
+                    variant="destructive"
+                    className="bg-red-50/90 border-red-200 text-red-900 text-xs py-2.5"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+                    <div>
+                      <AlertTitle className="font-semibold text-red-800 text-xs">
+                        Atenção
+                      </AlertTitle>
+                      <AlertDescription className="text-red-700 text-xs mt-0.5">
+                        {error}
+                      </AlertDescription>
                     </div>
-                    {!isForgotMode && (
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label
-                            htmlFor="password"
-                            className="text-white/60 text-xs font-semibold uppercase tracking-wider"
-                          >
-                            Senha
-                          </Label>
-                          <button
-                            type="button"
-                            onClick={() => setIsForgotMode(true)}
-                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            Esqueci minha senha
-                          </button>
-                        </div>
+                  </Alert>
+                )}
+
+                {successNotice && (
+                  <Alert className="bg-emerald-50 border-emerald-200 text-emerald-900 text-xs py-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <AlertDescription className="text-emerald-800 text-xs font-medium">
+                        {successNotice}
+                      </AlertDescription>
+                    </div>
+                  </Alert>
+                )}
+
+                {/* ETAPA 1: Login */}
+                {step === 'LOGIN' && (
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-xs font-medium text-slate-700">
+                        E-mail Institucional
+                      </Label>
+                      <div className="relative">
+                        <Mail className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="usuario@ciafal.com.br"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-9 text-sm h-10 border-slate-200 focus:border-blue-600 focus:ring-blue-600"
+                          required
+                          disabled={loading}
+                          autoComplete="username"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password" className="text-xs font-medium text-slate-700">
+                        Senha de Acesso
+                      </Label>
+                      <div className="relative">
+                        <Lock className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <Input
                           id="password"
                           type="password"
                           placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="pl-9 text-sm h-10 border-slate-200 focus:border-blue-600 focus:ring-blue-600"
                           required
-                          value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="border-white/15 focus-visible:ring-primary/40 focus-visible:border-primary/50 h-11 rounded-xl"
+                          disabled={loading}
+                          autoComplete="current-password"
                         />
                       </div>
-                    )}
+                    </div>
 
                     <Button
                       type="submit"
-                      disabled={isLoading}
-                      className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold mt-1 shadow-lg shadow-blue-950/50 transition-all active:scale-[.98]"
+                      className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold h-10 shadow-sm transition-all text-sm mt-2"
+                      disabled={loading}
                     >
-                      {isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : isForgotMode ? (
-                        'Enviar link de recuperação'
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Validando credenciais...
+                        </span>
                       ) : (
-                        'Entrar no Sistema'
+                        <span className="flex items-center justify-center gap-2">
+                          Continuar para Verificação
+                          <ArrowRight className="h-4 w-4" />
+                        </span>
+                      )}
+                    </Button>
+                  </form>
+                )}
+
+                {/* ETAPA 2: MFA / OTP */}
+                {step === 'MFA' && (
+                  <form onSubmit={handleMfaSubmit} className="space-y-4">
+                    <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-1">
+                      <div className="flex items-center justify-between font-medium text-slate-700">
+                        <span>Usuário autenticado:</span>
+                        <span className="text-blue-700 font-semibold">{email}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Um código numérico de 6 dígitos foi gerado para confirmação do seu acesso.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="otp" className="text-xs font-semibold text-slate-800">
+                        CÓDIGO OTP (6 DÍGITOS)
+                      </Label>
+                      <Input
+                        ref={otpInputRef}
+                        id="otp"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={otp}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 6)
+                          setOtp(val)
+                        }}
+                        className="text-center font-mono text-xl tracking-[0.4em] font-bold h-12 border-slate-300 focus:border-blue-700 focus:ring-blue-700 bg-white"
+                        required
+                        disabled={loading}
+                      />
+                      <p className="text-[11px] text-slate-400">
+                        Digite os 6 números ou cole diretamente o código.
+                      </p>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold h-11 shadow-sm transition-all text-sm"
+                      disabled={loading || otp.length !== 6}
+                    >
+                      {loading ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                          Validando...
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          <ShieldCheck className="h-4 w-4" />
+                          Validar e Entrar
+                        </span>
                       )}
                     </Button>
 
-                    {isForgotMode && (
-                      <Button
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                      <button
                         type="button"
-                        variant="ghost"
-                        onClick={() => setIsForgotMode(false)}
-                        className="text-white/50 hover:text-white text-xs h-9"
+                        onClick={() => {
+                          setStep('LOGIN')
+                          setOtp('')
+                          setError(null)
+                        }}
+                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
                       >
                         ← Voltar ao login
-                      </Button>
-                    )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={resendCooldown > 0 || loading}
+                        className="text-blue-700 hover:text-blue-800 font-semibold disabled:text-slate-400 disabled:cursor-not-allowed"
+                      >
+                        {resendCooldown > 0
+                          ? `Reenviar código em ${resendCooldown}s`
+                          : 'Reenviar código'}
+                      </button>
+                    </div>
                   </form>
-                </div>
-              )}
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col items-center gap-6">
-              <div className="text-center">
-                <h2 className="font-serif text-2xl font-bold text-white">Conectar WhatsApp</h2>
-                <p className="text-white/40 text-sm mt-1">Abra o app e escaneie o QR Code</p>
-              </div>
-              <div className="w-52 h-52 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-xl shadow-black/50">
-                {isGenerating ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    <p className="text-xs text-primary font-medium animate-pulse">Gerando...</p>
-                  </div>
-                ) : qrCodeBase64 ? (
-                  <img
-                    src={
-                      qrCodeBase64.startsWith('data:')
-                        ? qrCodeBase64
-                        : `data:image/png;base64,${qrCodeBase64}`
-                    }
-                    alt="QR Code"
-                    className="w-44 h-44 object-contain mix-blend-multiply"
-                  />
-                ) : pollErrors >= 1 ? (
-                  <div className="flex flex-col items-center gap-3 p-4 text-center">
-                    <p className="text-sm text-red-500 font-medium">Conexão instável</p>
-                    <Button variant="outline" size="sm" onClick={generateQrCode}>
-                      Tentar novamente
-                    </Button>
-                  </div>
-                ) : (
-                  <QrCode className="w-16 h-16 text-gray-200" />
                 )}
-              </div>
-              <p className="text-center text-xs text-white/30 leading-relaxed">
-                No WhatsApp, acesse{' '}
-                <span className="text-white/50 font-medium">Aparelhos Conectados</span> e aponte a
-                câmera.
-              </p>
-            </div>
-          )}
+              </CardContent>
 
-          {step === 3 && (
-            <div className="flex flex-col items-center gap-6">
-              <div className="text-center">
-                <div className="w-14 h-14 rounded-2xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center mx-auto mb-4">
-                  <RefreshCcw className="w-6 h-6 text-blue-400 animate-spin" />
+              <CardFooter className="bg-slate-50/80 border-t border-slate-100 px-6 py-3.5 flex items-center justify-between text-[11px] text-slate-500">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Sessão Protegida por Criptografia</span>
                 </div>
-                <h2 className="font-serif text-2xl font-bold text-white">Sincronizando</h2>
-                <p className="text-white/40 text-sm mt-1">Puxando seu histórico de conversas</p>
-              </div>
-              <div className="w-full flex flex-col gap-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/40 font-medium">Importando conversas...</span>
-                  <span className="text-blue-400 font-bold tabular-nums">{syncProgress}%</span>
+                <span>CIAFAL v2.4</span>
+              </CardFooter>
+            </Card>
+
+            {/* Guia Informativo Discreto de Homologação */}
+            {isHomologation && (
+              <div className="mt-4 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900/90 space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold text-blue-900">
+                  <Info className="h-3.5 w-3.5 text-blue-700" />
+                  <span>Ambiente de Testes / Homologação:</span>
                 </div>
-                <Progress
-                  value={syncProgress}
-                  className="h-1.5 bg-white/8 [&>div]:bg-primary [&>div]:transition-all"
-                />
+                <p className="text-slate-600 leading-normal">
+                  Usuários oficiais de teste aceitam a senha institucional de homologação e o código
+                  OTP padrão.
+                </p>
               </div>
-              <p className="text-center text-xs text-white/20 leading-relaxed">
-                Você será redirecionado automaticamente assim que terminar.
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </main>
 
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0.3; }
-        }
-
-        /* Inputs escuros com texto branco — override confiável via CSS */
-        .dark-inputs input {
-          background-color: rgba(6, 20, 36, 0.7) !important;
-          color: rgba(255, 255, 255, 0.9) !important;
-          border-color: rgba(255, 255, 255, 0.15) !important;
-        }
-        .dark-inputs input::placeholder {
-          color: rgba(255, 255, 255, 0.25) !important;
-        }
-        /* Override do autofill do browser (Chrome/Safari) */
-        .dark-inputs input:-webkit-autofill,
-        .dark-inputs input:-webkit-autofill:hover,
-        .dark-inputs input:-webkit-autofill:focus {
-          -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
-          -webkit-box-shadow: 0 0 0 1000px #061424 inset !important;
-          transition: background-color 5000s ease-in-out 0s;
-        }
-      `}</style>
+      {/* Rodapé Corporativo */}
+      <footer className="border-t border-slate-200/80 bg-white/80 backdrop-blur py-3 px-6 text-center text-xs text-slate-500">
+        © {new Date().getFullYear()} CIAFAL — Todos os direitos reservados. Sistema Corporativo
+        Integrado de Gestão Comercial.
+      </footer>
     </div>
   )
 }

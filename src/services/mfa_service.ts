@@ -2,14 +2,26 @@ import pb from '@/lib/pocketbase/client'
 
 export interface MfaRequestResult {
   success: boolean
+  challenge_token?: string
   message?: string
   is_qas_fixed_active?: boolean
+  environment?: 'HOMOLOGATION' | 'PRODUCTION'
   error?: string
 }
 
 export interface MfaVerifyResult {
   valid: boolean
   mfa_mode?: 'FIXED_QAS' | 'REAL_OTP' | string
+  user_details?: {
+    id: string
+    email: string
+    name: string
+    role: string
+    employee_id?: string
+    seller_code?: string
+    ramal?: string
+    telefone_corporativo?: string
+  }
   message?: string
   error?: string
 }
@@ -81,7 +93,9 @@ export function getFixedTestOtpCode(): string {
     import.meta.env.VITE_FIXED_TEST_OTP ||
     import.meta.env.FIXED_TEST_OTP ||
     '123456'
-  ).toString()
+  )
+    .toString()
+    .trim()
 }
 
 /**
@@ -161,7 +175,7 @@ export function resetRateLimit(email: string): void {
 }
 
 /**
- * Registra log de auditoria no PocketBase sem registrar o código OTP (REDACTED)
+ * Registra log de auditoria sem registrar senha ou código OTP (REDACTED)
  */
 export async function logMfaAudit(
   email: string,
@@ -173,7 +187,6 @@ export async function logMfaAudit(
   const isTestDomain =
     normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
 
-  // Em modo QAS / domínios de teste, não chamar PocketBase
   if (isFixedTestOtpEnabled() || isTestDomain) {
     return
   }
@@ -191,7 +204,7 @@ export async function logMfaAudit(
       },
     })
   } catch {
-    // Falha silenciosa em caso de offline/mock sem banco
+    // Falha silenciosa
   }
 }
 
@@ -200,14 +213,14 @@ export async function logMfaAudit(
  */
 export function requiresMfa(email: string, role?: string): boolean {
   const normalized = (email || '').trim().toLowerCase()
-  // Usuários de teste e perfis com obrigatoriedade de MFA
   if (
     normalized === 'representante.teste@crm360.local' ||
     normalized === 'admin.teste@ciafal.local' ||
     normalized === 'supervisor.teste@ciafal.local' ||
     normalized === 'vendedor.teste@ciafal.local' ||
     normalized === 'vendedor2.teste@ciafal.local' ||
-    role === 'representante_externo'
+    role === 'representante_externo' ||
+    role === 'REPRESENTANTE_EXTERNO'
   ) {
     return true
   }
@@ -215,7 +228,7 @@ export function requiresMfa(email: string, role?: string): boolean {
 }
 
 /**
- * Solicita emissão de OTP
+ * Solicita emissão de OTP ou desafio MFA
  */
 export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
   const normalizedEmail = (email || '').trim().toLowerCase()
@@ -227,8 +240,10 @@ export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
   if (isFixed || isTestDomain) {
     return {
       success: true,
+      challenge_token: `mfa_ch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       message: 'Código de verificação gerado para o ambiente de testes.',
       is_qas_fixed_active: true,
+      environment: 'HOMOLOGATION',
     }
   }
 
@@ -255,20 +270,27 @@ export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
 
   return {
     success: true,
+    challenge_token: `mfa_ch_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     message: 'Código de verificação enviado.',
     is_qas_fixed_active: false,
+    environment: 'PRODUCTION',
   }
 }
 
 /**
- * Valida o código OTP diretamente no frontend com auditoria e rate limiting
+ * Valida o código OTP com auditoria, normalização estrita de string e rate limiting
  */
-export async function verifyOtp(email: string, otp: string): Promise<MfaVerifyResult> {
+export async function verifyOtp(
+  email: string,
+  otp: string | number,
+  challengeToken?: string,
+): Promise<MfaVerifyResult> {
   const normalizedEmail = (email || '').trim().toLowerCase()
-  const trimmedCode = (otp || '').trim()
+  // Sempre tratar como string de 6 caracteres sem remover zero inicial
+  const trimmedCode = String(otp ?? '').trim()
 
   if (!normalizedEmail || !trimmedCode) {
-    return { valid: false, error: 'E-mail e código OTP são obrigatórios' }
+    return { valid: false, error: 'E-mail e código OTP são obrigatórios.' }
   }
 
   // 1. Rate Limiting Check
@@ -288,7 +310,7 @@ export async function verifyOtp(email: string, otp: string): Promise<MfaVerifyRe
     }
   }
 
-  // 2. Verificação de QAS Fixed OTP
+  // 2. Verificação de Homologação / Fixed OTP
   if (isFixedTestOtpEnabled()) {
     const fixedCode = getFixedTestOtpCode()
     if (trimmedCode === fixedCode) {
@@ -297,26 +319,26 @@ export async function verifyOtp(email: string, otp: string): Promise<MfaVerifyRe
       return {
         valid: true,
         mfa_mode: 'FIXED_QAS',
-        message: 'MFA validado com sucesso via OTP QAS.',
+        message: 'MFA validado com sucesso via OTP de homologação.',
       }
     } else {
       recordFailedAttempt(normalizedEmail)
       await logMfaAudit(normalizedEmail, 'FIXED_QAS', false, 'Código inválido (FIXED_QAS)')
       return {
         valid: false,
-        error: 'Código inválido',
+        error: 'Código de verificação inválido.',
       }
     }
   }
 
-  // 3. Produção ou Fixed OTP Desabilitado: Validação com OTP dinâmico
+  // 3. Produção: Validação com OTP dinâmico
   try {
     const records = await pb.collection('mock_emails').getList(1, 5, {
       filter: `recipient = '${normalizedEmail}' && status = 'VALID'`,
       sort: '-created',
     })
 
-    const matching = records.items.find((r: any) => r.otp_code === trimmedCode)
+    const matching = records.items.find((r: any) => String(r.otp_code).trim() === trimmedCode)
     if (matching) {
       try {
         await pb.collection('mock_emails').update(matching.id, {
@@ -345,7 +367,7 @@ export async function verifyOtp(email: string, otp: string): Promise<MfaVerifyRe
 
   return {
     valid: false,
-    error: 'Código inválido',
+    error: 'Código de verificação inválido.',
   }
 }
 

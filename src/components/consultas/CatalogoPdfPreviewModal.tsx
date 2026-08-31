@@ -64,7 +64,9 @@ export function CatalogoPdfPreviewModal({
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState<'preview' | 'produtos' | 'enviar' | 'config'>('preview')
+  const [activeTab, setActiveTab] = useState<'preview' | 'produtos' | 'enviar' | 'config'>(
+    'preview',
+  )
   const [paginaAtual, setPaginaAtual] = useState(1)
 
   // Estado editável dos produtos na prévia
@@ -80,7 +82,9 @@ export function CatalogoPdfPreviewModal({
     catalogo?.configuracao.incluirDadosTecnicos ?? true,
   )
   const [incluirNormas, setIncluirNormas] = useState(catalogo?.configuracao.incluirNormas ?? true)
-  const [incluirPesos, setIncluirPesos] = useState(catalogo?.configuracao.incluirPesosTeoricos ?? true)
+  const [incluirPesos, setIncluirPesos] = useState(
+    catalogo?.configuracao.incluirPesosTeoricos ?? true,
+  )
   const [incluirCrossSell, setIncluirCrossSell] = useState(
     catalogo?.configuracao.incluirCrossSellSugerido ?? true,
   )
@@ -88,7 +92,9 @@ export function CatalogoPdfPreviewModal({
   // Estados de envio
   const [canalEnvio, setCanalEnvio] = useState<'EMAIL' | 'WHATSAPP'>('WHATSAPP')
   const [destinatarioNome, setDestinatarioNome] = useState(
-    catalogo?.clienteNome ? `Engenharia / Suprimentos (${catalogo.clienteNome})` : 'Equipe Técnica & Compras',
+    catalogo?.clienteNome
+      ? `Engenharia / Suprimentos (${catalogo.clienteNome})`
+      : 'Equipe Técnica & Compras',
   )
   const [destinatarioContato, setDestinatarioContato] = useState(
     catalogo?.clienteTelefone || catalogo?.clienteEmail || '(31) 98765-4321',
@@ -108,7 +114,9 @@ export function CatalogoPdfPreviewModal({
       setIncluirPesos(catalogo.configuracao.incluirPesosTeoricos)
       setIncluirCrossSell(catalogo.configuracao.incluirCrossSellSugerido)
       setDestinatarioNome(
-        catalogo.clienteNome ? `Engenharia / Suprimentos (${catalogo.clienteNome})` : 'Equipe Técnica & Compras',
+        catalogo.clienteNome
+          ? `Engenharia / Suprimentos (${catalogo.clienteNome})`
+          : 'Equipe Técnica & Compras',
       )
       setDestinatarioContato(catalogo.clienteTelefone || catalogo.clienteEmail || '(31) 98765-4321')
 
@@ -362,7 +370,7 @@ export function CatalogoPdfPreviewModal({
                         </h2>
                         <span className="text-xs uppercase tracking-widest text-slate-600 font-bold block">
                           COMPANHIA INDUSTRIAL DE AÇOS E FERRAGENS
-                        </h2>
+                        </span>
                       </div>
                     </div>
                     <div className="h-1.5 w-24 bg-[#003A70] rounded-full" />
@@ -371,7 +379,9 @@ export function CatalogoPdfPreviewModal({
                   {/* Centro da Capa */}
                   <div className="space-y-6 my-12">
                     <span className="inline-block px-3 py-1 rounded-full bg-sky-50 text-[#003A70] border border-sky-200 text-xs font-bold uppercase tracking-wider">
-                      {modo === 'TECNICO' ? 'Catálogo Técnico Corporativo' : 'Catálogo Comercial de Produtos'}
+                      {modo === 'TECNICO'
+                        ? 'Catálogo Técnico Corporativo'
+                        : 'Catálogo Comercial de Produtos'}
                     </span>
                     <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-serif leading-tight">
                       {catalogo.configuracao.titulo}
@@ -391,7 +401,8 @@ export function CatalogoPdfPreviewModal({
                           {catalogo.clienteNome}
                         </div>
                         <div className="text-xs text-slate-600 font-mono">
-                          Código SAP: {catalogo.clienteSap || '0001088041'} · Validade: {catalogo.configuracao.validadeDias} dias
+                          Código SAP: {catalogo.clienteSap || '0001088041'} · Validade:{' '}
+                          {catalogo.configuracao.validadeDias} dias
                         </div>
                       </div>
                     )}
@@ -441,7 +452,9 @@ export function CatalogoPdfPreviewModal({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-medium">
-                      {modo === 'TECNICO' ? 'Especificações Técnicas de Produtos' : 'Soluções Comerciais em Aço'}
+                      {modo === 'TECNICO'
+                        ? 'Especificações Técnicas de Produtos'
+                        : 'Soluções Comerciais em Aço'}
                     </span>
                   </div>
 
@@ -492,7 +505,9 @@ export function CatalogoPdfPreviewModal({
                                 <span className="text-slate-400 block font-bold text-[9px] uppercase">
                                   Qualidade do Aço
                                 </span>
-                                <span className="font-semibold text-slate-800">{p.qualidadeAco}</span>
+                                <span className="font-semibold text-slate-800">
+                                  {p.qualidadeAco}
+                                </span>
                               </div>
 
                               {incluirNormas && (
@@ -500,7 +515,9 @@ export function CatalogoPdfPreviewModal({
                                   <span className="text-slate-400 block font-bold text-[9px] uppercase">
                                     Norma Técnica
                                   </span>
-                                  <span className="font-semibold text-slate-800">{p.normaTecnica}</span>
+                                  <span className="font-semibold text-slate-800">
+                                    {p.normaTecnica}
+                                  </span>
                                 </div>
                               )}
 
@@ -522,7 +539,9 @@ export function CatalogoPdfPreviewModal({
                                 <span className="text-slate-400 block font-bold text-[9px] uppercase">
                                   Comprimento
                                 </span>
-                                <span className="font-semibold text-slate-800">{p.comprimento}</span>
+                                <span className="font-semibold text-slate-800">
+                                  {p.comprimento}
+                                </span>
                               </div>
                             </div>
                           )}
@@ -534,36 +553,39 @@ export function CatalogoPdfPreviewModal({
                       ))}
 
                     {/* Seção de Cross Sell Sugerido ("Outras Soluções CIAFAL") */}
-                    {incluirCrossSell && crossSellProdutos.length > 0 && paginaAtual === totalPaginas && (
-                      <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3 mt-4">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-purple-700" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900">
-                            {catalogo.configuracao.tituloSecaoCrossSell || 'Outras Soluções Complementares CIAFAL'}
-                          </h4>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          {crossSellProdutos.map((cs) => (
-                            <div
-                              key={cs.id}
-                              className="p-2.5 bg-white rounded-lg border border-purple-100 flex flex-col justify-between"
-                            >
-                              <div className="font-bold text-slate-900">{cs.descricaoComercial}</div>
-                              <div className="text-[11px] text-slate-500 font-mono mt-1">
-                                {cs.codigo} · {cs.normaTecnica}
+                    {incluirCrossSell &&
+                      crossSellProdutos.length > 0 &&
+                      paginaAtual === totalPaginas && (
+                        <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3 mt-4">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-purple-700" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900">
+                              {catalogo.configuracao.tituloSecaoCrossSell ||
+                                'Outras Soluções Complementares CIAFAL'}
+                            </h4>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            {crossSellProdutos.map((cs) => (
+                              <div
+                                key={cs.id}
+                                className="p-2.5 bg-white rounded-lg border border-purple-100 flex flex-col justify-between"
+                              >
+                                <div className="font-bold text-slate-900">
+                                  {cs.descricaoComercial}
+                                </div>
+                                <div className="text-[11px] text-slate-500 font-mono mt-1">
+                                  {cs.codigo} · {cs.normaTecnica}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   {/* Rodapé Interno com Numeração */}
                   <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>
-                      CIAFAL FERRO & AÇO · Catálogo Comercial {catalogo.codigoVersao}
-                    </span>
+                    <span>CIAFAL FERRO & AÇO · Catálogo Comercial {catalogo.codigoVersao}</span>
                     <span>
                       Página {paginaAtual} de {totalPaginas}
                     </span>
@@ -728,7 +750,9 @@ export function CatalogoPdfPreviewModal({
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-bold text-slate-800 block">Capa Institucional CIAFAL</span>
+                    <span className="font-bold text-slate-800 block">
+                      Capa Institucional CIAFAL
+                    </span>
                     <span className="text-[11px] text-slate-500">
                       Inclui logotipo oficial, identificação do cliente e consultor
                     </span>
@@ -761,7 +785,9 @@ export function CatalogoPdfPreviewModal({
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-bold text-slate-800 block">Pesos Teóricos e Unidades SI</span>
+                    <span className="font-bold text-slate-800 block">
+                      Pesos Teóricos e Unidades SI
+                    </span>
                     <span className="text-[11px] text-slate-500">
                       Exibe pesos nominais padronizados em kg/m e t
                     </span>
@@ -792,7 +818,8 @@ export function CatalogoPdfPreviewModal({
                   Enviar Catálogo via Canal Corporativo
                 </h3>
                 <p className="text-slate-500">
-                  O envio será registrado na timeline do cliente e congelará esta versão para auditoria.
+                  O envio será registrado na timeline do cliente e congelará esta versão para
+                  auditoria.
                 </p>
               </div>
 
@@ -826,7 +853,9 @@ export function CatalogoPdfPreviewModal({
                   <Mail className="w-5 h-5 text-[#003A70]" />
                   <div className="text-left">
                     <span className="block font-bold">E-mail Corporativo</span>
-                    <span className="text-[10px] text-slate-500">Com anexo em PDF de alta resolução</span>
+                    <span className="text-[10px] text-slate-500">
+                      Com anexo em PDF de alta resolução
+                    </span>
                   </div>
                 </button>
               </div>
@@ -850,7 +879,9 @@ export function CatalogoPdfPreviewModal({
                   <Input
                     value={destinatarioContato}
                     onChange={(e) => setDestinatarioContato(e.target.value)}
-                    placeholder={canalEnvio === 'WHATSAPP' ? '(31) 98765-4321' : 'compras@empresa.com.br'}
+                    placeholder={
+                      canalEnvio === 'WHATSAPP' ? '(31) 98765-4321' : 'compras@empresa.com.br'
+                    }
                     className="h-8 text-xs"
                   />
                 </div>
@@ -872,8 +903,9 @@ export function CatalogoPdfPreviewModal({
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 text-[11px] text-blue-900">
                 <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0" />
                 <span>
-                  <strong>Garantia de Governança:</strong> Este catálogo não contém dados internos de
-                  margem, custo ou estoque global. Apenas dados técnicos e comerciais oficiais serão enviados.
+                  <strong>Garantia de Governança:</strong> Este catálogo não contém dados internos
+                  de margem, custo ou estoque global. Apenas dados técnicos e comerciais oficiais
+                  serão enviados.
                 </span>
               </div>
 
@@ -893,7 +925,9 @@ export function CatalogoPdfPreviewModal({
                   className="h-8 text-xs font-bold bg-[#003A70] text-white hover:bg-[#002850] gap-1.5"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  {enviando ? 'Enviando...' : `Confirmar Envio por ${canalEnvio === 'EMAIL' ? 'E-mail' : 'WhatsApp'}`}
+                  {enviando
+                    ? 'Enviando...'
+                    : `Confirmar Envio por ${canalEnvio === 'EMAIL' ? 'E-mail' : 'WhatsApp'}`}
                 </Button>
               </div>
             </div>

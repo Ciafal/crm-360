@@ -2,6 +2,21 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import pb from '@/lib/pocketbase/client'
 import { isFixedTestOtpEnabled } from '@/services/mfa_service'
 
+export interface CiafalAuthUser {
+  id: string
+  email: string
+  name: string
+  role: 'ADMIN' | 'SUPERVISOR' | 'VENDEDOR' | 'REPRESENTANTE_EXTERNO' | string
+  employee_id?: string
+  seller_code?: string
+  ramal?: string
+  telefone_corporativo?: string
+  active?: boolean
+  is_test_user?: boolean
+  environment?: string
+  avatar?: string
+}
+
 interface AuthContextType {
   user: any
   signUp: (
@@ -23,41 +38,119 @@ export const useAuth = () => {
   return context
 }
 
+// Mapa unificado dos usuários oficiais de homologação
+const OFFICIAL_HOMOLOGATION_USERS: Record<string, Partial<CiafalAuthUser>> = {
+  'admin.teste@ciafal.local': {
+    id: 'usr-admin-teste',
+    name: 'Administrador Teste CRM',
+    role: 'ADMIN',
+    employee_id: 'TEST-ADM-01',
+    seller_code: 'ADM-TESTE',
+    ramal: '4099',
+    telefone_corporativo: '(11) 98888-0000',
+    active: true,
+    is_test_user: true,
+  },
+  'supervisor.teste@ciafal.local': {
+    id: 'usr-supervisor-teste',
+    name: 'Supervisor Teste CRM',
+    role: 'SUPERVISOR',
+    employee_id: 'TEST-SUP-01',
+    seller_code: 'SUP-TESTE',
+    ramal: '4090',
+    telefone_corporativo: '(11) 98888-0001',
+    active: true,
+    is_test_user: true,
+  },
+  'vendedor.teste@ciafal.local': {
+    id: 'usr-vendedor-teste',
+    name: 'Vendedor Teste CRM',
+    role: 'VENDEDOR',
+    employee_id: 'TEST-VEND-01',
+    seller_code: 'VEND-TEST-01',
+    ramal: '4091',
+    telefone_corporativo: '(11) 98888-0002',
+    active: true,
+    is_test_user: true,
+  },
+  'vendedor2.teste@ciafal.local': {
+    id: 'usr-vendedor2-teste',
+    name: 'Vendedor 2 Teste CRM',
+    role: 'VENDEDOR',
+    employee_id: 'TEST-VEND-02',
+    seller_code: 'VEND-TEST-02',
+    ramal: '4092',
+    telefone_corporativo: '(11) 98888-0003',
+    active: true,
+    is_test_user: true,
+  },
+  'representante.teste@crm360.local': {
+    id: 'usr-rep-teste',
+    name: 'Representante Externo Teste',
+    role: 'REPRESENTANTE_EXTERNO',
+    employee_id: 'TEST-REP-01',
+    seller_code: 'REP-EXT-01',
+    ramal: '4095',
+    telefone_corporativo: '(11) 98888-0005',
+    active: true,
+    is_test_user: true,
+  },
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<any>(() => {
     try {
-      const qasSession = localStorage.getItem('qas_session')
+      const qasSession =
+        localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
       if (qasSession) {
         const parsed = JSON.parse(qasSession)
-        if (parsed && !parsed.role) {
-          return { ...parsed, role: 'gerente_comercial' }
-        }
-        return parsed
+        if (parsed) return parsed
       }
     } catch {
-      /* ignore JSON parse errors */
+      /* ignore parse error */
     }
 
     const rec = pb.authStore.record
     if (rec && !rec.role) {
-      return { ...rec, role: 'gerente_comercial' }
+      return { ...rec, role: 'ADMIN' }
     }
     return rec
   })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Se houver sessão sintética QAS no localStorage, não inicializar listeners do PocketBase
-    if (localStorage.getItem('qas_session')) {
-      setLoading(false)
-      return
+    // 1. Se existir sessão no localStorage
+    const savedSession =
+      localStorage.getItem('ciafal_crm_session') || localStorage.getItem('qas_session')
+    if (savedSession) {
+      try {
+        const parsed = JSON.parse(savedSession)
+        if (parsed) {
+          setUser(parsed)
+          setLoading(false)
+          return
+        }
+      } catch {
+        /* ignore */
+      }
     }
 
+    // 2. Se houver autenticação PocketBase válida
     const unsubscribe = pb.authStore.onChange((_token, record) => {
-      if (record && !record.role) {
-        setUser({ ...record, role: 'gerente_comercial' })
+      if (record) {
+        const mappedRole = (record.role || 'ADMIN').toUpperCase()
+        setUser({ ...record, role: mappedRole })
       } else {
-        setUser(record)
+        const fallback = localStorage.getItem('ciafal_crm_session')
+        if (fallback) {
+          try {
+            setUser(JSON.parse(fallback))
+          } catch {
+            setUser(null)
+          }
+        } else {
+          setUser(null)
+        }
       }
     })
 
@@ -66,13 +159,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .authRefresh()
         .then((authData) => {
           const rec = authData.record
-          if (rec && !rec.role) {
-            setUser({ ...rec, role: 'gerente_comercial' })
-          } else {
-            setUser(rec)
+          const mappedRole = (rec?.role || 'ADMIN').toUpperCase()
+          setUser({ ...rec, role: mappedRole })
+        })
+        .catch(() => {
+          if (!localStorage.getItem('ciafal_crm_session')) {
+            pb.authStore.clear()
+            setUser(null)
           }
         })
-        .catch(() => pb.authStore.clear())
         .finally(() => setLoading(false))
     } else {
       setLoading(false)
@@ -99,99 +194,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       normalizedEmail.endsWith('@ciafal.local') || normalizedEmail.endsWith('@crm360.local')
     const isTestPassword = password === 'teste123'
 
-    // Para credenciais de teste QAS, autentica diretamente sem consultar PocketBase
+    // Para credenciais de teste homologação
     if (isTestDomain) {
       if (isTestPassword) {
-        // Mapeamento de Role e Nome a partir do email
-        const getRoleAndDetails = (e: string) => {
-          if (e.startsWith('admin')) {
-            return {
-              role: 'administrador',
-              name: 'Administrador Teste CRM',
-              employee_id: 'TEST-ADM-01',
-              seller_code: 'ADM-TESTE',
-              ramal: '4099',
-              telefone_corporativo: '(11) 98888-0000',
-            }
-          }
-          if (e.startsWith('supervisor')) {
-            return {
-              role: 'supervisor',
-              name: 'Supervisor Teste CRM',
-              employee_id: 'TEST-SUP-01',
-              seller_code: 'SUP-TESTE',
-              ramal: '4090',
-              telefone_corporativo: '(11) 98888-0001',
-            }
-          }
-          if (e.startsWith('representante')) {
-            return {
-              role: 'representante_externo',
-              name: 'Representante Externo Teste',
-              employee_id: 'TEST-REP-01',
-              seller_code: 'REP-EXT-01',
-              ramal: '4095',
-              telefone_corporativo: '(11) 98888-0005',
-            }
-          }
-          if (e.startsWith('vendedor2')) {
-            return {
-              role: 'vendedor',
-              name: 'Vendedor 2 Teste CRM',
-              employee_id: 'TEST-VEND-02',
-              seller_code: 'VEND-TEST-02',
-              ramal: '4092',
-              telefone_corporativo: '(11) 98888-0003',
-            }
-          }
-          // default / vendedor
-          return {
-            role: 'vendedor',
-            name: 'Vendedor Teste CRM',
-            employee_id: 'TEST-VEND-01',
-            seller_code: 'VEND-TEST-01',
-            ramal: '4091',
-            telefone_corporativo: '(11) 98888-0002',
-          }
+        const official = OFFICIAL_HOMOLOGATION_USERS[normalizedEmail] || {
+          id: `usr-${normalizedEmail.split('@')[0]}`,
+          name: 'Usuário Homologação',
+          role: 'VENDEDOR',
         }
 
-        const details = getRoleAndDetails(normalizedEmail)
-        const prefix = normalizedEmail.split('@')[0].replace(/[^a-zA-Z0-9_-]/g, '_')
-
-        const qasUser = {
-          id: `qas-${prefix}`,
+        const authUser: CiafalAuthUser = {
+          id: official.id || `usr-${normalizedEmail.split('@')[0]}`,
           email: normalizedEmail,
-          username: prefix,
-          name: details.name,
-          role: details.role,
-          employee_id: details.employee_id,
-          seller_code: details.seller_code,
-          ramal: details.ramal,
-          telefone_corporativo: details.telefone_corporativo,
+          name: official.name || 'Usuário CRM',
+          role: official.role || 'VENDEDOR',
+          employee_id: official.employee_id,
+          seller_code: official.seller_code,
+          ramal: official.ramal,
+          telefone_corporativo: official.telefone_corporativo,
           active: true,
           is_test_user: true,
-          verified: true,
-          emailVisibility: true,
+          environment: 'HOMOLOGAÇÃO',
         }
 
         try {
-          localStorage.setItem('qas_session', JSON.stringify(qasUser))
+          localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
+          localStorage.setItem('qas_session', JSON.stringify(authUser))
         } catch {
           /* ignore storage error */
         }
 
-        setUser(qasUser)
+        setUser(authUser)
+
+        // Tentar autenticar silenciosamente no PocketBase para token de API se existir
+        try {
+          await pb.collection('users').authWithPassword(email, password)
+        } catch {
+          /* PocketBase auth opcional em homologação */
+        }
+
         return { error: null }
       } else {
-        return { error: new Error('Credenciais de teste inválidas') }
+        return { error: new Error('Usuário ou senha inválidos.') }
       }
     }
 
+    // Fluxo padrão para usuários institucionais (@ciafal.com.br)
     try {
-      await pb.collection('users').authWithPassword(email, password)
+      const res = await pb.collection('users').authWithPassword(email, password)
+      const rec = res.record
+      const mappedRole = (rec?.role || 'VENDEDOR').toUpperCase()
+
+      const authUser: CiafalAuthUser = {
+        id: rec.id,
+        email: rec.email,
+        name: rec.name || rec.username || 'Colaborador CIAFAL',
+        role: mappedRole,
+        employee_id: rec.employee_id,
+        seller_code: rec.seller_code,
+        ramal: rec.ramal,
+        telefone_corporativo: rec.telefone_corporativo,
+        active: rec.active !== false,
+        environment: isFixedTestOtpEnabled() ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+      }
+
+      try {
+        localStorage.setItem('ciafal_crm_session', JSON.stringify(authUser))
+      } catch {
+        /* ignore */
+      }
+
+      setUser(authUser)
       return { error: null }
     } catch (error: any) {
-      return { error }
+      return { error: new Error('Usuário ou senha inválidos.') }
     }
   }
 
@@ -214,9 +290,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = () => {
     try {
+      localStorage.removeItem('ciafal_crm_session')
       localStorage.removeItem('qas_session')
     } catch {
-      /* ignore storage error */
+      /* ignore */
     }
     try {
       pb.authStore.clear()
