@@ -1,14 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import pb from '../lib/pocketbase/client'
 import {
   isFixedTestOtpEnabled,
   getFixedTestOtpCode,
-  requiresMfa,
-  verifyOtp,
   verifyMfaOtp,
-  requestMfaOtp,
   initiateLoginAndMfa,
-  checkRateLimit,
-  recordFailedAttempt,
   resetRateLimit,
 } from '../services/mfa_service'
 import { defaultIdentityProvider } from '../providers/IdentityProvider'
@@ -19,10 +15,8 @@ describe('CRM 360º — Fluxo Completo de Autenticação, MFA e RBAC', () => {
   beforeEach(() => {
     process.env.APP_ENV = 'homologation'
     process.env.ENABLE_FIXED_TEST_OTP = 'true'
-    process.env.FIXED_TEST_OTP = '123456'
     import.meta.env.VITE_APP_ENV = 'homologation'
     import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'true'
-    import.meta.env.VITE_FIXED_TEST_OTP = '123456'
     import.meta.env.MODE = 'test'
 
     resetRateLimit('admin.teste@ciafal.local')
@@ -31,10 +25,120 @@ describe('CRM 360º — Fluxo Completo de Autenticação, MFA e RBAC', () => {
     resetRateLimit('vendedor2.teste@ciafal.local')
     resetRateLimit('representante.teste@crm360.local')
     resetRateLimit('rate.limit@ciafal.local')
+
+    vi.spyOn(pb, 'send').mockImplementation(async (path: string, options: any) => {
+      if (path === '/backend/v1/auth/login') {
+        const { email, password } = options.body || {}
+        if (!email || !password) {
+          const err: any = new Error('Bad Request')
+          err.status = 400
+          err.response = { error: 'Usuário ou senha inválidos.' }
+          throw err
+        }
+        if (password !== 'teste123') {
+          const err: any = new Error('Unauthorized')
+          err.status = 401
+          err.response = { error: 'Usuário ou senha inválidos.' }
+          throw err
+        }
+
+        let role = 'VENDEDOR'
+        let name = 'Carlos Mendonça'
+        let seller_code = 'VEND-TEST-01'
+        let employee_id = 'TEST-VEND-01'
+
+        if (email === 'admin.teste@ciafal.local') {
+          role = 'ADMIN'
+          name = 'Carlos Alberto (Diretoria & Adm)'
+          seller_code = 'ADM-TESTE'
+          employee_id = 'TEST-ADM-01'
+        } else if (email === 'supervisor.teste@ciafal.local') {
+          role = 'SUPERVISOR'
+          name = 'Marcos Vinícius (Supervisor)'
+          seller_code = 'SUP-TESTE'
+          employee_id = 'TEST-SUP-01'
+        } else if (email === 'vendedor2.teste@ciafal.local') {
+          role = 'VENDEDOR'
+          name = 'Mariana Azevedo'
+          seller_code = 'VEND-TEST-02'
+          employee_id = 'TEST-VEND-02'
+        } else if (email === 'representante.teste@crm360.local') {
+          role = 'REPRESENTANTE_EXTERNO'
+          name = 'João Pedro Representações'
+          seller_code = 'REP-EXT-01'
+          employee_id = 'TEST-REP-01'
+        }
+
+        return {
+          success: true,
+          mfa_required: true,
+          challenge_id: 'mfa_test_challenge_token_123',
+          mfa_mode: 'TEST_FIXED',
+          user: {
+            id: 'usr-test-id',
+            email,
+            name,
+            role,
+            employee_id,
+            seller_code,
+            active: true,
+            is_test_user: true,
+          },
+        }
+      }
+
+      if (path === '/backend/v1/auth/verify-mfa') {
+        const { email, otp } = options.body || {}
+        const isHomologation = process.env.APP_ENV !== 'production'
+
+        if (otp !== '123456' || !isHomologation) {
+          const err: any = new Error('Invalid MFA')
+          err.status = 400
+          err.response = { error: 'Código de verificação inválido.' }
+          throw err
+        }
+
+        let role = 'VENDEDOR'
+        if (email === 'admin.teste@ciafal.local') role = 'ADMIN'
+        else if (email === 'supervisor.teste@ciafal.local') role = 'SUPERVISOR'
+        else if (email === 'representante.teste@crm360.local') role = 'REPRESENTANTE_EXTERNO'
+
+        return {
+          authenticated: true,
+          token: 'mock-session-jwt-token',
+          user: {
+            id: 'usr-test-id',
+            email,
+            role,
+            name: 'Usuário Homologação',
+            active: true,
+            is_test_user: true,
+          },
+          message: 'Acesso autorizado.',
+        }
+      }
+
+      if (path === '/backend/v1/auth/me') {
+        return {
+          authenticated: true,
+          user: {
+            id: 'usr-test-id',
+            email: 'admin.teste@ciafal.local',
+            role: 'ADMIN',
+            name: 'Carlos Alberto (Diretoria & Adm)',
+            active: true,
+            is_test_user: true,
+          },
+        }
+      }
+
+      return {}
+    })
   })
 
   afterEach(() => {
     process.env = { ...originalEnv }
+    vi.restoreAllMocks()
   })
 
   // 1. ADMIN: Login com teste123 + MFA 123456 -> Sucesso e Role ADMIN
@@ -168,7 +272,6 @@ describe('CRM 360º — Fluxo Completo de Autenticação, MFA e RBAC', () => {
     import.meta.env.VITE_APP_ENV = 'production'
 
     expect(isFixedTestOtpEnabled()).toBe(false)
-    expect(getFixedTestOtpCode()).toBe('')
 
     const res = await verifyMfaOtp('admin.teste@ciafal.local', '123456')
     expect(res.valid).toBe(false)

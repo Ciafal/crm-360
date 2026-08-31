@@ -97,7 +97,7 @@ export function getFixedTestOtpCode(): string {
     (typeof import.meta !== 'undefined' && import.meta.env
       ? import.meta.env.VITE_FIXED_TEST_OTP || import.meta.env.FIXED_TEST_OTP
       : undefined) ||
-    '123456'
+    ''
   )
     .toString()
     .trim()
@@ -196,70 +196,16 @@ export function requiresMfa(email: string, role?: string): boolean {
  * Base autoritativa de usuários oficiais de homologação para autenticação e RBAC
  * As senhas oficiais no ambiente de testes são validadas de forma restrita e estrita.
  */
-export const HOMOLOGATION_ACCOUNTS: Record<
-  string,
-  {
-    id: string
-    name: string
-    role: 'ADMIN' | 'SUPERVISOR' | 'VENDEDOR' | 'REPRESENTANTE_EXTERNO'
-    employee_id: string
-    seller_code: string
-    ramal: string
-    telefone_corporativo: string
-    manager_id: string
-  }
-> = {
-  'admin.teste@ciafal.local': {
-    id: 'usr-admin-teste-01',
-    name: 'Carlos Alberto (Diretoria & Adm)',
-    role: 'ADMIN',
-    employee_id: 'TEST-ADM-01',
-    seller_code: 'ADM-TESTE',
-    ramal: '4099',
-    telefone_corporativo: '(11) 98888-0000',
-    manager_id: '',
-  },
-  'supervisor.teste@ciafal.local': {
-    id: 'usr-supervisor-teste-01',
-    name: 'Marcos Vinícius (Supervisor)',
-    role: 'SUPERVISOR',
-    employee_id: 'TEST-SUP-01',
-    seller_code: 'SUP-TESTE',
-    ramal: '4090',
-    telefone_corporativo: '(11) 98888-0001',
-    manager_id: '',
-  },
-  'vendedor.teste@ciafal.local': {
-    id: 'usr-vendedor-teste-01',
-    name: 'Carlos Mendonça',
-    role: 'VENDEDOR',
-    employee_id: 'TEST-VEND-01',
-    seller_code: 'VEND-TEST-01',
-    ramal: '4091',
-    telefone_corporativo: '(11) 98888-0002',
-    manager_id: 'supervisor.teste@ciafal.local',
-  },
-  'vendedor2.teste@ciafal.local': {
-    id: 'usr-vendedor2-teste-01',
-    name: 'Mariana Azevedo',
-    role: 'VENDEDOR',
-    employee_id: 'TEST-VEND-02',
-    seller_code: 'VEND-TEST-02',
-    ramal: '4092',
-    telefone_corporativo: '(11) 98888-0003',
-    manager_id: 'supervisor.teste@ciafal.local',
-  },
-  'representante.teste@crm360.local': {
-    id: 'usr-rep-teste-01',
-    name: 'João Pedro Representações',
-    role: 'REPRESENTANTE_EXTERNO',
-    employee_id: 'TEST-REP-01',
-    seller_code: 'REP-EXT-01',
-    ramal: '4095',
-    telefone_corporativo: '(11) 98888-0005',
-    manager_id: '',
-  },
-}
+/**
+ * Domínios e contas oficiais de homologação conhecidos para validações locais de formato
+ */
+export const OFFICIAL_HOMOLOGATION_EMAILS = [
+  'admin.teste@ciafal.local',
+  'supervisor.teste@ciafal.local',
+  'vendedor.teste@ciafal.local',
+  'vendedor2.teste@ciafal.local',
+  'representante.teste@crm360.local',
+] as const
 
 /**
  * Verifica se um email pertence aos domínios e contas oficiais de teste/homologação
@@ -267,30 +213,14 @@ export const HOMOLOGATION_ACCOUNTS: Record<
 export function isOfficialTestAccount(email: string): boolean {
   const normalized = (email || '').trim().toLowerCase()
   return (
-    Boolean(HOMOLOGATION_ACCOUNTS[normalized]) ||
+    OFFICIAL_HOMOLOGATION_EMAILS.includes(normalized as any) ||
     normalized.endsWith('@ciafal.local') ||
     normalized.endsWith('@crm360.local')
   )
 }
 
 /**
- * Helper para executar chamadas de backend com timeout curto (ex: 800ms)
- * para falhar rápido e seguro quando o backend estiver inacessível ou desconectado.
- */
-async function withFastTimeout<T>(promise: Promise<T>, timeoutMs = 800): Promise<T> {
-  let timer: any
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('Backend timeout')), timeoutMs)
-  })
-  try {
-    return await Promise.race([promise, timeoutPromise])
-  } finally {
-    clearTimeout(timer)
-  }
-}
-
-/**
- * Inicia o login com credenciais (validação e geração de challenge)
+ * Inicia o login com credenciais — todas as decisões ocorrem no BACKEND
  */
 export async function initiateLoginAndMfa(
   email: string,
@@ -310,105 +240,49 @@ export async function initiateLoginAndMfa(
     return { success: false, error: 'Usuário ou senha inválidos.' }
   }
 
-  const isHomologation = isFixedTestOtpEnabled()
-  const isOfficial = isOfficialTestAccount(cleanEmail)
+  try {
+    const res = await pb.send<{
+      success: boolean
+      mfa_required: boolean
+      challenge_id: string
+      mfa_mode: string
+      user: any
+      error?: string
+    }>('/backend/v1/auth/login', {
+      method: 'POST',
+      body: { email: cleanEmail, password: cleanPassword },
+    })
 
-  // 1. Tentar autenticação via hook do PocketBase (/backend/v1/auth/login) se houver backend configurado
-  const hasConfiguredBackend = Boolean(
-    pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
-  )
-  if (hasConfiguredBackend) {
-    try {
-      const res = await withFastTimeout(
-        pb.send('/backend/v1/auth/login', {
-          method: 'POST',
-          body: { email: cleanEmail, password: cleanPassword },
-        }),
-        1000,
-      )
-
-      if (res && res.success) {
-        return {
-          success: true,
-          mfa_required: true,
-          challenge_id: res.challenge_id,
-          mfa_mode: res.mfa_mode,
-          user: res.user,
-        }
-      }
-    } catch (err: any) {
-      if (err?.status === 401 || err?.status === 403) {
-        return { success: false, error: err?.response?.error || 'Usuário ou senha inválidos.' }
-      }
-    }
-
-    // 2. Tentar autenticação direta via PocketBase SDK authWithPassword
-    try {
-      const authRes = await withFastTimeout(
-        pb.collection('users').authWithPassword(cleanEmail, cleanPassword),
-        1000,
-      )
-      if (authRes && authRes.record) {
-        const rec = authRes.record
-        const challengeToken = `mfa_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-        return {
-          success: true,
-          mfa_required: true,
-          challenge_id: challengeToken,
-          mfa_mode: rec.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
-          user: {
-            id: rec.id,
-            email: rec.email,
-            name: rec.name || 'Colaborador CIAFAL',
-            role: (rec.role || 'VENDEDOR').toUpperCase(),
-            employee_id: rec.employee_id,
-            seller_code: rec.seller_code,
-            ramal: rec.ramal,
-            telefone_corporativo: rec.telefone_corporativo,
-            active: rec.active !== false,
-            is_test_user: rec.is_test_user === true,
-          },
-        }
-      }
-    } catch {
-      /* ignore fallback error */
-    }
-  }
-
-  // 3. Fallback controlado para ambiente de HOMOLOGAÇÃO com os 5 usuários oficiais de teste
-  // Barreira clara: se o ambiente for PRODUÇÃO REAL OU o email não for de homologação, NUNCA usar
-  if (isHomologation && isOfficial && HOMOLOGATION_ACCOUNTS[cleanEmail]) {
-    // Validar senha de homologação restrita
-    if (cleanPassword === 'teste123') {
-      const account = HOMOLOGATION_ACCOUNTS[cleanEmail]
-      const challengeToken = `mfa_hml_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    if (res && res.success) {
       return {
         success: true,
-        mfa_required: true,
-        challenge_id: challengeToken,
-        mfa_mode: 'TEST_FIXED',
-        user: {
-          id: account.id,
-          email: cleanEmail,
-          name: account.name,
-          role: account.role,
-          employee_id: account.employee_id,
-          seller_code: account.seller_code,
-          ramal: account.ramal,
-          telefone_corporativo: account.telefone_corporativo,
-          active: true,
-          is_test_user: true,
-          environment: 'HOMOLOGAÇÃO',
-        },
+        mfa_required: res.mfa_required !== false,
+        challenge_id: res.challenge_id,
+        mfa_mode: res.mfa_mode,
+        user: res.user,
       }
     }
-  }
 
-  return { success: false, error: 'Usuário ou senha inválidos.' }
+    return {
+      success: false,
+      error: res?.error || 'Usuário ou senha inválidos.',
+    }
+  } catch (err: any) {
+    const errorMsg =
+      err?.response?.error ||
+      err?.data?.error ||
+      (err?.status === 401 || err?.status === 400 || err?.status === 403
+        ? 'Usuário ou senha inválidos.'
+        : 'Usuário ou senha inválidos.')
+    return {
+      success: false,
+      error: errorMsg,
+    }
+  }
 }
 
 /**
- * Solicita reemissão de desafio MFA
+ * Solicita reemissão de desafio MFA — renovação do challenge
  */
 export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
   const normalizedEmail = (email || '').trim().toLowerCase()
@@ -426,7 +300,7 @@ export async function requestMfaOtp(email: string): Promise<MfaRequestResult> {
 }
 
 /**
- * Valida o código OTP (tratado estritamente como string de 6 dígitos)
+ * Valida o código OTP (tratado estritamente como string de 6 dígitos) chamando o BACKEND
  */
 export async function verifyOtp(
   email: string,
@@ -445,7 +319,7 @@ export async function verifyOtp(
     return { valid: false, error: 'Código de verificação inválido.' }
   }
 
-  // Rate Limiting Check
+  // Rate Limiting Check local preventivo
   const rateCheck = checkRateLimit(normalizedEmail)
   if (!rateCheck.allowed) {
     return {
@@ -456,89 +330,50 @@ export async function verifyOtp(
     }
   }
 
-  const isHomologation = isFixedTestOtpEnabled()
-  const isOfficial = isOfficialTestAccount(normalizedEmail)
+  try {
+    const res = await pb.send<{
+      authenticated: boolean
+      token?: string
+      user?: any
+      message?: string
+      error?: string
+    }>('/backend/v1/auth/verify-mfa', {
+      method: 'POST',
+      body: {
+        email: normalizedEmail,
+        otp: trimmedCode,
+        challenge_id: challengeToken,
+      },
+    })
 
-  // 1. Chamada ao endpoint real do Backend PocketBase (/backend/v1/auth/verify-mfa) se houver backend configurado
-  const hasConfiguredBackend = Boolean(
-    pb.baseUrl && pb.baseUrl !== '/' && pb.baseUrl !== window?.location?.origin,
-  )
-  if (hasConfiguredBackend) {
-    try {
-      const res = await withFastTimeout(
-        pb.send('/backend/v1/auth/verify-mfa', {
-          method: 'POST',
-          body: {
-            email: normalizedEmail,
-            otp: trimmedCode,
-            challenge_id: challengeToken,
-          },
-        }),
-        1000,
-      )
-
-      if (res && res.authenticated) {
-        resetRateLimit(normalizedEmail)
-        return {
-          valid: true,
-          mfa_mode: res.user?.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
-          token: res.token,
-          user_details: res.user,
-          message: 'Acesso autorizado.',
-        }
-      }
-    } catch (err: any) {
-      if (err?.status === 400 || err?.status === 429) {
-        recordFailedAttempt(normalizedEmail)
-        return {
-          valid: false,
-          error: err?.response?.error || 'Código de verificação inválido.',
-        }
-      }
-    }
-  }
-
-  // 2. Validação para ambiente de HOMOLOGAÇÃO (usuários de teste oficiais e OTP 123456)
-  // Barreira incondicional para PRODUÇÃO REAL: se isHomologation for false ou email não for oficial de teste, rejeitar
-  if (isHomologation && isOfficial) {
-    const fixedCode = getFixedTestOtpCode()
-
-    if (trimmedCode === fixedCode && fixedCode !== '') {
+    if (res && res.authenticated) {
       resetRateLimit(normalizedEmail)
-      const account = HOMOLOGATION_ACCOUNTS[normalizedEmail]
       return {
         valid: true,
-        mfa_mode: 'FIXED_QAS',
-        user_details: account
-          ? {
-              id: account.id,
-              email: normalizedEmail,
-              name: account.name,
-              role: account.role,
-              employee_id: account.employee_id,
-              seller_code: account.seller_code,
-              ramal: account.ramal,
-              telefone_corporativo: account.telefone_corporativo,
-              active: true,
-              is_test_user: true,
-              environment: 'HOMOLOGAÇÃO',
-            }
-          : undefined,
-        message: 'MFA validado com sucesso via OTP de homologação.',
-      }
-    } else {
-      recordFailedAttempt(normalizedEmail)
-      return {
-        valid: false,
-        error: 'Código de verificação inválido.',
+        mfa_mode: res.user?.is_test_user ? 'TEST_FIXED' : 'REAL_OTP',
+        token: res.token,
+        user_details: res.user,
+        message: res.message || 'Acesso autorizado.',
       }
     }
-  }
 
-  recordFailedAttempt(normalizedEmail)
-  return {
-    valid: false,
-    error: 'Código de verificação inválido.',
+    recordFailedAttempt(normalizedEmail)
+    return {
+      valid: false,
+      error: res?.error || 'Código de verificação inválido.',
+    }
+  } catch (err: any) {
+    recordFailedAttempt(normalizedEmail)
+    const errorMsg =
+      err?.response?.error ||
+      err?.data?.error ||
+      (err?.status === 429
+        ? 'Limite de tentativas de MFA excedido. Por segurança, tente novamente em 15 minutos.'
+        : 'Código de verificação inválido.')
+    return {
+      valid: false,
+      error: errorMsg,
+    }
   }
 }
 

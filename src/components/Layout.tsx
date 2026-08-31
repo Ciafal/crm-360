@@ -1,8 +1,20 @@
 import React, { useState } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { Building2, Menu, X, LogOut, ChevronDown, FileText } from 'lucide-react'
+import {
+  Building2,
+  Menu,
+  X,
+  LogOut,
+  ChevronDown,
+  FileText,
+  UserCheck,
+  ShieldAlert,
+  Sparkles,
+  RefreshCw,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { shouldUseQASAuthBypass } from '@/config/qas-auth-config'
 import { GlobalAssistant } from '@/components/shared/GlobalAssistant'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -19,11 +31,18 @@ import pb from '@/lib/pocketbase/client'
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, signOut, switchQASProfile, isBypassActive } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const isBypass = isBypassActive ?? shouldUseQASAuthBypass()
 
   const handleLogout = () => {
     signOut()
+    navigate('/')
+  }
+
+  const handleSwitchProfile = () => {
+    switchQASProfile()
     navigate('/')
   }
 
@@ -35,6 +54,16 @@ export default function Layout() {
     import.meta.env.VITE_ENABLE_TEST_USERS === 'true' ||
     import.meta.env.MODE !== 'production' ||
     true // Ativado por padrão em DEV/HML
+
+  const getProfileLabel = () => {
+    const role = (user?.role || '').toUpperCase()
+    if (role === 'ADMIN' || role === 'ADMINISTRADOR') return 'Perfil de teste: Administrador'
+    if (role === 'SUPERVISOR') return 'Perfil de teste: Supervisor'
+    if (role === 'REPRESENTANTE_EXTERNO' || role === 'REPRESENTANTE')
+      return 'Perfil de teste: Representante Externo'
+    if (user?.email?.includes('vendedor2')) return 'Perfil de teste: Vendedor 2'
+    return 'Perfil de teste: Vendedor'
+  }
 
   // Ordem principal do menu corporativo CIAFAL (1 a 11):
   // 1 Meu Dia, 2 Contatos, 3 Cotações, 4 CRM 360, 5 Tarefas, 6 KPIs, 7 Gestão de Clientes, 8 Satisfação de Clientes, 9 Consultas, 10 Central de Ações, 11 Estoque.
@@ -94,14 +123,19 @@ export default function Layout() {
       {/* Background Noise */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-multiply bg-noise z-0" />
 
-      {/* Banner Discreto de Ambiente de Teste */}
+      {/* Banner Discreto de Ambiente de Teste / Bypass QAS */}
       {isTestEnvironment && (
         <div
           data-testid="test-environment-banner"
-          className="fixed bottom-2 right-3 z-50 pointer-events-none select-none bg-amber-500/10 text-amber-900 border border-amber-400/30 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium uppercase tracking-wider flex items-center gap-1.5 shadow-xs"
+          className="fixed bottom-2 right-3 z-50 pointer-events-none select-none bg-amber-500/15 text-amber-950 border border-amber-400/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider flex items-center gap-2 shadow-xs"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-          AMBIENTE DE TESTE / HOMOLOGAÇÃO
+          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+          <span>AMBIENTE DE HOMOLOGAÇÃO</span>
+          {isBypass && (
+            <span className="text-[9px] text-amber-800 lowercase font-normal hidden sm:inline">
+              • autenticação temporariamente desativada para homologação
+            </span>
+          )}
         </div>
       )}
 
@@ -115,14 +149,27 @@ export default function Layout() {
                 <Building2 className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col leading-none">
-                <span className="font-serif font-bold text-base sm:text-lg text-[#003A70] tracking-tight whitespace-nowrap">
-                  CRM 360º
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-serif font-bold text-base sm:text-lg text-[#003A70] tracking-tight whitespace-nowrap">
+                    CRM 360º
+                  </span>
+                  <span className="hidden xl:inline-flex items-center px-1.5 py-0.2 text-[9px] font-bold uppercase rounded bg-amber-100 text-amber-900 border border-amber-300">
+                    HOMOLOGAÇÃO
+                  </span>
+                </div>
                 <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-500 font-bold whitespace-nowrap">
                   CIAFAL FERRO & AÇO
                 </span>
               </div>
             </Link>
+
+            {/* Identificação do Perfil de Teste Ativo no TopNav */}
+            {user && (
+              <div className="hidden 2xl:flex items-center gap-1.5 ml-2 px-2.5 py-1 rounded-full bg-slate-100/90 border border-slate-200 text-slate-700 text-[11px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                <span>{getProfileLabel()}</span>
+              </div>
+            )}
           </div>
 
           {/* Centro: Menu Principal Responsivo com Overflow "Mais ▾" */}
@@ -418,6 +465,22 @@ export default function Layout() {
 
                   <DropdownMenuSeparator />
 
+                  {/* ITEM OBRIGATÓRIO: Trocar perfil de homologação */}
+                  {isBypass && (
+                    <DropdownMenuItem
+                      onClick={handleSwitchProfile}
+                      className="cursor-pointer text-xs rounded-lg py-2 font-bold text-[#003A70] bg-sky-50/80 hover:bg-sky-100 border border-sky-200 my-1 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-3.5 w-3.5 text-[#003A70]" />
+                        <span>[Trocar perfil de homologação]</span>
+                      </div>
+                      <Badge className="text-[8px] bg-[#003A70] text-white px-1.5 py-0 font-mono">
+                        QAS
+                      </Badge>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem
                     onClick={() => navigate('/home')}
                     className="cursor-pointer text-xs rounded-lg py-1.5"
@@ -527,13 +590,24 @@ export default function Layout() {
           </div>
 
           {user && (
-            <Button
-              variant="destructive"
-              className="mt-4 w-full py-5 text-sm rounded-xl"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-2 h-4 w-4" /> Sair da conta
-            </Button>
+            <div className="space-y-2 mt-4">
+              {isBypass && (
+                <Button
+                  variant="outline"
+                  className="w-full py-4 text-xs font-bold rounded-xl border-[#003A70] text-[#003A70] bg-sky-50 flex items-center justify-center gap-2"
+                  onClick={handleSwitchProfile}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" /> [Trocar perfil de homologação]
+                </Button>
+              )}
+              <Button
+                variant="destructive"
+                className="w-full py-4 text-sm rounded-xl"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" /> Sair da conta
+              </Button>
+            </div>
           )}
         </div>
       )}

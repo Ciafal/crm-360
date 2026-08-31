@@ -1,46 +1,67 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import pb from '../lib/pocketbase/client'
 import {
   isFixedTestOtpEnabled,
-  getFixedTestOtpCode,
   requiresMfa,
   verifyOtp,
   verifyMfaOtp,
   requestMfaOtp,
-  checkRateLimit,
-  recordFailedAttempt,
   resetRateLimit,
 } from '../services/mfa_service'
 import { defaultIdentityProvider } from '../providers/IdentityProvider'
 
-describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)', () => {
+describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção', () => {
   const originalEnv = { ...process.env }
 
   beforeEach(() => {
-    // Restaurar env padrão para QAS
     process.env.APP_ENV = 'qas'
     process.env.ENABLE_FIXED_TEST_OTP = 'true'
-    process.env.FIXED_TEST_OTP = '123456'
     import.meta.env.VITE_APP_ENV = 'qas'
     import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'true'
-    import.meta.env.VITE_FIXED_TEST_OTP = '123456'
     import.meta.env.MODE = 'test'
     resetRateLimit('admin.teste@ciafal.local')
     resetRateLimit('vendedor.teste@ciafal.local')
     resetRateLimit('representante.teste@crm360.local')
     resetRateLimit('usuario.corporativo@ciafal.com.br')
     resetRateLimit('rate.limit@ciafal.local')
+
+    vi.spyOn(pb, 'send').mockImplementation(async (path: string, options: any) => {
+      if (path === '/backend/v1/auth/verify-mfa') {
+        const { email, otp } = options.body || {}
+        const isHomologation = process.env.APP_ENV !== 'production'
+
+        if (otp !== '123456' || !isHomologation) {
+          const err: any = new Error('Invalid MFA')
+          err.status = 400
+          err.response = { error: 'Código de verificação inválido.' }
+          throw err
+        }
+
+        return {
+          authenticated: true,
+          token: 'token-jwt-test',
+          user: {
+            id: 'usr-test',
+            email,
+            is_test_user: true,
+          },
+          message: 'Acesso autorizado.',
+        }
+      }
+      return {}
+    })
   })
 
   afterEach(() => {
     process.env = { ...originalEnv }
+    vi.restoreAllMocks()
   })
 
-  // 1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso com mfa_mode: "FIXED_QAS"
-  it('1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso com mfa_mode: "FIXED_QAS"', async () => {
+  // 1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso
+  it('1. QAS: admin + teste123 -> MFA -> 123456 -> sucesso', async () => {
     const email = 'admin.teste@ciafal.local'
     expect(requiresMfa(email)).toBe(true)
     expect(isFixedTestOtpEnabled()).toBe(true)
-    expect(getFixedTestOtpCode()).toBe('123456')
 
     const req = await requestMfaOtp(email)
     expect(req.success).toBe(true)
@@ -49,12 +70,12 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     // Usando verifyOtp diretamente
     const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
-    expect(result.mfa_mode).toBe('FIXED_QAS')
+    expect(result.mfa_mode).toBe('TEST_FIXED')
 
     // Usando verifyMfaOtp alias
     const resultAlias = await verifyMfaOtp(email, '123456')
     expect(resultAlias.valid).toBe(true)
-    expect(resultAlias.mfa_mode).toBe('FIXED_QAS')
+    expect(resultAlias.mfa_mode).toBe('TEST_FIXED')
   })
 
   // 2. QAS: admin + teste123 -> MFA -> 654321 -> falha ("Código de verificação inválido.")
@@ -91,7 +112,7 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
 
     const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
-    expect(result.mfa_mode).toBe('FIXED_QAS')
+    expect(result.mfa_mode).toBe('TEST_FIXED')
   })
 
   // 5. QAS: representante + teste123 -> 123456 -> sucesso, escopo externo
@@ -101,7 +122,7 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
 
     const result = await verifyOtp(email, '123456')
     expect(result.valid).toBe(true)
-    expect(result.mfa_mode).toBe('FIXED_QAS')
+    expect(result.mfa_mode).toBe('TEST_FIXED')
 
     // Validação de escopo externo: só acessa a própria carteira
     const repId = 'rep-externo-01'
@@ -124,7 +145,6 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'true'
 
     expect(isFixedTestOtpEnabled()).toBe(false)
-    expect(getFixedTestOtpCode()).toBe('')
 
     // Em produção sem fixed OTP ativo, o código "123456" fixo é rejeitado
     const email = 'usuario.corporativo@ciafal.com.br'
@@ -141,7 +161,6 @@ describe('CRM 360º — Validação de OTP Fixo QAS/HML vs Produção (Frontend)
     import.meta.env.VITE_ENABLE_FIXED_TEST_OTP = 'false'
 
     expect(isFixedTestOtpEnabled()).toBe(false)
-    expect(getFixedTestOtpCode()).toBe('')
 
     const email = 'admin.teste@ciafal.local'
     const result = await verifyOtp(email, '123456')

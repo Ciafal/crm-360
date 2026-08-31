@@ -1,116 +1,118 @@
-// pocketbase/hooks/auth_me.js
-// GET /backend/v1/auth/me
-// Retorna a sessão ativa a partir do cabeçalho Authorization: Bearer <token> ou pb_auth
-
 routerAdd('GET', '/backend/v1/auth/me', (e) => {
-  // 1. Tentar ler do e.auth (caso PocketBase nativo)
-  if (e.auth) {
-    const authRec = e.auth
-    const safeUser = {
-      id: authRec.id,
-      email: authRec.email(),
-      name: authRec.getString('name') || 'Colaborador CIAFAL',
-      role: (authRec.getString('role') || 'VENDEDOR').toUpperCase(),
-      employee_id: authRec.getString('employee_id') || '',
-      seller_code: authRec.getString('seller_code') || '',
-      ramal: authRec.getString('ramal') || '',
-      telefone_corporativo: authRec.getString('telefone_corporativo') || '',
-      active: authRec.get('active') !== false,
-      is_test_user: authRec.get('is_test_user') === true,
-    }
+  const authHeader = e.requestInfo().headers['authorization'] || ''
+  let token = ''
 
-    return e.json(200, {
-      authenticated: true,
-      user: safeUser,
-    })
+  if (authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim()
   }
 
-  // 2. Tentar validar via Authorization Bearer JWT
-  const authHeader = (
-    e.requestInfo().headers['authorization'] ||
-    e.requestInfo().headers['Authorization'] ||
-    ''
-  )
-    .toString()
-    .trim()
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return e.json(401, {
-      authenticated: false,
-      error: 'Você não possui permissão para acessar este recurso.',
-    })
-  }
-
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim()
   if (!token) {
     return e.json(401, {
       authenticated: false,
-      error: 'Você não possui permissão para acessar este recurso.',
+      error: 'Token não fornecido ou inválido.',
     })
   }
 
-  const jwtSecret =
-    $os.getenv('AUTH_JWT_SECRET') ||
-    $secrets.get('AUTH_JWT_SECRET') ||
-    'ciafal_secure_mfa_jwt_secret_token_2025'
+  const jwtSecret = $secrets.get('JWT_SECRET') || 'ciafal_crm_session_jwt_secret_key_2025'
+  let payload = null
 
   try {
-    const payload = $security.parseJWT(token, jwtSecret)
-    if (!payload || !payload.email) {
-      return e.json(401, {
-        authenticated: false,
-        error: 'Você não possui permissão para acessar este recurso.',
-      })
-    }
+    payload = $security.parseJWT(token, jwtSecret)
+  } catch (_) {
+    payload = null
+  }
 
-    // Verificar se o usuário ainda existe e está ativo
-    let authRecord = null
-    try {
-      authRecord = $app.findAuthRecordByEmail('_pb_users_auth_', payload.email)
-    } catch (_) {}
-
-    if (authRecord) {
-      if (authRecord.get('active') === false) {
-        return e.json(403, {
-          authenticated: false,
-          error: 'Você não possui permissão para acessar este recurso.',
-        })
-      }
-
-      const safeUser = {
-        id: authRecord.id,
-        email: authRecord.email(),
-        name: authRecord.getString('name') || payload.name || 'Colaborador CIAFAL',
-        role: (authRecord.getString('role') || payload.role || 'VENDEDOR').toUpperCase(),
-        employee_id: authRecord.getString('employee_id') || '',
-        seller_code: authRecord.getString('seller_code') || '',
-        ramal: authRecord.getString('ramal') || '',
-        telefone_corporativo: authRecord.getString('telefone_corporativo') || '',
-        active: authRecord.get('active') !== false,
-        is_test_user: authRecord.get('is_test_user') === true,
-      }
-
-      return e.json(200, {
-        authenticated: true,
-        user: safeUser,
-      })
-    }
-
-    // Se o payload do token estiver íntegro
-    return e.json(200, {
-      authenticated: true,
-      user: {
-        id: payload.sub || 'usr-jwt',
-        email: payload.email,
-        name: payload.name || 'Colaborador CIAFAL',
-        role: (payload.role || 'VENDEDOR').toUpperCase(),
-        active: true,
-        is_test_user: payload.email.endsWith('.local'),
-      },
-    })
-  } catch (errJwt) {
+  if (!payload || !payload.sub || !payload.email) {
     return e.json(401, {
       authenticated: false,
-      error: 'Você não possui permissão para acessar este recurso.',
+      error: 'Sessão inválida ou expirada.',
     })
   }
+
+  // Verificar se a sessão está ativa no banco
+  if (payload.session_id) {
+    try {
+      const sess = $app.findFirstRecordByData('sessions', 'session_id', payload.session_id)
+      if (
+        sess &&
+        (!sess.getBool('is_active') ||
+          new Date(sess.getString('expires_at')).getTime() < Date.now())
+      ) {
+        return e.json(401, {
+          authenticated: false,
+          error: 'Sessão revogada ou expirada.',
+        })
+      }
+    } catch (_) {}
+  }
+
+  let user = null
+  try {
+    user = $app.findRecordById('_pb_users_auth_', payload.sub)
+  } catch (_) {
+    try {
+      user = $app.findAuthRecordByEmail('_pb_users_auth_', payload.email)
+    } catch (_) {
+      user = null
+    }
+  }
+
+  if (!user || user.getBool('active') === false) {
+    return e.json(401, {
+      authenticated: false,
+      error: 'Usuário não encontrado ou inativo.',
+    })
+  }
+
+  const rawRole = (user.getString('role') || payload.role || 'VENDEDOR').toUpperCase()
+  let normalizedRole = 'VENDEDOR'
+  if (rawRole === 'ADMIN' || rawRole === 'ADMINISTRADOR') normalizedRole = 'ADMIN'
+  else if (rawRole === 'SUPERVISOR') normalizedRole = 'SUPERVISOR'
+  else if (rawRole === 'REPRESENTANTE_EXTERNO' || rawRole === 'REPRESENTANTE')
+    normalizedRole = 'REPRESENTANTE_EXTERNO'
+  else normalizedRole = rawRole
+
+  let permissions = []
+  if (normalizedRole === 'ADMIN') {
+    permissions = ['ALL', 'USERS_MANAGE', 'PORTFOLIO_ALL', 'REPORTS_ALL', 'SETTINGS', 'AUDIT']
+  } else if (normalizedRole === 'SUPERVISOR') {
+    permissions = ['PORTFOLIO_TEAM', 'QUOTATIONS_APPROVE', 'REPORTS_TEAM', 'DASHBOARD_TEAM']
+  } else if (normalizedRole === 'REPRESENTANTE_EXTERNO') {
+    permissions = ['PORTFOLIO_EXTERNAL', 'QUOTATIONS_OWN', 'CONSULTAS_OWN']
+  } else {
+    permissions = ['PORTFOLIO_OWN', 'QUOTATIONS_OWN', 'CONSULTAS_OWN', 'TASKS_OWN']
+  }
+
+  const appEnv = ($os.getenv('APP_ENV') || $secrets.get('APP_ENV') || 'homologation').toLowerCase()
+  const isHomologation =
+    appEnv === 'homologation' ||
+    appEnv === 'qas' ||
+    appEnv === 'test' ||
+    appEnv === 'preview' ||
+    appEnv === 'development'
+
+  const safeUser = {
+    id: user.id,
+    email: user.email(),
+    name: user.getString('name') || 'Colaborador CIAFAL',
+    role: normalizedRole,
+    employee_id: user.getString('employee_id') || '',
+    seller_code: user.getString('seller_code') || '',
+    ramal: user.getString('ramal') || '',
+    telefone_corporativo: user.getString('telefone_corporativo') || '',
+    department: user.getString('department') || '',
+    cargo: user.getString('cargo') || '',
+    cost_center: user.getString('cost_center') || '',
+    manager_id: user.getString('manager_id') || '',
+    manager_name: user.getString('manager_name') || '',
+    active: user.getBool('active') !== false,
+    is_test_user: user.getBool('is_test_user'),
+    environment: isHomologation ? 'HOMOLOGAÇÃO' : 'PRODUÇÃO',
+    permissions: permissions,
+  }
+
+  return e.json(200, {
+    authenticated: true,
+    user: safeUser,
+  })
 })

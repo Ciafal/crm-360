@@ -36,10 +36,17 @@ import {
   isFixedTestOtpEnabled,
 } from '@/services/mfa_service'
 
+import QASProfileSelectionScreen from '@/components/auth/QASProfileSelectionScreen'
+import { shouldUseQASAuthBypass } from '@/config/qas-auth-config'
+
 export default function Index() {
-  const { user, signIn, loading: authLoading } = useAuth()
+  const { user, signIn, loading: authLoading, isBypassActive } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Se o modo de homologação sem login (QAS Auth Bypass) estiver ativo
+  // e o usuário não estiver logado, renderiza a tela de 5 perfis diretos
+  const isBypass = isBypassActive ?? shouldUseQASAuthBypass()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -80,6 +87,11 @@ export default function Index() {
       return () => clearTimeout(timer)
     }
   }, [resendCooldown])
+
+  // Se estiver no modo Bypass QAS e não estiver logado, exibe a tela de perfis
+  if (isBypass && !user && !authLoading) {
+    return <QASProfileSelectionScreen />
+  }
 
   // Etapa 1: Validação de Credenciais
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -473,7 +485,7 @@ export default function Index() {
                       <p className="text-[11px] text-slate-500">
                         {isHomologation
                           ? 'Validação MFA do ambiente de homologação.'
-                          : 'Um código numérico de 6 dígitos foi gerado para confirmação do seu acesso.'}
+                          : 'Digite o código de verificação enviado para o seu canal seguro.'}
                       </p>
                     </div>
 
