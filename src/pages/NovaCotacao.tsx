@@ -286,9 +286,26 @@ export default function NovaCotacao() {
           fetchCreditData(st.codigoSap, match.id)
         }
 
+        if (st.observacoesOrigem) {
+          setCommercialNotes((prev) =>
+            prev ? `${prev}\n${st.observacoesOrigem}` : st.observacoesOrigem,
+          )
+        }
+
+        if (
+          st.grupoMercadoriaSugerido &&
+          st.grupoMercadoriaSugerido !== 'Não definido / A identificar'
+        ) {
+          setMaterialSearch(st.grupoMercadoriaSugerido)
+        }
+
+        if (st.quantidadeEstimadaSugerida) {
+          setItemQtyTons(String(st.quantidadeEstimadaSugerida))
+        }
+
         toast({
           title: 'Cliente Pré-preenchido',
-          description: `${match.razaoSocial} carregado a partir do Registro Comercial Único.`,
+          description: `${match.razaoSocial} carregado a partir da Oportunidade / Registro Comercial.`,
         })
       }
     }

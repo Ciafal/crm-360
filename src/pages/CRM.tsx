@@ -2,13 +2,20 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   mockClientes,
-  mockFunilOportunidades,
   ClienteCarteira,
   OportunidadeFunil,
   EtapaFunil,
   mockLeads,
 } from '@/data/mockCommercialData'
+import {
+  opportunityLeadService,
+  AdvancedOpportunity,
+  ESTAGIOS_OPORTUNIDADE_CIAFAL,
+  EstagioOportunidadeCiafal,
+} from '@/services/opportunity_lead_service'
 import { quotationService } from '@/services/quotation_service'
+import { NovaOportunidadeModal } from '@/components/crm/NovaOportunidadeModal'
+import { DetalhesOportunidadeModal } from '@/components/crm/DetalhesOportunidadeModal'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -115,6 +122,13 @@ export default function CRM() {
 
   // Filtros do Funil
   const [funilVendedorFilter, setFunilVendedorFilter] = useState('todos')
+
+  // Modais de Oportunidades CIAFAL
+  const [novaOportunidadeOpen, setNovaOportunidadeOpen] = useState(false)
+  const [selectedClienteForOpp, setSelectedClienteForOpp] = useState<ClienteCarteira | null>(null)
+  const [detalhesOppModalOpen, setDetalhesOppModalOpen] = useState(false)
+  const [selectedOppForDetail, setSelectedOppForDetail] = useState<AdvancedOpportunity | null>(null)
+  const [oppsRefreshKey, setOppsRefreshKey] = useState(0)
 
   // Modais de Ações Operacionais (WMS e TMS)
   const [wmsModalOpen, setWmsModalOpen] = useState(false)
@@ -335,10 +349,11 @@ export default function CRM() {
     }
   }
 
-  // Oportunidades do Funil sincronizadas com as Cotações Reais
+  // Oportunidades do Funil sincronizadas com as Cotações Reais e LocalStorage Service
   const rawFunil = useMemo(() => {
+    const storedOpps = opportunityLeadService.getStoredOpportunities()
     const baseList = isVendedorOnly
-      ? mockFunilOportunidades.filter(
+      ? storedOpps.filter(
           (op) =>
             op.vendedorId === user?.id ||
             (userEmail.includes('vendedor2')
@@ -347,7 +362,7 @@ export default function CRM() {
                 ? op.vendedorId === 'qas-representante_teste'
                 : op.vendedorId === 'qas-vendedor_teste'),
         )
-      : mockFunilOportunidades
+      : storedOpps
 
     // Mapear cotações armazenadas por customer_id, customer_sap_code e customer_name
     const storedQuotes = quotationService.getStoredQuotations()
@@ -396,7 +411,7 @@ export default function CRM() {
         quotation_status: qStatus,
       }
     })
-  }, [isVendedorOnly, userEmail, user?.id])
+  }, [isVendedorOnly, userEmail, user?.id, oppsRefreshKey])
 
   const filteredFunil = useMemo(() => {
     return rawFunil.filter((op) => {
@@ -575,9 +590,10 @@ export default function CRM() {
             size="sm"
             variant="outline"
             onClick={() => {
-              toast.info('Abertura rápida de oportunidade no Funil de Vendas.')
+              setSelectedClienteForOpp(null)
+              setNovaOportunidadeOpen(true)
             }}
-            className="h-9 gap-1.5 text-xs border-primary/30 text-primary hover:bg-primary/5 rounded-xl font-semibold"
+            className="h-9 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10 rounded-xl font-semibold shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />+ Nova Oportunidade
           </Button>
@@ -1130,10 +1146,11 @@ export default function CRM() {
                                 size="sm"
                                 variant="outline"
                                 className="h-7 w-7 p-0 text-indigo-600 hover:bg-indigo-50 border-indigo-200"
-                                onClick={() =>
-                                  toast.info(`Criar nova oportunidade para ${c.nomeFantasia}`)
-                                }
-                                title="Criar Oportunidade"
+                                onClick={() => {
+                                  setSelectedClienteForOpp(c)
+                                  setNovaOportunidadeOpen(true)
+                                }}
+                                title={`Criar Nova Oportunidade para ${c.nomeFantasia}`}
                               >
                                 <Plus className="h-3.5 w-3.5" />
                               </Button>
@@ -1342,15 +1359,18 @@ export default function CRM() {
                           return (
                             <Card
                               key={op.id}
-                              onClick={() => navigate(`/crm/${op.clienteId}`)}
+                              onClick={() => {
+                                setSelectedOppForDetail(op as AdvancedOpportunity)
+                                setDetalhesOppModalOpen(true)
+                              }}
                               className={cn(
-                                'bg-white border-border/50 hover:border-primary/40 hover:shadow-md transition-all cursor-pointer rounded-xl p-3 space-y-2',
+                                'bg-white border-border/50 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer rounded-xl p-3 space-y-2 group',
                                 isParada && 'border-amber-400 bg-amber-50/30',
                               )}
                             >
                               <div className="flex items-start justify-between gap-1">
                                 <div>
-                                  <span className="font-semibold text-xs text-primary block leading-tight hover:underline">
+                                  <span className="font-bold text-xs text-primary block leading-tight group-hover:underline">
                                     {op.clienteNome}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground font-mono">
@@ -1359,7 +1379,9 @@ export default function CRM() {
                                 </div>
                                 <div className="flex flex-col items-end gap-0.5">
                                   <Badge className="text-[9px] bg-primary/10 text-primary border-none font-bold">
-                                    Vend: {probVendedor}%
+                                    {op.probabilidadeClassificacao
+                                      ? `${op.probabilidadeClassificacao.toUpperCase()} (${op.probabilidade}%)`
+                                      : `Vend: ${probVendedor}%`}
                                   </Badge>
                                   <span className="text-[9px] text-emerald-700 font-mono font-bold">
                                     IA: {probIA}%
@@ -1371,6 +1393,15 @@ export default function CRM() {
                                 {op.titulo}
                               </p>
 
+                              {/* Grupo de Mercadoria */}
+                              {op.grupoMercadoria &&
+                                op.grupoMercadoria !== 'Não definido / A identificar' && (
+                                  <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                                    <Layers className="w-3 h-3 text-primary/70 shrink-0" />
+                                    <span className="truncate">{op.grupoMercadoria}</span>
+                                  </div>
+                                )}
+
                               {isParada && (
                                 <div className="p-1.5 rounded-lg bg-amber-100/90 border border-amber-300 text-[10px] text-amber-900 flex items-center gap-1 font-semibold">
                                   <Clock className="w-3 h-3 text-amber-700 shrink-0" />
@@ -1378,12 +1409,25 @@ export default function CRM() {
                                 </div>
                               )}
 
+                              {/* VALOR POTENCIAL E QUANTIDADE (Regras 4, 5 e 12: 'Não estimado' quando ausente, nunca 'R$ 0') */}
                               <div className="flex items-center justify-between pt-1 border-t border-border/20 text-[11px]">
-                                <span className="font-serif font-bold text-emerald-600">
-                                  {formatBRL(op.valor)}
+                                <span className="font-serif font-bold text-emerald-700">
+                                  {op.valorPotencialCalculado !== null &&
+                                  op.valorPotencialCalculado !== undefined &&
+                                  op.valorPotencialCalculado > 0
+                                    ? formatBRL(op.valorPotencialCalculado)
+                                    : op.valor > 0
+                                      ? formatBRL(op.valor)
+                                      : 'Não estimado'}
                                 </span>
                                 <span className="text-[10px] text-muted-foreground font-semibold">
-                                  {op.toneladas.toLocaleString('pt-BR')} t
+                                  {op.quantidadeEstimadaTons !== null &&
+                                  op.quantidadeEstimadaTons !== undefined &&
+                                  op.quantidadeEstimadaTons > 0
+                                    ? `${op.quantidadeEstimadaTons.toLocaleString('pt-BR')} t`
+                                    : op.toneladas > 0
+                                      ? `${op.toneladas.toLocaleString('pt-BR')} t`
+                                      : 'Não informada'}
                                 </span>
                               </div>
 
@@ -1391,15 +1435,19 @@ export default function CRM() {
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3 text-amber-500" /> {aging}d no funil
                                 </span>
-                                <span className="text-primary font-medium">
-                                  Prev: {op.previsaoFechamento}
+                                <span className="text-primary font-medium truncate max-w-[130px]">
+                                  {op.previsaoCompra
+                                    ? `Prev: ${op.previsaoCompra.replace(/_/g, ' ')}`
+                                    : `Prev: ${op.previsaoFechamento}`}
                                 </span>
                               </div>
 
-                              <div className="bg-slate-50 p-1.5 rounded-lg text-[10px] text-slate-600">
-                                <strong className="text-primary">Próx. Ação:</strong>{' '}
-                                {op.proximaAcao}
-                              </div>
+                              {op.proximaAcao && (
+                                <div className="bg-slate-50 p-1.5 rounded-lg text-[10px] text-slate-600 truncate">
+                                  <strong className="text-primary">Próx. Ação:</strong>{' '}
+                                  {op.proximaAcao}
+                                </div>
+                              )}
                             </Card>
                           )
                         })
@@ -1493,25 +1541,54 @@ export default function CRM() {
                   {rawFunil.map((op) => (
                     <tr
                       key={op.id}
-                      onClick={() => navigate(`/crm/${op.clienteId}`)}
+                      onClick={() => {
+                        setSelectedOppForDetail(op as AdvancedOpportunity)
+                        setDetalhesOppModalOpen(true)
+                      }}
                       className="hover:bg-primary/5 cursor-pointer transition-colors"
                     >
-                      <td className="py-3 px-3 font-bold text-primary">{op.clienteNome}</td>
-                      <td className="py-3 px-3 text-slate-800 font-medium">{op.titulo}</td>
+                      <td className="py-3 px-3 font-bold text-primary">
+                        <div>{op.clienteNome}</div>
+                        <div className="text-[10px] text-muted-foreground font-mono">
+                          SAP {op.clienteSap}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-slate-800 font-medium">
+                        <div>{op.titulo}</div>
+                        {op.grupoMercadoria && (
+                          <div className="text-[10px] text-muted-foreground">
+                            {op.grupoMercadoria}
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-3">
                         <Badge variant="outline" className="text-[10px] capitalize">
-                          {op.etapa}
+                          {op.estagioCiafal ? op.estagioCiafal.replace(/_/g, ' ') : op.etapa}
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
-                        {formatBRL(op.valor)}
+                        {op.valorPotencialCalculado !== null &&
+                        op.valorPotencialCalculado !== undefined &&
+                        op.valorPotencialCalculado > 0
+                          ? formatBRL(op.valorPotencialCalculado)
+                          : op.valor > 0
+                            ? formatBRL(op.valor)
+                            : 'Não estimado'}
                       </td>
-                      <td className="py-3 px-3 text-center font-mono">{op.toneladas} t</td>
+                      <td className="py-3 px-3 text-center font-mono">
+                        {op.quantidadeEstimadaTons !== null &&
+                        op.quantidadeEstimadaTons !== undefined &&
+                        op.quantidadeEstimadaTons > 0
+                          ? `${op.quantidadeEstimadaTons} t`
+                          : op.toneladas > 0
+                            ? `${op.toneladas} t`
+                            : 'Não informada'}
+                      </td>
                       <td className="py-3 px-3 text-center font-bold text-primary">
                         {op.probabilidade}%
                       </td>
                       <td className="py-3 px-3 text-center text-muted-foreground">
-                        {op.agingDias}d
+                        {op.agingDias || op.tempoNoEstagioDias || 0}d
                       </td>
                       <td className="py-3 px-3 text-slate-600">{op.vendedorNome}</td>
                       <td className="py-3 px-3 text-slate-700">{op.proximaAcao}</td>
@@ -1587,6 +1664,30 @@ export default function CRM() {
         referenceDoc={tmsSelectedData.referenceDoc}
         itemDescription={tmsSelectedData.itemDescription}
         defaultTons={tmsSelectedData.defaultTons}
+      />
+
+      {/* MODAL + NOVA OPORTUNIDADE CIAFAL */}
+      <NovaOportunidadeModal
+        open={novaOportunidadeOpen}
+        onOpenChange={setNovaOportunidadeOpen}
+        initialCliente={selectedClienteForOpp}
+        usuarioAtualNome={user?.name || 'Carlos Mendonça'}
+        onSuccess={(newOpp) => {
+          setOppsRefreshKey((k) => k + 1)
+          setActiveTab('funil')
+        }}
+      />
+
+      {/* MODAL DETALHES DA OPORTUNIDADE (AVANÇO DE ESTÁGIO, AUDITORIA E COTAÇÃO) */}
+      <DetalhesOportunidadeModal
+        open={detalhesOppModalOpen}
+        onOpenChange={setDetalhesOppModalOpen}
+        opportunity={selectedOppForDetail}
+        usuarioAtualNome={user?.name || 'Carlos Mendonça'}
+        onUpdate={(updated) => {
+          setSelectedOppForDetail(updated)
+          setOppsRefreshKey((k) => k + 1)
+        }}
       />
     </div>
   )
