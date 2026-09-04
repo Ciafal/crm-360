@@ -10,6 +10,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { isFixedTestOtpEnabled } from '@/services/mfa_service'
+import { crmStorage } from '@/lib/crm-storage'
 import {
   QASProfile,
   QAS_PROFILES,
@@ -115,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<CiafalAuthUser | null>(() => {
     try {
       const savedSession =
-        localStorage.getItem(SESSION_STORAGE_KEY) || localStorage.getItem(QAS_STORAGE_KEY)
+        crmStorage.getItem(SESSION_STORAGE_KEY) || crmStorage.getItem(QAS_STORAGE_KEY)
       if (savedSession) {
         const parsed = JSON.parse(savedSession)
         if (parsed && parsed.email) {
@@ -132,9 +133,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem(JWT_STORAGE_KEY)
+    const token = crmStorage.getItem(JWT_STORAGE_KEY)
     const savedSession =
-      localStorage.getItem(SESSION_STORAGE_KEY) || localStorage.getItem(QAS_STORAGE_KEY)
+      crmStorage.getItem(SESSION_STORAGE_KEY) || crmStorage.getItem(QAS_STORAGE_KEY)
 
     // Se estiver em modo bypass e houver uma sessão salva, mantê-la sem validar no backend Skip Cloud
     if (isBypassActive && savedSession) {
@@ -174,15 +175,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
             setUser(safeUser)
             try {
-              localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(safeUser))
+              crmStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(safeUser))
             } catch {
               /* ignore */
             }
           } else {
             // Sessão inválida no backend
-            localStorage.removeItem(SESSION_STORAGE_KEY)
-            localStorage.removeItem(QAS_STORAGE_KEY)
-            localStorage.removeItem(JWT_STORAGE_KEY)
+            crmStorage.removeItem(SESSION_STORAGE_KEY)
+            crmStorage.removeItem(QAS_STORAGE_KEY)
+            crmStorage.removeItem(JWT_STORAGE_KEY)
             setUser(null)
           }
         })
@@ -243,8 +244,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const testUser = createQASTestSessionUser(targetProfile)
 
     try {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(testUser))
-      localStorage.setItem(QAS_STORAGE_KEY, JSON.stringify(testUser))
+      crmStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(testUser))
+      crmStorage.setItem(QAS_STORAGE_KEY, JSON.stringify(testUser))
     } catch {
       /* ignore */
     }
@@ -270,9 +271,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
    */
   const switchQASProfile = () => {
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY)
-      localStorage.removeItem(QAS_STORAGE_KEY)
-      localStorage.removeItem(JWT_STORAGE_KEY)
+      crmStorage.removeItem(SESSION_STORAGE_KEY)
+      crmStorage.removeItem(QAS_STORAGE_KEY)
+      crmStorage.removeItem(JWT_STORAGE_KEY)
     } catch {
       /* ignore */
     }
@@ -325,8 +326,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(authUser))
-        localStorage.setItem(QAS_STORAGE_KEY, JSON.stringify(authUser))
+        crmStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(authUser))
+        crmStorage.setItem(QAS_STORAGE_KEY, JSON.stringify(authUser))
       } catch {
         /* ignore */
       }
@@ -363,7 +364,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = () => {
     try {
-      const token = localStorage.getItem(JWT_STORAGE_KEY)
+      const token = crmStorage.getItem(JWT_STORAGE_KEY)
       if (token) {
         pb.send('/backend/v1/auth/logout', {
           method: 'POST',
@@ -375,9 +376,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY)
-      localStorage.removeItem(QAS_STORAGE_KEY)
-      localStorage.removeItem(JWT_STORAGE_KEY)
+      crmStorage.removeItem(SESSION_STORAGE_KEY)
+      crmStorage.removeItem(QAS_STORAGE_KEY)
+      crmStorage.removeItem(JWT_STORAGE_KEY)
       sessionStorage.clear()
     } catch {
       /* ignore */

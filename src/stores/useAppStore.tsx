@@ -26,7 +26,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chats, setChats] = useState<Chat[]>(initialChats)
   const [commercialMetric, setCommercialMetric] = useState<CommercialMetric>(() => {
     try {
-      const saved = localStorage.getItem('ciafal_commercial_metric')
+      const saved = crmStorage.getItem('ciafal_commercial_metric')
       if (saved === 'REVENUE' || saved === 'TONS') return saved
     } catch {
       /* intentionally ignored */
@@ -37,7 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setCommercialMetricWithPersistence = (metric: CommercialMetric) => {
     setCommercialMetric(metric)
     try {
-      localStorage.setItem('ciafal_commercial_metric', metric)
+      crmStorage.setItem('ciafal_commercial_metric', metric)
     } catch {
       /* intentionally ignored */
     }

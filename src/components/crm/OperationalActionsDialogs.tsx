@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { crmStorage } from '@/lib/crm-storage'
 import {
   Dialog,
   DialogContent,
@@ -71,9 +72,9 @@ export function WmsStockCheckModal({
 
       // Salvar na fila de solicitações WMS (LocalStorage / Evento)
       try {
-        const stored = JSON.parse(localStorage.getItem('ciafal_wms_stock_requests') || '[]')
+        const stored = crmStorage.getJSON<any[]>('ciafal_wms_stock_requests', [])
         stored.unshift(payload)
-        localStorage.setItem('ciafal_wms_stock_requests', JSON.stringify(stored))
+        crmStorage.setJSON('ciafal_wms_stock_requests', stored)
       } catch {
         /* intentionally ignored */
       }
@@ -245,9 +246,9 @@ export function TmsPriorityAlertModal({
 
       // Salvar nos alertas TMS rastreáveis
       try {
-        const stored = JSON.parse(localStorage.getItem('ciafal_tms_priority_alerts') || '[]')
+        const stored = crmStorage.getJSON<any[]>('ciafal_tms_priority_alerts', [])
         stored.unshift(payload)
-        localStorage.setItem('ciafal_tms_priority_alerts', JSON.stringify(stored))
+        crmStorage.setJSON('ciafal_tms_priority_alerts', stored)
       } catch {
         /* intentionally ignored */
       }

@@ -38,6 +38,7 @@ import {
 
 import QASProfileSelectionScreen from '@/components/auth/QASProfileSelectionScreen'
 import { shouldUseQASAuthBypass } from '@/config/qas-auth-config'
+import { crmStorage } from '@/lib/crm-storage'
 
 export default function Index() {
   const { user, signIn, loading: authLoading, isBypassActive } = useAuth()
@@ -159,7 +160,7 @@ export default function Index() {
         // Armazenar JWT se retornado
         if (verifyResult.token) {
           try {
-            localStorage.setItem('ciafal_jwt_token', verifyResult.token)
+            crmStorage.setItem('ciafal_jwt_token', verifyResult.token)
           } catch {
             /* intentionally ignored */
           }
