@@ -1,3 +1,4 @@
+import { crmStorage } from '@/lib/crm-storage'
 import pb from '@/lib/pocketbase/client'
 import {
   CATALOG_MATERIALS,
@@ -142,7 +143,7 @@ export class SmartCrossSellEngine {
         window.location.hostname.includes('preview') ||
         window.location.port !== ''
 
-      const savedMode = localStorage.getItem(STORAGE_KEY_MODE) as CrossSellDataMode | null
+      const savedMode = crmStorage.getItem(STORAGE_KEY_MODE) as CrossSellDataMode | null
       if (savedMode === 'REAL' || savedMode === 'FIXTURE') {
         this.mode = savedMode
       } else {
@@ -157,9 +158,7 @@ export class SmartCrossSellEngine {
 
   public setDataMode(mode: CrossSellDataMode): void {
     this.mode = mode
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_MODE, mode)
-    }
+    crmStorage.setItem(STORAGE_KEY_MODE, mode)
   }
 
   /**
@@ -585,9 +584,7 @@ export class SmartCrossSellEngine {
     }
 
     feedbackList.unshift(record)
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY_FEEDBACK, JSON.stringify(feedbackList))
-    }
+    crmStorage.setJSON(STORAGE_KEY_FEEDBACK, feedbackList)
 
     try {
       const payload = {
@@ -624,15 +621,7 @@ export class SmartCrossSellEngine {
   }
 
   public getStoredFeedback(): CrossSellFeedbackRecord[] {
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const stored = localStorage.getItem(STORAGE_KEY_FEEDBACK)
-        if (stored) return JSON.parse(stored)
-      }
-    } catch {
-      /* intentionally ignored */
-    }
-    return [
+    const defaultFeedback: CrossSellFeedbackRecord[] = [
       {
         id: 'fb-init-1',
         quotation_code: 'COT-98104',
@@ -706,6 +695,7 @@ export class SmartCrossSellEngine {
         timestamp: '2024-10-22 14:10',
       },
     ]
+    return crmStorage.getJSON<CrossSellFeedbackRecord[]>(STORAGE_KEY_FEEDBACK, defaultFeedback)
   }
 
   public getEfficiencyStats(): CrossSellEfficiencyStats {

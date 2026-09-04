@@ -1,6 +1,7 @@
 // src/services/campaign_service.ts
 // Gerencia Campanhas Comerciais Estruturadas (E-mail, WhatsApp, Fila, Idempotência, Supressão, Governança, Opt-out)
 
+import { crmStorage } from '@/lib/crm-storage'
 import {
   mockInitialCampaigns,
   mockInitialQueue,
@@ -21,21 +22,11 @@ const STORAGE_KEY_LGPD = 'ciafal_crm_lgpd_consent_v1'
 
 class CampaignService {
   private getStored<T>(key: string, fallback: T): T {
-    try {
-      const item = localStorage.getItem(key)
-      if (item) return JSON.parse(item)
-    } catch {
-      // fallback
-    }
-    return fallback
+    return crmStorage.getJSON<T>(key, fallback)
   }
 
   private setStored<T>(key: string, data: T) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data))
-    } catch {
-      // silent
-    }
+    crmStorage.setJSON(key, data)
   }
 
   public getCampaigns(): CommercialCampaign[] {

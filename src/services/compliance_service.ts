@@ -5,6 +5,7 @@ import {
   DigitalSignatureIntegrationConfig,
   SignatureEnvelopeSummary,
 } from '@/types/models'
+import { crmStorage } from '@/lib/crm-storage'
 import { DigitalSignatureProvider, D4SignProvider, DocuSignProvider } from '@/providers'
 
 const POLICIES_KEY = 'ciafal_compliance_policies_v1'
@@ -446,75 +447,35 @@ const INITIAL_ACCEPTANCES: EmployeePolicyAcceptance[] = [
 
 export class ComplianceService {
   private getPolicies(): CompliancePolicyType[] {
-    try {
-      const data = localStorage.getItem(POLICIES_KEY)
-      if (data) return JSON.parse(data)
-    } catch {
-      /* intentionally ignored */
-    }
-    return INITIAL_POLICY_TYPES
+    return crmStorage.getJSON<CompliancePolicyType[]>(POLICIES_KEY, INITIAL_POLICY_TYPES)
   }
 
   private savePolicies(list: CompliancePolicyType[]): void {
-    try {
-      localStorage.setItem(POLICIES_KEY, JSON.stringify(list))
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(POLICIES_KEY, list)
   }
 
   private getVersions(): PolicyDocumentVersion[] {
-    try {
-      const data = localStorage.getItem(VERSIONS_KEY)
-      if (data) return JSON.parse(data)
-    } catch {
-      /* intentionally ignored */
-    }
-    return INITIAL_VERSIONS
+    return crmStorage.getJSON<PolicyDocumentVersion[]>(VERSIONS_KEY, INITIAL_VERSIONS)
   }
 
   private saveVersions(list: PolicyDocumentVersion[]): void {
-    try {
-      localStorage.setItem(VERSIONS_KEY, JSON.stringify(list))
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(VERSIONS_KEY, list)
   }
 
   private getAcceptances(): EmployeePolicyAcceptance[] {
-    try {
-      const data = localStorage.getItem(ACCEPTANCES_KEY)
-      if (data) return JSON.parse(data)
-    } catch {
-      /* intentionally ignored */
-    }
-    return INITIAL_ACCEPTANCES
+    return crmStorage.getJSON<EmployeePolicyAcceptance[]>(ACCEPTANCES_KEY, INITIAL_ACCEPTANCES)
   }
 
   private saveAcceptances(list: EmployeePolicyAcceptance[]): void {
-    try {
-      localStorage.setItem(ACCEPTANCES_KEY, JSON.stringify(list))
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(ACCEPTANCES_KEY, list)
   }
 
   getDigitalSignatureConfig(): DigitalSignatureIntegrationConfig {
-    try {
-      const data = localStorage.getItem(SIG_CONFIG_KEY)
-      if (data) return JSON.parse(data)
-    } catch {
-      /* intentionally ignored */
-    }
-    return DEFAULT_SIG_CONFIG
+    return crmStorage.getJSON<DigitalSignatureIntegrationConfig>(SIG_CONFIG_KEY, DEFAULT_SIG_CONFIG)
   }
 
   saveDigitalSignatureConfig(cfg: DigitalSignatureIntegrationConfig): void {
-    try {
-      localStorage.setItem(SIG_CONFIG_KEY, JSON.stringify(cfg))
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(SIG_CONFIG_KEY, cfg)
   }
 
   getProviderInstance(

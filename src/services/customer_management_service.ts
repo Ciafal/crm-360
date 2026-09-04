@@ -1,4 +1,5 @@
 // src/services/customer_management_service.ts
+import { crmStorage } from '@/lib/crm-storage'
 import type {
   CustomerManagementItem,
   CoverageSummaryKpi,
@@ -37,21 +38,11 @@ const STORAGE_KEY_CATALOG = 'ciafal_crm_catalog_v1'
 
 class CustomerManagementService {
   private getStored<T>(key: string, defaultData: T): T {
-    try {
-      const item = localStorage.getItem(key)
-      if (item) return JSON.parse(item)
-    } catch {
-      // fallback
-    }
-    return defaultData
+    return crmStorage.getJSON<T>(key, defaultData)
   }
 
   private setStored<T>(key: string, data: T) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data))
-    } catch {
-      // silent
-    }
+    crmStorage.setJSON(key, data)
   }
 
   public getCustomers(): CustomerManagementItem[] {

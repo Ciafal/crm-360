@@ -1,6 +1,7 @@
 // src/services/bulk_task_service.ts
 // Gerencia a criação e controle de tarefas em lote e individuais (UMA TAREFA POR CLIENTE)
 
+import { crmStorage } from '@/lib/crm-storage'
 import {
   mockInitialTasks,
   mockInitialBatches,
@@ -22,21 +23,11 @@ const STORAGE_KEY_AUDIT = 'ciafal_crm_ai_audit_logs_v1'
 
 class BulkTaskService {
   private getStored<T>(key: string, fallback: T): T {
-    try {
-      const item = localStorage.getItem(key)
-      if (item) return JSON.parse(item)
-    } catch {
-      // fallback
-    }
-    return fallback
+    return crmStorage.getJSON<T>(key, fallback)
   }
 
   private setStored<T>(key: string, data: T) {
-    try {
-      localStorage.setItem(key, JSON.stringify(data))
-    } catch {
-      // silent
-    }
+    crmStorage.setJSON(key, data)
   }
 
   public getTasks(): CommercialTask[] {

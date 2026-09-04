@@ -1,3 +1,4 @@
+import { crmStorage } from '@/lib/crm-storage'
 import {
   CorporateRequest,
   CorporateRequestType,
@@ -291,21 +292,11 @@ const INITIAL_REQUESTS: CorporateRequest[] = [
 
 export class CorporateRequestsService {
   private getStorage(): CorporateRequest[] {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY)
-      if (data) return JSON.parse(data)
-    } catch {
-      /* intentionally ignored */
-    }
-    return INITIAL_REQUESTS
+    return crmStorage.getJSON<CorporateRequest[]>(STORAGE_KEY, INITIAL_REQUESTS)
   }
 
   private saveStorage(list: CorporateRequest[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(STORAGE_KEY, list)
   }
 
   async listRequests(): Promise<CorporateRequest[]> {

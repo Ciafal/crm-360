@@ -1,6 +1,7 @@
 // src/services/catalogoService.ts
 // SERVIÇO DE GERAÇÃO, VERSIONAMENTO, SEGURANÇA E ENVIO DE CATÁLOGOS CIAFAL CRM 360º
 
+import { crmStorage } from '@/lib/crm-storage'
 import pb from '@/lib/pocketbase/client'
 import {
   CatalogoProdutoItem,
@@ -56,29 +57,13 @@ export class CatalogoService {
   }
 
   private carregarCatalogosArmazenados() {
-    try {
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem(STORAGE_KEY_CATALOGOS)
-        if (stored) {
-          this.catalogos = JSON.parse(stored)
-          return
-        }
-      }
-    } catch {
-      /* intentionally ignored */
-    }
-    this.catalogos = [...mockCatalogosGeradosHistorico]
-    this.salvarCatalogosStorage()
+    this.catalogos = crmStorage.getJSON<CatalogoGerado[]>(STORAGE_KEY_CATALOGOS, [
+      ...mockCatalogosGeradosHistorico,
+    ])
   }
 
   private salvarCatalogosStorage() {
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_CATALOGOS, JSON.stringify(this.catalogos))
-      }
-    } catch {
-      /* intentionally ignored */
-    }
+    crmStorage.setJSON(STORAGE_KEY_CATALOGOS, this.catalogos)
   }
 
   /**

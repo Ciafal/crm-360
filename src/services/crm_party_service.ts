@@ -1,4 +1,5 @@
 // src/services/crm_party_service.ts - Registro Comercial Único CRM 360º CIAFAL
+import { crmStorage } from '@/lib/crm-storage'
 import type {
   CrmPartyMaster,
   CommercialStage,
@@ -576,28 +577,15 @@ class CrmPartyService {
 
   public getParties(): CrmPartyMaster[] {
     if (this.partiesCache) return this.partiesCache
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_CRM_PARTIES)
-      if (stored) {
-        this.partiesCache = JSON.parse(stored)
-        return this.partiesCache!
-      }
-    } catch {
-      // fallback
-    }
-
     const initial = this.initializeDefaultParties()
-    this.saveParties(initial)
-    return initial
+    const stored = crmStorage.getJSON<CrmPartyMaster[]>(STORAGE_KEY_CRM_PARTIES, initial)
+    this.partiesCache = stored
+    return stored
   }
 
   public saveParties(parties: CrmPartyMaster[]): void {
     this.partiesCache = parties
-    try {
-      localStorage.setItem(STORAGE_KEY_CRM_PARTIES, JSON.stringify(parties))
-    } catch {
-      // silent
-    }
+    crmStorage.setJSON(STORAGE_KEY_CRM_PARTIES, parties)
   }
 
   public getPartyById(crmPartyId: string): CrmPartyMaster | undefined {
@@ -1312,21 +1300,11 @@ class CrmPartyService {
   }
 
   public getSapQueue(): CrmSapIntegrationQueueItem[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_SAP_QUEUE)
-      if (stored) return JSON.parse(stored)
-    } catch {
-      // fallback
-    }
-    return []
+    return crmStorage.getJSON<CrmSapIntegrationQueueItem[]>(STORAGE_KEY_SAP_QUEUE, [])
   }
 
   public saveSapQueue(queue: CrmSapIntegrationQueueItem[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_SAP_QUEUE, JSON.stringify(queue))
-    } catch {
-      // silent
-    }
+    crmStorage.setJSON(STORAGE_KEY_SAP_QUEUE, queue)
   }
 
   // Executa processamento simulado da fila SAP ECC gerando código SAP (Ex: 00172893)
