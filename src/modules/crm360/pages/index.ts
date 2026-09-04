@@ -1,6 +1,7 @@
 // src/modules/crm360/pages/index.ts
 // Re-exportação das páginas que compõem o módulo CRM 360º CIAFAL
 export { default as IndexPage } from '@/pages/Index'
+export { default as LoginPage } from '@/pages/Index'
 export { default as HomePage } from '@/pages/Home'
 export { default as CrmPage } from '@/pages/CRM'
 export { ContatosPage } from '@/pages/Contatos'

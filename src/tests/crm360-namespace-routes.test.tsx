@@ -120,6 +120,30 @@ describe('FASE 1 — Namespace CRM 360º (/crm360/*) e Migração de Storage', (
       expect(paths).toContain('/crm360/administracao')
     })
 
+    it('redireciona a rota raiz / diretamente para /crm360/home sem renderizar Index diretamente', () => {
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/crm360/home" replace />} />
+            <Route path="/crm360/home" element={<div>Tela Canônica Meu Dia CRM360</div>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      expect(screen.getByText('Tela Canônica Meu Dia CRM360')).toBeDefined()
+    })
+
+    it('redireciona path legado /home e /meu-dia para /crm360/home', () => {
+      render(
+        <MemoryRouter initialEntries={['/home']}>
+          <Routes>
+            <Route path="/home" element={<Navigate to="/crm360/home" replace />} />
+            <Route path="/crm360/home" element={<div>Tela Canônica Meu Dia CRM360</div>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      expect(screen.getByText('Tela Canônica Meu Dia CRM360')).toBeDefined()
+    })
+
     it('redireciona path legado /estoque para /crm360/estoque no roteador', () => {
       render(
         <MemoryRouter initialEntries={['/estoque']}>
@@ -142,6 +166,31 @@ describe('FASE 1 — Namespace CRM 360º (/crm360/*) e Migração de Storage', (
         </MemoryRouter>,
       )
       expect(screen.getByText('Módulo de Cotações CRM360')).toBeDefined()
+    })
+
+    it('redireciona /consultas, /tarefas, /equipe, /contatos, /metas, /kpis, /crm para seus equivalentes /crm360/*', () => {
+      const routesToTest = [
+        { legacy: '/consultas', target: '/crm360/consultas', label: 'Consultas CRM360' },
+        { legacy: '/tarefas', target: '/crm360/tarefas', label: 'Tarefas CRM360' },
+        { legacy: '/equipe', target: '/crm360/equipe', label: 'Equipe CRM360' },
+        { legacy: '/contatos', target: '/crm360/contatos', label: 'Contatos CRM360' },
+        { legacy: '/metas', target: '/crm360/metas', label: 'Metas CRM360' },
+        { legacy: '/kpis', target: '/crm360/kpis', label: 'KPIs CRM360' },
+        { legacy: '/crm', target: '/crm360/crm', label: 'Pipeline CRM360' },
+      ]
+
+      routesToTest.forEach(({ legacy, target, label }) => {
+        const { unmount } = render(
+          <MemoryRouter initialEntries={[legacy]}>
+            <Routes>
+              <Route path={legacy} element={<Navigate to={target} replace />} />
+              <Route path={target} element={<div>{label}</div>} />
+            </Routes>
+          </MemoryRouter>,
+        )
+        expect(screen.getByText(label)).toBeDefined()
+        unmount()
+      })
     })
 
     it('redireciona /parametros-sap e /administracao/parametros-sap para /crm360/parametros-sap', () => {
@@ -191,6 +240,37 @@ describe('FASE 1 — Namespace CRM 360º (/crm360/*) e Migração de Storage', (
       await waitFor(() => {
         expect(screen.getByText(`Usuario: ${vendedorProfile.name}`)).toBeDefined()
         expect(screen.getByText('Role: VENDEDOR')).toBeDefined()
+      })
+    })
+
+    it('acesso direto à rota interna prefixada (/crm360/estoque) preserva a sessão autenticada sem loop', async () => {
+      const vendedorProfile = QAS_PROFILES.find((p) => p.role === 'VENDEDOR')!
+      const testSessionUser = createQASTestSessionUser(vendedorProfile)
+      crmStorage.setItem('ciafal_crm_session', JSON.stringify(testSessionUser))
+
+      const InternalProtectedRoute = () => {
+        const { user, loading } = useAuth()
+        if (loading) return <div>Carregando Sessão...</div>
+        if (!user) return <Navigate to="/crm360/login" replace />
+        return <Outlet />
+      }
+
+      render(
+        <MemoryRouter initialEntries={['/crm360/estoque']}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/crm360/login" element={<div>Tela de Login QAS</div>} />
+              <Route element={<InternalProtectedRoute />}>
+                <Route path="/crm360/estoque" element={<div>Módulo de Estoque Aberto com Sucesso</div>} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Módulo de Estoque Aberto com Sucesso')).toBeDefined()
+        expect(screen.queryByText('Tela de Login QAS')).toBeNull()
       })
     })
 

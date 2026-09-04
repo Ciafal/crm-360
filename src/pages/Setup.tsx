@@ -825,7 +825,7 @@ export default function Setup() {
                           try {
                             await pb.collection('users').authWithPassword(u.email, u.password)
                             addLog(`Login efetuado para ${u.email}! Redirecionando...`, 'success')
-                            navigate('/home')
+                            navigate('/crm360/home')
                           } catch (e: any) {
                             addLog(`Erro ao logar com ${u.email}: ${e.message}`, 'error')
                           }
@@ -897,7 +897,7 @@ export default function Setup() {
           </Button>
 
           <Button
-            onClick={() => navigate('/home')}
+            onClick={() => navigate('/crm360/home')}
             className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-semibold h-10 shadow-lg shadow-emerald-950/50"
           >
             Acessar Sistema CRM 360º →

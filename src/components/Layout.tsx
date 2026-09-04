@@ -38,12 +38,12 @@ export default function Layout() {
 
   const handleLogout = () => {
     signOut()
-    navigate('/')
+    navigate('/crm360/login')
   }
 
   const handleSwitchProfile = () => {
     switchQASProfile()
-    navigate('/')
+    navigate('/crm360/login')
   }
 
   const avatarUrl = user?.avatar
@@ -81,7 +81,12 @@ export default function Layout() {
     { id: 'crm', name: 'CRM 360', path: '/crm360/crm', priority: 4 },
     { id: 'tarefas', name: 'Tarefas', path: '/crm360/tarefas', priority: 5 },
     { id: 'kpis', name: 'KPIs', path: '/crm360/kpis', priority: 6 },
-    { id: 'gestao-clientes', name: 'Gestão de Clientes', path: '/crm360/gestao-clientes', priority: 7 },
+    {
+      id: 'gestao-clientes',
+      name: 'Gestão de Clientes',
+      path: '/crm360/gestao-clientes',
+      priority: 7,
+    },
     { id: 'satisfacao', name: 'Satisfação de Clientes', path: '/crm360/satisfacao', priority: 8 },
     {
       id: 'consultas',
@@ -104,7 +109,11 @@ export default function Layout() {
 
   // Módulos complementares para o menu "Mais"
   const SECONDARY_NAV_ITEMS = [
-    { name: 'S&OP / Forecast', path: '/crm360/planejamento-sop', desc: 'Demanda F0-F4, FVA & Waterfall' },
+    {
+      name: 'S&OP / Forecast',
+      path: '/crm360/planejamento-sop',
+      desc: 'Demanda F0-F4, FVA & Waterfall',
+    },
     { name: 'Equipe Comercial', path: '/crm360/equipe', desc: 'Vendedores, Metas & Hierarquia' },
     { name: 'Visitas & Rotas', path: '/crm360/visitas', desc: 'Roteirização & Geolocalização' },
     { name: 'Agentes de IA', path: '/crm360/agentes', desc: 'Copilotos & Automações' },

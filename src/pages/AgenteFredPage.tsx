@@ -73,7 +73,7 @@ export default function AgenteFredPage() {
             toast.success(
               'Compromisso de alinhamento logístico criado na Agenda Corporativa do HUB!',
             )
-            navigate('/home')
+            navigate('/crm360/home')
           },
         },
       },

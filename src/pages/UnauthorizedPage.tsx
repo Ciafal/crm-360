@@ -17,7 +17,7 @@ export default function UnauthorizedPage() {
 
   const handleLogout = () => {
     signOut()
-    navigate('/', { replace: true })
+    navigate('/crm360/login', { replace: true })
   }
 
   return (
@@ -87,7 +87,7 @@ export default function UnauthorizedPage() {
           <CardFooter className="flex flex-col sm:flex-row gap-2.5 pt-2 pb-6 px-6">
             <Button
               variant="outline"
-              onClick={() => navigate('/home')}
+              onClick={() => navigate('/crm360/home')}
               className="w-full sm:flex-1 h-10 border-slate-300 text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-2"
             >
               <ArrowLeft className="h-4 w-4" />

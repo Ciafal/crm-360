@@ -50,7 +50,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   const { user, loading } = useAuth()
   if (loading) return null
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/crm360/login" replace />
 
   if (allowedRoles && allowedRoles.length > 0) {
     const userRole = (user.role || '').toString().toUpperCase()
@@ -71,17 +71,24 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Rota Raiz: Tela de Seleção de Perfil (QAS) ou Login / Redirecionamento se autenticado */}
-            <Route path="/" element={<Index />} />
+            {/* Rota Raiz Canônica: Redireciona diretamente para /crm360/home.
+                Se o usuário não estiver autenticado (ou com bypass ativo),
+                a proteção de rota interna ProtectedRoute redireciona para /crm360/login. */}
+            <Route path="/" element={<Navigate to="/crm360/home" replace />} />
 
-            {/* Rotas Públicas / Sistema sob namespace /crm360 */}
+            {/* Rotas Públicas / Autenticação sob namespace /crm360 */}
+            <Route path="/crm360/login" element={<Index />} />
             <Route path="/crm360/setup" element={<Setup />} />
             <Route path="/crm360/nao-autorizado" element={<UnauthorizedPage />} />
             <Route path="/crm360/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Redirecionamentos de rotas públicas legadas */}
+            <Route path="/login" element={<Navigate to="/crm360/login" replace />} />
             <Route path="/setup" element={<Navigate to="/crm360/setup" replace />} />
-            <Route path="/nao-autorizado" element={<Navigate to="/crm360/nao-autorizado" replace />} />
+            <Route
+              path="/nao-autorizado"
+              element={<Navigate to="/crm360/nao-autorizado" replace />}
+            />
             <Route path="/unauthorized" element={<Navigate to="/crm360/unauthorized" replace />} />
 
             {/* Redirecionamento da raiz do CRM para a home canônica */}
@@ -129,10 +136,7 @@ const App = () => (
                   path="/crm360/planejamento-estrategico"
                   element={<ImportacaoPlanejamentoEstrategico />}
                 />
-                <Route
-                  path="/crm360/importar-pe"
-                  element={<ImportacaoPlanejamentoEstrategico />}
-                />
+                <Route path="/crm360/importar-pe" element={<ImportacaoPlanejamentoEstrategico />} />
 
                 {/* 7. Gestão de Clientes / Carteira / Cobertura */}
                 <Route path="/crm360/gestao-clientes" element={<GestaoClientesPage />} />
@@ -216,14 +220,8 @@ const App = () => (
                 {/* Central de Integrações */}
                 <Route path="/crm360/central-integracoes" element={<CentralIntegracoes />} />
                 <Route path="/crm360/integracoes" element={<CentralIntegracoes />} />
-                <Route
-                  path="/crm360/crm/integracoes/sap/pedidos"
-                  element={<SapOrdersMonitor />}
-                />
-                <Route
-                  path="/crm360/integracoes/sap/pedidos"
-                  element={<SapOrdersMonitor />}
-                />
+                <Route path="/crm360/crm/integracoes/sap/pedidos" element={<SapOrdersMonitor />} />
+                <Route path="/crm360/integracoes/sap/pedidos" element={<SapOrdersMonitor />} />
 
                 {/* Administração & Parâmetros */}
                 <Route path="/crm360/administracao" element={<Administracao />} />
@@ -243,14 +241,20 @@ const App = () => (
             {/* ========================================================================= */}
             <Route path="/home" element={<Navigate to="/crm360/home" replace />} />
             <Route path="/meu-dia" element={<Navigate to="/crm360/meu-dia" replace />} />
-            <Route path="/gestao-do-dia" element={<Navigate to="/crm360/gestao-do-dia" replace />} />
+            <Route
+              path="/gestao-do-dia"
+              element={<Navigate to="/crm360/gestao-do-dia" replace />}
+            />
 
             <Route path="/contatos" element={<Navigate to="/crm360/contatos" replace />} />
             <Route path="/conversas" element={<Navigate to="/crm360/conversas" replace />} />
             <Route path="/whatsapp" element={<Navigate to="/crm360/whatsapp" replace />} />
 
             <Route path="/cotacoes" element={<Navigate to="/crm360/cotacoes" replace />} />
-            <Route path="/cotacoes/nova" element={<Navigate to="/crm360/cotacoes/nova" replace />} />
+            <Route
+              path="/cotacoes/nova"
+              element={<Navigate to="/crm360/cotacoes/nova" replace />}
+            />
             <Route path="/cotacoes/:id" element={<Navigate to="/crm360/cotacoes/:id" replace />} />
             <Route path="/crm/cotacoes" element={<Navigate to="/crm360/crm/cotacoes" replace />} />
             <Route
@@ -263,15 +267,24 @@ const App = () => (
             />
 
             <Route path="/crm" element={<Navigate to="/crm360/crm" replace />} />
-            <Route path="/crm/oportunidades" element={<Navigate to="/crm360/oportunidades" replace />} />
-            <Route path="/oportunidades" element={<Navigate to="/crm360/oportunidades" replace />} />
+            <Route
+              path="/crm/oportunidades"
+              element={<Navigate to="/crm360/oportunidades" replace />}
+            />
+            <Route
+              path="/oportunidades"
+              element={<Navigate to="/crm360/oportunidades" replace />}
+            />
             <Route path="/cliente/:id" element={<Navigate to="/crm360/cliente/:id" replace />} />
             <Route path="/crm/:id" element={<Navigate to="/crm360/crm/:id" replace />} />
 
             <Route path="/tarefas" element={<Navigate to="/crm360/tarefas" replace />} />
 
             <Route path="/kpis" element={<Navigate to="/crm360/kpis" replace />} />
-            <Route path="/kpis-comerciais" element={<Navigate to="/crm360/kpis-comerciais" replace />} />
+            <Route
+              path="/kpis-comerciais"
+              element={<Navigate to="/crm360/kpis-comerciais" replace />}
+            />
             <Route path="/indicadores" element={<Navigate to="/crm360/indicadores" replace />} />
             <Route path="/metas" element={<Navigate to="/crm360/metas" replace />} />
             <Route
@@ -280,7 +293,10 @@ const App = () => (
             />
             <Route path="/importar-pe" element={<Navigate to="/crm360/importar-pe" replace />} />
 
-            <Route path="/gestao-clientes" element={<Navigate to="/crm360/gestao-clientes" replace />} />
+            <Route
+              path="/gestao-clientes"
+              element={<Navigate to="/crm360/gestao-clientes" replace />}
+            />
             <Route path="/clientes" element={<Navigate to="/crm360/clientes" replace />} />
             <Route path="/carteira" element={<Navigate to="/crm360/carteira" replace />} />
             <Route path="/cobertura" element={<Navigate to="/crm360/cobertura" replace />} />
@@ -292,8 +308,14 @@ const App = () => (
             />
 
             <Route path="/consultas" element={<Navigate to="/crm360/consultas" replace />} />
-            <Route path="/consultas/nfs" element={<Navigate to="/crm360/consultas/nfs" replace />} />
-            <Route path="/consultas/boletos" element={<Navigate to="/crm360/consultas/boletos" replace />} />
+            <Route
+              path="/consultas/nfs"
+              element={<Navigate to="/crm360/consultas/nfs" replace />}
+            />
+            <Route
+              path="/consultas/boletos"
+              element={<Navigate to="/crm360/consultas/boletos" replace />}
+            />
             <Route
               path="/consultas/certificados"
               element={<Navigate to="/crm360/consultas/certificados" replace />}
@@ -303,16 +325,25 @@ const App = () => (
               element={<Navigate to="/crm360/consultas/documentos" replace />}
             />
 
-            <Route path="/central-acoes" element={<Navigate to="/crm360/central-acoes" replace />} />
+            <Route
+              path="/central-acoes"
+              element={<Navigate to="/crm360/central-acoes" replace />}
+            />
             <Route path="/acoes" element={<Navigate to="/crm360/acoes" replace />} />
             <Route path="/campanhas" element={<Navigate to="/crm360/campanhas" replace />} />
             <Route path="/cross-sell" element={<Navigate to="/crm360/cross-sell" replace />} />
 
             <Route path="/estoque" element={<Navigate to="/crm360/estoque" replace />} />
-            <Route path="/gestao-estoque" element={<Navigate to="/crm360/gestao-estoque" replace />} />
+            <Route
+              path="/gestao-estoque"
+              element={<Navigate to="/crm360/gestao-estoque" replace />}
+            />
             <Route path="/catalogo" element={<Navigate to="/crm360/catalogo" replace />} />
 
-            <Route path="/planejamento-sop" element={<Navigate to="/crm360/planejamento-sop" replace />} />
+            <Route
+              path="/planejamento-sop"
+              element={<Navigate to="/crm360/planejamento-sop" replace />}
+            />
             <Route path="/planejamento" element={<Navigate to="/crm360/planejamento" replace />} />
             <Route path="/sop" element={<Navigate to="/crm360/sop" replace />} />
             <Route path="/forecast" element={<Navigate to="/crm360/forecast" replace />} />
@@ -322,13 +353,19 @@ const App = () => (
             <Route path="/agenda" element={<Navigate to="/crm360/agenda" replace />} />
             <Route path="/agentes" element={<Navigate to="/crm360/agentes" replace />} />
 
-            <Route path="/gestao-inativos" element={<Navigate to="/crm360/gestao-inativos" replace />} />
+            <Route
+              path="/gestao-inativos"
+              element={<Navigate to="/crm360/gestao-inativos" replace />}
+            />
             <Route path="/inativos" element={<Navigate to="/crm360/inativos" replace />} />
 
             <Route path="/agente-fred" element={<Navigate to="/crm360/agente-fred" replace />} />
             <Route path="/fred" element={<Navigate to="/crm360/fred" replace />} />
 
-            <Route path="/parametros-sap" element={<Navigate to="/crm360/parametros-sap" replace />} />
+            <Route
+              path="/parametros-sap"
+              element={<Navigate to="/crm360/parametros-sap" replace />}
+            />
             <Route
               path="/administracao/parametros-sap"
               element={<Navigate to="/crm360/administracao/parametros-sap" replace />}
@@ -348,13 +385,22 @@ const App = () => (
               element={<Navigate to="/crm360/crm/integracoes/sap/pedidos" replace />}
             />
 
-            <Route path="/administracao" element={<Navigate to="/crm360/administracao" replace />} />
+            <Route
+              path="/administracao"
+              element={<Navigate to="/crm360/administracao" replace />}
+            />
             <Route path="/solicitacoes" element={<Navigate to="/crm360/solicitacoes" replace />} />
             <Route path="/hcm" element={<Navigate to="/crm360/hcm" replace />} />
-            <Route path="/hcm/compliance" element={<Navigate to="/crm360/hcm/compliance" replace />} />
+            <Route
+              path="/hcm/compliance"
+              element={<Navigate to="/crm360/hcm/compliance" replace />}
+            />
             <Route path="/compliance" element={<Navigate to="/crm360/compliance" replace />} />
             <Route path="/hypercare" element={<Navigate to="/crm360/hypercare" replace />} />
-            <Route path="/relatorio-release" element={<Navigate to="/crm360/relatorio-release" replace />} />
+            <Route
+              path="/relatorio-release"
+              element={<Navigate to="/crm360/relatorio-release" replace />}
+            />
 
             {/* Rota 404 Não Encontrado */}
             <Route path="*" element={<NotFound />} />
