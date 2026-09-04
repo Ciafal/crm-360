@@ -52,7 +52,7 @@ export default function QASProfileSelectionScreen() {
         toast.success(`Acesso liberado como ${profile.displayRole} (${profile.name})!`, {
           description: 'Sessão de homologação inicializada com sucesso.',
         })
-        const from = (location.state as any)?.from?.pathname || '/home'
+        const from = (location.state as any)?.from?.pathname || '/crm360/home'
         setTimeout(() => {
           navigate(from, { replace: true })
         }, 150)

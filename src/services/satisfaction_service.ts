@@ -13,6 +13,7 @@ import {
 import { DEFAULT_ISC_PESOS, DEFAULT_ISC_BANDS, iscEngine } from '@/services/isc_engine'
 import { stockService } from '@/services/stock_service'
 import { mockClientes } from '@/data/mockCommercialData'
+import { crmStorage } from '@/lib/crm-storage'
 
 const STORAGE_KEY_CLIENTES = 'ciafal_satisfaction_clients_v1'
 const STORAGE_KEY_PESOS = 'ciafal_satisfaction_pesos_v1'
@@ -1899,36 +1900,36 @@ export class SatisfactionService {
   // Clientes
   public getClients(): ClienteSatisfacao360[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_CLIENTES)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<ClienteSatisfacao360[] | null>(STORAGE_KEY_CLIENTES, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
     const init = generateInitialSatisfactionClients()
-    localStorage.setItem(STORAGE_KEY_CLIENTES, JSON.stringify(init))
+    crmStorage.setJSON(STORAGE_KEY_CLIENTES, init)
     return init
   }
 
   public saveClients(clients: ClienteSatisfacao360[]) {
-    localStorage.setItem(STORAGE_KEY_CLIENTES, JSON.stringify(clients))
+    crmStorage.setJSON(STORAGE_KEY_CLIENTES, clients)
   }
 
   // Pesos do ISC
   public getPesos(): ISCPesosConfig {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_PESOS)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<ISCPesosConfig | null>(STORAGE_KEY_PESOS, null)
+      if (raw) return raw
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_PESOS, JSON.stringify(DEFAULT_ISC_PESOS))
+    crmStorage.setJSON(STORAGE_KEY_PESOS, DEFAULT_ISC_PESOS)
     return DEFAULT_ISC_PESOS
   }
 
   public getPesosHistory(): ISCPesoHistoryEntry[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_PESOS_HISTORY)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<ISCPesoHistoryEntry[] | null>(STORAGE_KEY_PESOS_HISTORY, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
@@ -1965,7 +1966,7 @@ export class SatisfactionService {
     }
 
     const pesosAnteriores = this.getPesos()
-    localStorage.setItem(STORAGE_KEY_PESOS, JSON.stringify(novosPesos))
+    crmStorage.setJSON(STORAGE_KEY_PESOS, novosPesos)
 
     // Registra histórico
     const history = this.getPesosHistory()
@@ -1981,7 +1982,7 @@ export class SatisfactionService {
       pesosAnteriores,
       pesosNovos: novosPesos,
     })
-    localStorage.setItem(STORAGE_KEY_PESOS_HISTORY, JSON.stringify(history))
+    crmStorage.setJSON(STORAGE_KEY_PESOS_HISTORY, history)
 
     // Recalcula ISC de todos os clientes com os novos pesos
     this.recalculateAllClientsISC(novosPesos)
@@ -2030,33 +2031,33 @@ export class SatisfactionService {
   // Faixas do ISC
   public getBands(): ISCBandConfig[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_BANDS)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<ISCBandConfig[] | null>(STORAGE_KEY_BANDS, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_BANDS, JSON.stringify(DEFAULT_ISC_BANDS))
+    crmStorage.setJSON(STORAGE_KEY_BANDS, DEFAULT_ISC_BANDS)
     return DEFAULT_ISC_BANDS
   }
 
   public saveBands(bands: ISCBandConfig[]) {
-    localStorage.setItem(STORAGE_KEY_BANDS, JSON.stringify(bands))
+    crmStorage.setJSON(STORAGE_KEY_BANDS, bands)
   }
 
   // Planos de Recuperação
   public getRecoveryPlans(): PlanoRecuperacao[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_PLANOS)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<PlanoRecuperacao[] | null>(STORAGE_KEY_PLANOS, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_PLANOS, JSON.stringify(INITIAL_RECOVERY_PLANS))
+    crmStorage.setJSON(STORAGE_KEY_PLANOS, INITIAL_RECOVERY_PLANS)
     return INITIAL_RECOVERY_PLANS
   }
 
   public saveRecoveryPlans(plans: PlanoRecuperacao[]) {
-    localStorage.setItem(STORAGE_KEY_PLANOS, JSON.stringify(plans))
+    crmStorage.setJSON(STORAGE_KEY_PLANOS, plans)
   }
 
   public createRecoveryPlan(
@@ -2152,39 +2153,39 @@ export class SatisfactionService {
   // Campanhas de Pesquisa
   public getSurveyCampaigns(): CampanhaPesquisa[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_CAMPANHAS)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<CampanhaPesquisa[] | null>(STORAGE_KEY_CAMPANHAS, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_CAMPANHAS, JSON.stringify(INITIAL_SURVEY_CAMPAIGNS))
+    crmStorage.setJSON(STORAGE_KEY_CAMPANHAS, INITIAL_SURVEY_CAMPAIGNS)
     return INITIAL_SURVEY_CAMPAIGNS
   }
 
   public saveSurveyCampaigns(campaigns: CampanhaPesquisa[]) {
-    localStorage.setItem(STORAGE_KEY_CAMPANHAS, JSON.stringify(campaigns))
+    crmStorage.setJSON(STORAGE_KEY_CAMPANHAS, campaigns)
   }
 
   public getSurveyResponses(): RespostaPesquisaCliente[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_RESPOSTAS)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<RespostaPesquisaCliente[] | null>(STORAGE_KEY_RESPOSTAS, null)
+      if (raw && Array.isArray(raw) && raw.length > 0) return raw
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_RESPOSTAS, JSON.stringify(INITIAL_SURVEY_RESPONSES))
+    crmStorage.setJSON(STORAGE_KEY_RESPOSTAS, INITIAL_SURVEY_RESPONSES)
     return INITIAL_SURVEY_RESPONSES
   }
 
   public saveSurveyResponses(responses: RespostaPesquisaCliente[]) {
-    localStorage.setItem(STORAGE_KEY_RESPOSTAS, JSON.stringify(responses))
+    crmStorage.setJSON(STORAGE_KEY_RESPOSTAS, responses)
   }
 
   // Auditoria
   public getAuditLogs(): SatisfactionAuditLog[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_AUDIT)
-      if (raw) return JSON.parse(raw)
+      const raw = crmStorage.getJSON<SatisfactionAuditLog[]>(STORAGE_KEY_AUDIT, [])
+      if (Array.isArray(raw)) return raw
     } catch {
       /* ignore */
     }
@@ -2203,7 +2204,7 @@ export class SatisfactionService {
     })
 
     if (list.length > 300) list.pop()
-    localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(list))
+    crmStorage.setJSON(STORAGE_KEY_AUDIT, list)
   }
 
   // RBAC: Filtrar clientes por perfil do usuário

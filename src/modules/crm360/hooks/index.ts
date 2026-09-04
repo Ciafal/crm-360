@@ -1,0 +1,16 @@
+// src/modules/crm360/hooks/index.ts
+// Re-exportação dos hooks do CRM 360 CIAFAL
+export * from '@/hooks/use-auth'
+export * from '@/hooks/use-crm'
+export * from '@/hooks/use-crm-companies'
+export * from '@/hooks/use-crm-stages'
+export * from '@/hooks/use-daily-actions'
+export * from '@/hooks/use-tasks'
+export * from '@/hooks/use-team-members'
+export * from '@/hooks/use-whatsapp'
+export * from '@/hooks/use-categories'
+export * from '@/hooks/use-bi'
+export * from '@/hooks/use-current-account'
+export * from '@/hooks/use-history-sync'
+export * from '@/hooks/use-realtime'
+export * from '@/hooks/use-qr-connection'

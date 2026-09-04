@@ -12,6 +12,7 @@ import type {
   DrilldownContextData,
 } from '@/components/analytics/CommercialDrilldownDrawer'
 import type { ClientRadarItem, ClientRadarQuadrant } from '@/components/analytics/ClientRadarWidget'
+import { crmStorage } from '@/lib/crm-storage'
 
 export interface RealDrilldownOptions {
   level: DrilldownLevel
@@ -323,8 +324,8 @@ const STORAGE_KEY_RISK_WEIGHTS = 'ciafal_meta_risk_weights'
 
 export function getRiskWeights(): RiskScoreWeights {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_RISK_WEIGHTS)
-    if (saved) return JSON.parse(saved)
+    const saved = crmStorage.getJSON<RiskScoreWeights | null>(STORAGE_KEY_RISK_WEIGHTS, null)
+    if (saved) return saved
   } catch {
     /* intentionally ignored */
   }
@@ -332,7 +333,7 @@ export function getRiskWeights(): RiskScoreWeights {
 }
 
 export function saveRiskWeights(weights: RiskScoreWeights) {
-  localStorage.setItem(STORAGE_KEY_RISK_WEIGHTS, JSON.stringify(weights))
+  crmStorage.setJSON(STORAGE_KEY_RISK_WEIGHTS, weights)
 }
 
 /**

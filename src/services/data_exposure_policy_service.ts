@@ -3,6 +3,7 @@ import type {
   ExposurePolicyAuditLog,
   ExposedValueResult,
 } from '@/types/data_exposure_policy'
+import { crmStorage } from '@/lib/crm-storage'
 
 const STORAGE_KEY_POLICIES = 'ciafal_data_exposure_policies_v1'
 const STORAGE_KEY_AUDIT = 'ciafal_data_exposure_audit_v1'
@@ -165,14 +166,9 @@ export class DataExposurePolicyService {
 
   public getPolicies(): DataExposurePolicy[] {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = window.localStorage.getItem(STORAGE_KEY_POLICIES)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed
-          }
-        }
+      const parsed = crmStorage.getJSON<DataExposurePolicy[] | null>(STORAGE_KEY_POLICIES, null)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
       }
     } catch {
       /* ignore */
@@ -184,10 +180,8 @@ export class DataExposurePolicyService {
 
   public savePolicies(policies: DataExposurePolicy[]): void {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(STORAGE_KEY_POLICIES, JSON.stringify(policies))
-        this.cacheVersion++
-      }
+      crmStorage.setJSON(STORAGE_KEY_POLICIES, policies)
+      this.cacheVersion++
     } catch {
       /* ignore */
     }
@@ -203,13 +197,8 @@ export class DataExposurePolicyService {
 
   public getAuditLogs(): ExposurePolicyAuditLog[] {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const stored = window.localStorage.getItem(STORAGE_KEY_AUDIT)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) return parsed
-        }
-      }
+      const parsed = crmStorage.getJSON<ExposurePolicyAuditLog[]>(STORAGE_KEY_AUDIT, [])
+      if (Array.isArray(parsed)) return parsed
     } catch {
       /* ignore */
     }
@@ -218,9 +207,7 @@ export class DataExposurePolicyService {
 
   public saveAuditLogs(logs: ExposurePolicyAuditLog[]): void {
     try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(STORAGE_KEY_AUDIT, JSON.stringify(logs))
-      }
+      crmStorage.setJSON(STORAGE_KEY_AUDIT, logs)
     } catch {
       /* ignore */
     }

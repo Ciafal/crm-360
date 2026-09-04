@@ -10,6 +10,7 @@ import type {
   CheckPriority,
 } from '@/types/stock'
 import pb from '@/lib/pocketbase/client'
+import { crmStorage } from '@/lib/crm-storage'
 
 const STORAGE_KEY_STOCK_ITEMS = 'ciafal_stock_staging_items_v2'
 const STORAGE_KEY_STOCK_CHECKS = 'ciafal_stock_check_requests_v2'
@@ -730,38 +731,38 @@ export class StockService {
 
   getStoredStockItems(): StockItem[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_STOCK_ITEMS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<StockItem[] | null>(STORAGE_KEY_STOCK_ITEMS, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_STOCK_ITEMS, JSON.stringify(INITIAL_STOCK_ITEMS))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_ITEMS, INITIAL_STOCK_ITEMS)
     return INITIAL_STOCK_ITEMS
   }
 
   saveStoredStockItems(items: StockItem[]) {
-    localStorage.setItem(STORAGE_KEY_STOCK_ITEMS, JSON.stringify(items))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_ITEMS, items)
   }
 
   getStoredStockChecks(): StockCheckRequest[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_STOCK_CHECKS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<StockCheckRequest[] | null>(STORAGE_KEY_STOCK_CHECKS, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_STOCK_CHECKS, JSON.stringify(INITIAL_STOCK_CHECKS))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_CHECKS, INITIAL_STOCK_CHECKS)
     return INITIAL_STOCK_CHECKS
   }
 
   saveStoredStockChecks(checks: StockCheckRequest[]) {
-    localStorage.setItem(STORAGE_KEY_STOCK_CHECKS, JSON.stringify(checks))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_CHECKS, checks)
   }
 
   getStoredAuditLogs(): StockAuditLog[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_STOCK_AUDIT)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<StockAuditLog[]>(STORAGE_KEY_STOCK_AUDIT, [])
+      if (Array.isArray(stored)) return stored
     } catch {
       /* ignore */
     }
@@ -769,22 +770,25 @@ export class StockService {
   }
 
   saveStoredAuditLogs(logs: StockAuditLog[]) {
-    localStorage.setItem(STORAGE_KEY_STOCK_AUDIT, JSON.stringify(logs))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_AUDIT, logs)
   }
 
   getStoredGovernanceParams(): StockGovernanceParam[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_STOCK_PARAMS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<StockGovernanceParam[] | null>(
+        STORAGE_KEY_STOCK_PARAMS,
+        null,
+      )
+      if (stored) return stored
     } catch {
       /* ignore */
     }
-    localStorage.setItem(STORAGE_KEY_STOCK_PARAMS, JSON.stringify(DEFAULT_GOVERNANCE_PARAMS))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_PARAMS, DEFAULT_GOVERNANCE_PARAMS)
     return DEFAULT_GOVERNANCE_PARAMS
   }
 
   saveStoredGovernanceParams(params: StockGovernanceParam[]) {
-    localStorage.setItem(STORAGE_KEY_STOCK_PARAMS, JSON.stringify(params))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_PARAMS, params)
   }
 
   // ==========================================
@@ -1265,8 +1269,10 @@ export class StockService {
 
   getSavedViews(): { id: string; name: string; filters: StockFilterState }[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_SAVED_VIEWS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<
+        { id: string; name: string; filters: StockFilterState }[] | null
+      >(STORAGE_KEY_SAVED_VIEWS, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* ignore */
     }
@@ -1328,7 +1334,7 @@ export class StockService {
       filters,
     }
     list.push(newView)
-    localStorage.setItem(STORAGE_KEY_SAVED_VIEWS, JSON.stringify(list))
+    crmStorage.setJSON(STORAGE_KEY_SAVED_VIEWS, list)
     return newView
   }
 }

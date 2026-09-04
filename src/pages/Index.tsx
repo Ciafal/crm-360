@@ -64,10 +64,10 @@ export default function Index() {
 
   const otpInputRef = useRef<HTMLInputElement>(null)
 
-  // Se já autenticado, redireciona uma única vez para o Meu Dia (/home)
+  // Se já autenticado, redireciona uma única vez para o CRM 360 Meu Dia (/crm360/home)
   useEffect(() => {
     if (!authLoading && user) {
-      const from = (location.state as any)?.from?.pathname || '/home'
+      const from = (location.state as any)?.from?.pathname || '/crm360/home'
       navigate(from, { replace: true })
     }
   }, [user, authLoading, navigate, location])
@@ -177,7 +177,7 @@ export default function Index() {
 
         setSuccessNotice('Acesso autorizado! Redirecionando para o Meu Dia...')
         setTimeout(() => {
-          navigate('/home', { replace: true })
+          navigate('/crm360/home', { replace: true })
         }, 200)
       } else {
         setError(verifyResult.error || 'Código de verificação inválido.')

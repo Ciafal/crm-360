@@ -1,5 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 import { createTask } from '@/services/tasks'
+import { crmStorage } from '@/lib/crm-storage'
 import type {
   Quotation,
   QuotationItem,
@@ -1002,12 +1003,12 @@ const INITIAL_SAP_MESSAGES: SapOrderMessage[] = [
 export class QuotationService {
   getStoredQuotations(): Quotation[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_QUOTES)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<Quotation[] | null>(STORAGE_KEY_QUOTES, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* intentionally ignored */
     }
-    localStorage.setItem(STORAGE_KEY_QUOTES, JSON.stringify(INITIAL_QUOTATIONS))
+    crmStorage.setJSON(STORAGE_KEY_QUOTES, INITIAL_QUOTATIONS)
     return INITIAL_QUOTATIONS
   }
 
@@ -1020,13 +1021,16 @@ export class QuotationService {
   }
 
   private saveStoredQuotes(quotes: Quotation[]) {
-    localStorage.setItem(STORAGE_KEY_QUOTES, JSON.stringify(quotes))
+    crmStorage.setJSON(STORAGE_KEY_QUOTES, quotes)
   }
 
   getAdminSettings(): QuotationAdminSettings {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_ADMIN_SETTINGS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<QuotationAdminSettings | null>(
+        STORAGE_KEY_ADMIN_SETTINGS,
+        null,
+      )
+      if (stored) return stored
     } catch {
       /* intentionally ignored */
     }
@@ -1034,7 +1038,7 @@ export class QuotationService {
   }
 
   saveAdminSettings(settings: QuotationAdminSettings) {
-    localStorage.setItem(STORAGE_KEY_ADMIN_SETTINGS, JSON.stringify(settings))
+    crmStorage.setJSON(STORAGE_KEY_ADMIN_SETTINGS, settings)
   }
 
   async getAllQuotations(): Promise<Quotation[]> {
@@ -1491,32 +1495,32 @@ export class QuotationService {
 
   getStoredSapQueue(): QuoteOrderIntegration[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_SAP_QUEUE)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<QuoteOrderIntegration[] | null>(STORAGE_KEY_SAP_QUEUE, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* intentionally ignored */
     }
-    localStorage.setItem(STORAGE_KEY_SAP_QUEUE, JSON.stringify(INITIAL_SAP_QUEUE))
+    crmStorage.setJSON(STORAGE_KEY_SAP_QUEUE, INITIAL_SAP_QUEUE)
     return INITIAL_SAP_QUEUE
   }
 
   saveStoredSapQueue(items: QuoteOrderIntegration[]) {
-    localStorage.setItem(STORAGE_KEY_SAP_QUEUE, JSON.stringify(items))
+    crmStorage.setJSON(STORAGE_KEY_SAP_QUEUE, items)
   }
 
   getStoredSapMessages(): SapOrderMessage[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_SAP_MSGS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<SapOrderMessage[] | null>(STORAGE_KEY_SAP_MSGS, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* intentionally ignored */
     }
-    localStorage.setItem(STORAGE_KEY_SAP_MSGS, JSON.stringify(INITIAL_SAP_MESSAGES))
+    crmStorage.setJSON(STORAGE_KEY_SAP_MSGS, INITIAL_SAP_MESSAGES)
     return INITIAL_SAP_MESSAGES
   }
 
   saveStoredSapMessages(msgs: SapOrderMessage[]) {
-    localStorage.setItem(STORAGE_KEY_SAP_MSGS, JSON.stringify(msgs))
+    crmStorage.setJSON(STORAGE_KEY_SAP_MSGS, msgs)
   }
 
   // Simulação do Daemon SAP ECC
@@ -1677,17 +1681,20 @@ export class QuotationService {
 
   getStoredStockConfirmations(): InventoryConfirmationRequest[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_STOCK_CONFIRM)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<InventoryConfirmationRequest[] | null>(
+        STORAGE_KEY_STOCK_CONFIRM,
+        null,
+      )
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* intentionally ignored */
     }
-    localStorage.setItem(STORAGE_KEY_STOCK_CONFIRM, JSON.stringify(INITIAL_STOCK_CONFIRMATIONS))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_CONFIRM, INITIAL_STOCK_CONFIRMATIONS)
     return INITIAL_STOCK_CONFIRMATIONS
   }
 
   saveStoredStockConfirmations(items: InventoryConfirmationRequest[]) {
-    localStorage.setItem(STORAGE_KEY_STOCK_CONFIRM, JSON.stringify(items))
+    crmStorage.setJSON(STORAGE_KEY_STOCK_CONFIRM, items)
   }
 
   async requestStockConfirmation(
@@ -1810,8 +1817,8 @@ export class QuotationService {
 
   getStoredCommunications(): QuotationCommunication[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_COMMUNICATIONS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<QuotationCommunication[]>(STORAGE_KEY_COMMUNICATIONS, [])
+      if (Array.isArray(stored)) return stored
     } catch {
       /* intentionally ignored */
     }
@@ -1819,7 +1826,7 @@ export class QuotationService {
   }
 
   saveStoredCommunications(list: QuotationCommunication[]) {
-    localStorage.setItem(STORAGE_KEY_COMMUNICATIONS, JSON.stringify(list))
+    crmStorage.setJSON(STORAGE_KEY_COMMUNICATIONS, list)
   }
 
   async sendQuotationCommunication(

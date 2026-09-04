@@ -6,6 +6,7 @@ import {
   mockFunilOportunidades,
   mockClientes,
 } from '@/data/mockCommercialData'
+import { crmStorage } from '@/lib/crm-storage'
 
 export interface AdvancedLead extends LeadItem {
   cnpj?: string
@@ -361,8 +362,8 @@ export function mapearEtapaFunilParaEstagioCiafal(etapa?: EtapaFunil): EstagioOp
 export class OpportunityLeadService {
   getStoredLeads(): AdvancedLead[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_ADVANCED_LEADS)
-      if (stored) return JSON.parse(stored)
+      const stored = crmStorage.getJSON<AdvancedLead[] | null>(STORAGE_KEY_ADVANCED_LEADS, null)
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored
     } catch {
       /* intentionally ignored */
     }
@@ -381,22 +382,22 @@ export class OpportunityLeadService {
       }
     })
 
-    localStorage.setItem(STORAGE_KEY_ADVANCED_LEADS, JSON.stringify(initial))
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_LEADS, initial)
     return initial
   }
 
   saveStoredLeads(leads: AdvancedLead[]) {
-    localStorage.setItem(STORAGE_KEY_ADVANCED_LEADS, JSON.stringify(leads))
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_LEADS, leads)
   }
 
   getStoredOpportunities(): AdvancedOpportunity[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_ADVANCED_OPPS)
-      if (stored) {
-        const parsed: AdvancedOpportunity[] = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed
-        }
+      const parsed = crmStorage.getJSON<AdvancedOpportunity[] | null>(
+        STORAGE_KEY_ADVANCED_OPPS,
+        null,
+      )
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
       }
     } catch {
       /* intentionally ignored */
@@ -462,12 +463,12 @@ export class OpportunityLeadService {
       }
     })
 
-    localStorage.setItem(STORAGE_KEY_ADVANCED_OPPS, JSON.stringify(initial))
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS, initial)
     return initial
   }
 
   saveStoredOpportunities(opps: AdvancedOpportunity[]) {
-    localStorage.setItem(STORAGE_KEY_ADVANCED_OPPS, JSON.stringify(opps))
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS, opps)
   }
 
   /**

@@ -7,23 +7,22 @@ import type {
   ActionOriginType,
   PriorityLevel,
 } from '@/types/commercial_execution'
+import { crmStorage } from '@/lib/crm-storage'
 
 const STORAGE_KEY_RECOMMENDATIONS = 'ciafal_crm_commercial_recommendations_v1'
 
 class RecommendationService {
   private getStored<T>(key: string, fallback: T): T {
     try {
-      const item = localStorage.getItem(key)
-      if (item) return JSON.parse(item)
+      return crmStorage.getJSON<T>(key, fallback)
     } catch {
-      // fallback
+      return fallback
     }
-    return fallback
   }
 
   private setStored<T>(key: string, data: T) {
     try {
-      localStorage.setItem(key, JSON.stringify(data))
+      crmStorage.setJSON(key, data)
     } catch {
       // silent
     }
