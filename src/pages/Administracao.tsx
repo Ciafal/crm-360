@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Mail,
   Shield,
@@ -28,6 +29,7 @@ import {
   Building2,
   Compass,
   FileSignature,
+  Sliders,
 } from 'lucide-react'
 import { complianceService } from '@/services/compliance_service'
 import type {
@@ -82,6 +84,7 @@ interface MockEmailItem {
 
 export default function Administracao() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const { toast } = useToast()
 
   const [adminTab, setAdminTab] = useState<
@@ -241,6 +244,14 @@ export default function Administracao() {
           )}
         >
           <Server className="w-4 h-4 mr-1.5" /> 1. Geral & Mocks OTP
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => navigate('/administracao/parametros-sap')}
+          className="h-9 text-xs rounded-xl font-bold border-[#003A70] text-[#003A70] hover:bg-sky-50 shadow-xs bg-white"
+        >
+          <Sliders className="w-4 h-4 mr-1.5 text-[#003A70]" /> ★ Parâmetros SAP (Governança)
         </Button>
         <Button
           size="sm"

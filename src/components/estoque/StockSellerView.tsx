@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 import type { StockItem } from '@/types/stock'
 import { formatCurrency, formatWeight, formatNumberBR } from '@/lib/utils'
+import { dataExposurePolicyService } from '@/services/data_exposure_policy_service'
+import { useAuth } from '@/hooks/use-auth'
 
 interface StockSellerViewProps {
   items: StockItem[]
@@ -30,6 +32,7 @@ export function StockSellerView({
   onFindOpportunities,
   userName = 'Carlos Mendonça',
 }: StockSellerViewProps) {
+  const { user } = useAuth()
   const totalAvailableTons = items.reduce((acc, it) => acc + it.availableTons, 0)
   const totalItemsCount = items.length
 
@@ -106,7 +109,14 @@ export function StockSellerView({
       {/* 2. CATÁLOGO COMERCIAL DE ESTOQUE DISPONÍVEL */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => {
-          const isLowStock = item.availableTons < 5.0
+          const exposure = dataExposurePolicyService.evaluateStockExposure(
+            item.availableTons,
+            user,
+            {
+              consumerModule: 'Estoque / Visão Vendedor',
+            },
+          )
+          const isLowStock = exposure.isLowStock
           const hasTms = item.tmsComplementAvailable
           const hasPcp = item.projectedPcpTons > 0
 
@@ -154,9 +164,27 @@ export function StockSellerView({
                   <span className="text-[10px] uppercase font-bold text-muted-foreground">
                     Disponível p/ Venda Imediata
                   </span>
-                  <strong className="text-base font-bold text-emerald-700">
-                    {formatWeight(item.availableTons)}
-                  </strong>
+                  <div className="flex items-center gap-1.5">
+                    {exposure.isCapped && (
+                      <span
+                        className="text-[9px] font-bold px-1 py-0.2 rounded bg-sky-100 text-sky-800"
+                        title={exposure.tooltip}
+                      >
+                        Capped
+                      </span>
+                    )}
+                    {exposure.isLowStock && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                        Baixo estoque
+                      </span>
+                    )}
+                    <strong
+                      className="text-base font-bold text-emerald-700"
+                      title={exposure.tooltip}
+                    >
+                      {exposure.displayValue}
+                    </strong>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-[10px] text-muted-foreground">

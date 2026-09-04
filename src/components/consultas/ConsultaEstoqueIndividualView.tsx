@@ -192,17 +192,29 @@ export function ConsultaEstoqueIndividualView() {
             {/* Grid com Saldo em Toneladas e Localização */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[11px] uppercase font-bold text-slate-500 block">
-                  Disponível Imediato para Venda
-                </span>
-                <div className="text-2xl font-black text-[#003A70] mt-1">
-                  {resultado.produto.disponivelTons.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 1,
-                  })}{' '}
-                  <span className="text-base font-normal text-slate-600">t</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] uppercase font-bold text-slate-500 block">
+                    Disponível Imediato para Venda
+                  </span>
+                  {resultado.produto.isCapped && (
+                    <Badge
+                      variant="outline"
+                      className="text-[9px] bg-sky-50 text-[#003A70] border-sky-200 font-semibold"
+                      title={resultado.produto.tooltip}
+                    >
+                      Limite Comercial
+                    </Badge>
+                  )}
+                </div>
+                <div
+                  className="text-2xl font-black text-[#003A70] mt-1"
+                  title={resultado.produto.tooltip}
+                >
+                  {resultado.produto.displayValue ||
+                    `${resultado.produto.disponivelTons.toLocaleString('pt-BR', { minimumFractionDigits: 1 })} t`}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Liberado para faturamento
+                  {resultado.produto.tooltip || 'Liberado para faturamento'}
                 </span>
               </div>
 

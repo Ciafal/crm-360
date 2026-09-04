@@ -22,6 +22,7 @@ import { quotationService } from '@/services/quotation_service'
 import { customerManagementService } from '@/services/customer_management_service'
 import { UserAuthContext, consultasService } from '@/services/consultasService'
 import { CATALOG_MATERIALS } from '@/services/quotation_service'
+import { dataExposurePolicyService } from '@/services/data_exposure_policy_service'
 
 const STORAGE_KEY_CATALOGOS = 'ciafal_catalogos_gerados'
 
@@ -289,6 +290,10 @@ export class CatalogoService {
       linha: string
       familia: string
       disponivelTons: number
+      displayValue?: string
+      isCapped?: boolean
+      canRequestCheck?: boolean
+      tooltip?: string
       statusEstoque: 'DISPONIVEL' | 'ESTOQUE_BAIXO' | 'SEM_ESTOQUE'
       previsaoPcp?: string
       planta: string
@@ -342,6 +347,13 @@ export class CatalogoService {
       },
     )
 
+    // Aplicação estrita da Política de Exposição de Dados SAP antes de retornar ao frontend
+    const exposureResult = dataExposurePolicyService.evaluateStockExposure(
+      mat.availableStock,
+      user,
+      { consumerModule: 'Consultas / Estoque Individual' },
+    )
+
     return {
       autorizado: true,
       produto: {
@@ -349,13 +361,18 @@ export class CatalogoService {
         descricao: mat.description,
         linha: mat.family.includes('Inox') ? 'Tubos Industriais & Inox' : 'Laminados Mercantis',
         familia: mat.family,
-        disponivelTons: mat.availableStock,
+        // Se usuário comercial, numericDisplayValue já é limitado (capped) e actualStock bruto NÃO é transmitido
+        disponivelTons: exposureResult.numericDisplayValue ?? mat.availableStock,
+        displayValue: exposureResult.displayValue,
+        isCapped: exposureResult.isCapped,
+        canRequestCheck: exposureResult.canRequestCheck,
+        tooltip: exposureResult.tooltip,
         statusEstoque:
-          mat.availableStock >= 5.0
-            ? 'DISPONIVEL'
-            : mat.availableStock > 0
+          (exposureResult.numericDisplayValue ?? mat.availableStock) === 0
+            ? 'SEM_ESTOQUE'
+            : exposureResult.isLowStock
               ? 'ESTOQUE_BAIXO'
-              : 'SEM_ESTOQUE',
+              : 'DISPONIVEL',
         previsaoPcp: mat.plannedProduction?.hasPlannedProduction
           ? `${mat.plannedProduction.plannedDate?.split('-').reverse().join('/')} (${mat.plannedProduction.plannedQuantityTons} t) · ${mat.plannedProduction.productionLineCenter}`
           : undefined,

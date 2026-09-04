@@ -111,6 +111,11 @@ export default function Layout() {
     { name: 'Gestão de Inativos', path: '/gestao-inativos', desc: 'Reativação Comercial' },
     { name: 'Agente Fred (TMS)', path: '/agente-fred', desc: 'Rastreabilidade Logística' },
     {
+      name: 'Parâmetros SAP (Governança)',
+      path: '/administracao/parametros-sap',
+      desc: 'Regras de Exposição & Limites SAP',
+    },
+    {
       name: 'Central de Integrações',
       path: '/central-integracoes',
       desc: 'SAP ECC, Qlik, TMS & SAC',
@@ -493,6 +498,13 @@ export default function Layout() {
                     className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
                     Perfil de Acesso & Configurações
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    onClick={() => navigate('/administracao/parametros-sap')}
+                    className="cursor-pointer text-xs rounded-lg py-1.5 text-[#003A70] font-semibold"
+                  >
+                    Parâmetros de Exposição SAP
                   </DropdownMenuItem>
 
                   <DropdownMenuItem

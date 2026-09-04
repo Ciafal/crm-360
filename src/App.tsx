@@ -31,6 +31,8 @@ import { ContatosPage } from './pages/Contatos'
 import IndicadoresComerciais from './pages/IndicadoresComerciais'
 import Hypercare from './pages/Hypercare'
 import RelatorioRelease from './pages/RelatorioRelease'
+import ParametrosSapPage from './pages/ParametrosSapPage'
+import { ProtectedAdminRoute } from './components/auth/ProtectedAdminRoute'
 import CentralIntegracoes from './pages/CentralIntegracoes'
 import AgenteFredPage from './pages/AgenteFredPage'
 import SatisfacaoClientes from './pages/SatisfacaoClientes'
@@ -113,6 +115,30 @@ const App = () => (
                 <Route path="/tarefas" element={<Tarefas />} />
                 <Route path="/equipe" element={<Equipe />} />
                 <Route path="/administracao" element={<Administracao />} />
+                <Route
+                  path="/administracao/parametros-sap"
+                  element={
+                    <ProtectedAdminRoute>
+                      <ParametrosSapPage />
+                    </ProtectedAdminRoute>
+                  }
+                />
+                <Route
+                  path="/parametros-sap"
+                  element={
+                    <ProtectedAdminRoute>
+                      <ParametrosSapPage />
+                    </ProtectedAdminRoute>
+                  }
+                />
+                <Route
+                  path="/integracoes/parametros-sap"
+                  element={
+                    <ProtectedAdminRoute>
+                      <ParametrosSapPage />
+                    </ProtectedAdminRoute>
+                  }
+                />
                 <Route path="/solicitacoes" element={<SolicitacoesCorporativas />} />
                 <Route path="/hcm" element={<HCMCompliance />} />
                 <Route path="/hcm/compliance" element={<HCMCompliance />} />

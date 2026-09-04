@@ -76,6 +76,7 @@ import {
 } from '@/services/quotation_service'
 import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
 import type { QuotationItem, Quotation } from '@/types/quotation'
+import { dataExposurePolicyService } from '@/services/data_exposure_policy_service'
 import { customerManagementService } from '@/services/customer_management_service'
 import { SmartCrossSellPanel } from '@/components/cotacoes/SmartCrossSellPanel'
 import { MaterialProgressiveTracker } from '@/components/cotacoes/MaterialProgressiveTracker'
@@ -118,9 +119,13 @@ export default function NovaCotacao() {
   const { id } = useParams<{ id?: string }>()
   const { toast } = useToast()
 
-  // Configuração Comercial Dinâmica
+  // Configuração Comercial Dinâmica & Central de Parâmetros SAP
   const [adminSettings, setAdminSettings] = useState(() => quotationService.getAdminSettings())
-  const stockCheckThreshold = adminSettings.stockCheckThresholdTons || 5.0
+  const exposureThresholdPolicy = dataExposurePolicyService.getPolicyByCode(
+    'CRM_SAP_STOCK_CHECK_THRESHOLD',
+  )
+  const stockCheckThreshold =
+    exposureThresholdPolicy?.triggerThreshold ?? adminSettings.stockCheckThresholdTons ?? 5.0
 
   // Estado da Cotação / Código Gerado
   const [quoteCode] = useState(() => {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +21,7 @@ import {
   HelpCircle,
   MessageSquare,
   Network,
+  Sliders,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -40,6 +42,7 @@ interface IntegrationConnector {
 }
 
 export default function CentralIntegracoes() {
+  const navigate = useNavigate()
   const [activeMainTab, setActiveMainTab] = useState<'whatsapp_oficial' | 'integracoes_gerais'>(
     'whatsapp_oficial',
   )
@@ -263,6 +266,13 @@ export default function CentralIntegracoes() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <Button
+                  onClick={() => navigate('/administracao/parametros-sap')}
+                  variant="outline"
+                  className="h-9 text-xs border-[#003A70] text-[#003A70] hover:bg-sky-50 gap-1.5 font-bold shadow-xs"
+                >
+                  <Sliders className="w-3.5 h-3.5" /> Parâmetros de Exposição SAP
+                </Button>
                 <Button
                   onClick={handleTestAll}
                   disabled={testingId === 'ALL'}
