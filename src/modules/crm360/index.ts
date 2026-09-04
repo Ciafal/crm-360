@@ -98,7 +98,7 @@ export const CRM_SECONDARY_NAV_ITEMS: CrmMenuItem[] = [
   {
     id: 'central-integracoes',
     name: 'Central de Integrações',
-    path: '/crm360/integracoes',
+    path: '/crm360/central-integracoes',
     desc: 'SAP ECC, Qlik, TMS & SAC',
   },
   {

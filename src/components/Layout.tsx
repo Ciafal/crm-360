@@ -68,25 +68,25 @@ export default function Layout() {
   // Ordem principal do menu corporativo CIAFAL (1 a 11):
   // 1 Meu Dia, 2 Contatos, 3 Cotações, 4 CRM 360, 5 Tarefas, 6 KPIs, 7 Gestão de Clientes, 8 Satisfação de Clientes, 9 Consultas, 10 Central de Ações, 11 Estoque.
   const MAIN_NAV_ITEMS = [
-    { id: 'meu-dia', name: 'Meu Dia', path: '/home', priority: 1 },
+    { id: 'meu-dia', name: 'Meu Dia', path: '/crm360/home', priority: 1 },
     {
       id: 'contatos',
       name: 'Contatos',
-      path: '/contatos',
+      path: '/crm360/contatos',
       badge: 'Omnichannel',
       badgeType: 'omni',
       priority: 2,
     },
-    { id: 'cotacoes', name: 'Cotações', path: '/crm/cotacoes', priority: 3 },
-    { id: 'crm', name: 'CRM 360', path: '/crm', priority: 4 },
-    { id: 'tarefas', name: 'Tarefas', path: '/tarefas', priority: 5 },
-    { id: 'kpis', name: 'KPIs', path: '/kpis-comerciais', priority: 6 },
-    { id: 'gestao-clientes', name: 'Gestão de Clientes', path: '/gestao-clientes', priority: 7 },
-    { id: 'satisfacao', name: 'Satisfação de Clientes', path: '/satisfacao-clientes', priority: 8 },
+    { id: 'cotacoes', name: 'Cotações', path: '/crm360/cotacoes', priority: 3 },
+    { id: 'crm', name: 'CRM 360', path: '/crm360/crm', priority: 4 },
+    { id: 'tarefas', name: 'Tarefas', path: '/crm360/tarefas', priority: 5 },
+    { id: 'kpis', name: 'KPIs', path: '/crm360/kpis', priority: 6 },
+    { id: 'gestao-clientes', name: 'Gestão de Clientes', path: '/crm360/gestao-clientes', priority: 7 },
+    { id: 'satisfacao', name: 'Satisfação de Clientes', path: '/crm360/satisfacao', priority: 8 },
     {
       id: 'consultas',
       name: 'Consultas',
-      path: '/consultas',
+      path: '/crm360/consultas',
       badge: 'Autosserviço',
       badgeType: 'auto',
       priority: 9,
@@ -94,33 +94,33 @@ export default function Layout() {
     {
       id: 'central-acoes',
       name: 'Central de Ações',
-      path: '/central-acoes',
+      path: '/crm360/central-acoes',
       badge: 'IA',
       badgeType: 'ia',
       priority: 10,
     },
-    { id: 'estoque', name: 'Estoque', path: '/estoque', priority: 11 },
+    { id: 'estoque', name: 'Estoque', path: '/crm360/estoque', priority: 11 },
   ]
 
   // Módulos complementares para o menu "Mais"
   const SECONDARY_NAV_ITEMS = [
-    { name: 'S&OP / Forecast', path: '/planejamento-sop', desc: 'Demanda F0-F4, FVA & Waterfall' },
-    { name: 'Equipe Comercial', path: '/equipe', desc: 'Vendedores, Metas & Hierarquia' },
-    { name: 'Visitas & Rotas', path: '/visitas', desc: 'Roteirização & Geolocalização' },
-    { name: 'Agentes de IA', path: '/agentes', desc: 'Copilotos & Automações' },
-    { name: 'Gestão de Inativos', path: '/gestao-inativos', desc: 'Reativação Comercial' },
-    { name: 'Agente Fred (TMS)', path: '/agente-fred', desc: 'Rastreabilidade Logística' },
+    { name: 'S&OP / Forecast', path: '/crm360/planejamento-sop', desc: 'Demanda F0-F4, FVA & Waterfall' },
+    { name: 'Equipe Comercial', path: '/crm360/equipe', desc: 'Vendedores, Metas & Hierarquia' },
+    { name: 'Visitas & Rotas', path: '/crm360/visitas', desc: 'Roteirização & Geolocalização' },
+    { name: 'Agentes de IA', path: '/crm360/agentes', desc: 'Copilotos & Automações' },
+    { name: 'Gestão de Inativos', path: '/crm360/gestao-inativos', desc: 'Reativação Comercial' },
+    { name: 'Agente Fred (TMS)', path: '/crm360/agente-fred', desc: 'Rastreabilidade Logística' },
     {
       name: 'Parâmetros SAP (Governança)',
-      path: '/administracao/parametros-sap',
+      path: '/crm360/parametros-sap',
       desc: 'Regras de Exposição & Limites SAP',
     },
     {
       name: 'Central de Integrações',
-      path: '/central-integracoes',
+      path: '/crm360/central-integracoes',
       desc: 'SAP ECC, Qlik, TMS & SAC',
     },
-    { name: 'Parâmetros & Acessos', path: '/administracao', desc: 'Configurações do CRM' },
+    { name: 'Parâmetros & Acessos', path: '/crm360/administracao', desc: 'Configurações do CRM' },
   ]
 
   return (
@@ -149,7 +149,7 @@ export default function Layout() {
         <header className="glass-nav w-full max-w-[1600px] px-3 sm:px-4 py-2 flex items-center justify-between transition-all duration-300 rounded-2xl shadow-sm border border-slate-200/80 bg-white/95 backdrop-blur-md">
           {/* Lado Esquerdo: Logo CIAFAL + Identificação */}
           <div className="flex items-center gap-2 shrink-0">
-            <Link to="/home" className="flex items-center gap-2.5 px-1.5 shrink-0 group">
+            <Link to="/crm360/home" className="flex items-center gap-2.5 px-1.5 shrink-0 group">
               <div className="bg-[#003A70] text-white p-1.5 rounded-lg shadow-xs group-hover:bg-[#002850] transition-colors">
                 <Building2 className="w-5 h-5 text-white" />
               </div>
@@ -181,9 +181,13 @@ export default function Layout() {
           <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 px-1">
             {MAIN_NAV_ITEMS.map((link) => {
               const isActive =
-                link.path === '/home'
-                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
-                  : location.pathname.startsWith(link.path)
+                link.path === '/crm360/home'
+                  ? location.pathname === '/crm360/home' ||
+                    location.pathname === '/crm360/meu-dia' ||
+                    location.pathname === '/home' ||
+                    location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path) ||
+                    location.pathname.startsWith(link.path.replace('/crm360', ''))
 
               return (
                 <Link
@@ -248,9 +252,13 @@ export default function Layout() {
           <div className="hidden lg:flex xl:hidden items-center gap-0.5 px-1">
             {MAIN_NAV_ITEMS.slice(0, 8).map((link) => {
               const isActive =
-                link.path === '/home'
-                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
-                  : location.pathname.startsWith(link.path)
+                link.path === '/crm360/home'
+                  ? location.pathname === '/crm360/home' ||
+                    location.pathname === '/crm360/meu-dia' ||
+                    location.pathname === '/home' ||
+                    location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path) ||
+                    location.pathname.startsWith(link.path.replace('/crm360', ''))
 
               return (
                 <Link
@@ -334,9 +342,13 @@ export default function Layout() {
           <div className="hidden md:flex lg:hidden items-center gap-0.5 px-1">
             {MAIN_NAV_ITEMS.slice(0, 5).map((link) => {
               const isActive =
-                link.path === '/home'
-                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
-                  : location.pathname.startsWith(link.path)
+                link.path === '/crm360/home'
+                  ? location.pathname === '/crm360/home' ||
+                    location.pathname === '/crm360/meu-dia' ||
+                    location.pathname === '/home' ||
+                    location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path) ||
+                    location.pathname.startsWith(link.path.replace('/crm360', ''))
 
               return (
                 <Link
@@ -487,28 +499,28 @@ export default function Layout() {
                   )}
 
                   <DropdownMenuItem
-                    onClick={() => navigate('/home')}
+                    onClick={() => navigate('/crm360/home')}
                     className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
                     Meu Painel (Meu Dia)
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
-                    onClick={() => navigate('/administracao')}
+                    onClick={() => navigate('/crm360/administracao')}
                     className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
                     Perfil de Acesso & Configurações
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
-                    onClick={() => navigate('/administracao/parametros-sap')}
+                    onClick={() => navigate('/crm360/parametros-sap')}
                     className="cursor-pointer text-xs rounded-lg py-1.5 text-[#003A70] font-semibold"
                   >
                     Parâmetros de Exposição SAP
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
-                    onClick={() => navigate('/hypercare')}
+                    onClick={() => navigate('/crm360/hypercare')}
                     className="cursor-pointer text-xs rounded-lg py-1.5"
                   >
                     Cockpit de Hypercare
@@ -557,9 +569,13 @@ export default function Layout() {
           <div className="space-y-1">
             {MAIN_NAV_ITEMS.map((link) => {
               const active =
-                link.path === '/home'
-                  ? location.pathname === '/home' || location.pathname === '/meu-dia'
-                  : location.pathname.startsWith(link.path)
+                link.path === '/crm360/home'
+                  ? location.pathname === '/crm360/home' ||
+                    location.pathname === '/crm360/meu-dia' ||
+                    location.pathname === '/home' ||
+                    location.pathname === '/meu-dia'
+                  : location.pathname.startsWith(link.path) ||
+                    location.pathname.startsWith(link.path.replace('/crm360', ''))
 
               return (
                 <Link

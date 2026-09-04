@@ -6,7 +6,25 @@ export * from '@/types/stock'
 export * from '@/types/crm_party'
 export * from '@/types/data_exposure_policy'
 export * from '@/types/satisfaction'
-export * from '@/types/customer_management'
+// Exporta customer_management resolvendo colisão de PriorityLevel e CommercialContactChannel já presentes em models
+export type {
+  ClassificationType,
+  CustomerStatusKey,
+  ContactHistoryItem,
+  UnifiedTimelineEvent,
+  ImportantDate,
+  SuggestedProduct,
+  AIClientDiagnostic,
+  CustomerManagementItem,
+  CoverageSummaryKpi,
+  SellerCoverageItem,
+  CatalogProduct,
+  EspeculacaoStatus,
+  EspeculacaoItem,
+  MarketingCampaign,
+  RegionalGeoMetric,
+  AIWhoToContactSuggestion,
+} from '@/types/customer_management'
 export * from '@/types/commercial_execution'
 export * from '@/types/cockpit'
 export * from '@/types/sop'

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { Chat, initialChats } from '@/lib/mock-data'
 import type { CommercialMetric, WhatsAppMode } from '@/types/models'
+import { crmStorage } from '@/lib/crm-storage'
 
 type AppState = {
   user: { name: string; email: string; avatar: string } | null
