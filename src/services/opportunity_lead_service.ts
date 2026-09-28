@@ -261,11 +261,18 @@ export interface AdvancedOpportunity extends OportunidadeFunil {
   origemNome?: string
   cotacaoRelacionadaId?: string
   pedidoSapRelacionado?: string
+  numeroSequencial?: string // OPP-000001/2026
+  data_entrada_estagio?: string // ISO
+  data_saida_estagio?: string // ISO
   historicoMovimentacao?: Array<{
     data: string
+    data_entrada?: string
+    data_saida?: string
     deEtapa: string
     paraEtapa: string
     usuario: string
+    origem?: string
+    observacao?: string
     motivo?: string
   }>
 }
@@ -359,7 +366,69 @@ export function mapearEtapaFunilParaEstagioCiafal(etapa?: EtapaFunil): EstagioOp
   }
 }
 
+/**
+ * Utilitários de formatação pt-BR padrão CIAFAL
+ */
+export function formatBRL(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'Não estimado'
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+export function formatTonsABNT(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'Não estimada'
+  return `${new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)} t`
+}
+
 export class OpportunityLeadService {
+  /**
+   * Gerador atômico de número sequencial OPP-XXXXXX/AAAA por ano.
+   * Chave de controle: `crm360:seq_opp_${ano}` via crmStorage.
+   * Não deriva de contagem de registros; reinicia a cada ano.
+   */
+  getNextSequentialNumber(ano?: number): string {
+    const targetYear = ano || new Date().getFullYear()
+    const seqKey = `seq_opp_${targetYear}`
+    const rawVal = crmStorage.getItem(seqKey)
+    let currentSeq = 0
+
+    if (rawVal !== null) {
+      const parsed = parseInt(rawVal, 10)
+      if (!isNaN(parsed) && parsed >= 0) {
+        currentSeq = parsed
+      }
+    } else {
+      // Se a chave não existir mas já existirem oportunidades com número deste ano,
+      // inicializa com o maior valor encontrado para evitar colisão
+      try {
+        const stored = this.getStoredOpportunities()
+        for (const opp of stored) {
+          const numSeq = (opp as any).numeroSequencial as string | undefined
+          if (numSeq && numSeq.includes(`/${targetYear}`)) {
+            const match = numSeq.match(/OPP-(\d{6})\//)
+            if (match && match[1]) {
+              const seqFound = parseInt(match[1], 10)
+              if (seqFound > currentSeq) currentSeq = seqFound
+            }
+          }
+        }
+      } catch {
+        /* intentionally ignored */
+      }
+    }
+
+    const nextSeq = currentSeq + 1
+    crmStorage.setItem(seqKey, String(nextSeq))
+    return `OPP-${String(nextSeq).padStart(6, '0')}/${targetYear}`
+  }
+
   getStoredLeads(): AdvancedLead[] {
     try {
       const stored = crmStorage.getJSON<AdvancedLead[] | null>(STORAGE_KEY_ADVANCED_LEADS, null)
@@ -490,6 +559,13 @@ export class OpportunityLeadService {
     const dataHoraFormatada = now.toLocaleString('pt-BR')
     const usuarioAtual = payload.usuarioAtual || payload.vendedorNome || 'Carlos Mendonça'
 
+    // Validação estrita do cliente
+    if (!payload.clienteId || !payload.clienteNome?.trim()) {
+      throw new Error('O campo "Cliente" é obrigatório para salvar a oportunidade.')
+    }
+
+    const anoAtual = now.getFullYear()
+    const numeroSequencial = this.getNextSequentialNumber(anoAtual)
     const oppId = `opp-ciafal-${Date.now()}`
 
     // Cálculo do valor potencial: Quantidade estimada × Preço estimado (somente se ambos válidos e > 0)
@@ -536,6 +612,7 @@ export class OpportunityLeadService {
 
     const newOpp: AdvancedOpportunity = {
       id: oppId,
+      numeroSequencial,
       clienteId: payload.clienteId,
       clienteNome: payload.clienteNome,
       clienteSap: payload.clienteSap || '000000',
@@ -560,6 +637,7 @@ export class OpportunityLeadService {
       agingDias: 0,
       tempoNoEstagioDias: 0,
       isParadaAlerta: false,
+      data_entrada_estagio: nowIso,
       proximaAcao: `Qualificar especulação e levantar demanda de ${payload.grupoMercadoria || 'materiais'}`,
       vendedorId: payload.vendedorId || 'qas-vendedor_teste',
       vendedorNome: payload.vendedorNome || 'Carlos Mendonça',
@@ -579,9 +657,12 @@ export class OpportunityLeadService {
       historicoMovimentacao: [
         {
           data: nowStr,
+          data_entrada: nowIso,
           deEtapa: 'Início',
-          paraEtapa: 'prospeccao',
+          paraEtapa: 'especulacao',
           usuario: usuarioAtual,
+          origem: payload.origemOportunidade || 'Contato Vendedor',
+          observacao: 'Criação inicial da oportunidade no estágio 1. Especulação',
           motivo: 'Criação inicial da oportunidade (Especulação)',
         },
       ],
@@ -718,8 +799,9 @@ export class OpportunityLeadService {
     const oldEtapaFunil = opp.etapa
     const newEtapaFunil = mapearEstagioCiafalParaEtapaFunil(newStageCiafal)
     const now = new Date()
+    const nowIso = now.toISOString()
     const dataHoraFormatada = now.toLocaleString('pt-BR')
-    const nowStr = now.toISOString().split('T')[0]
+    const nowStr = nowIso.split('T')[0]
 
     const auditoria: AuditoriaRegistro = {
       id: `aud-${Date.now()}`,
@@ -732,6 +814,8 @@ export class OpportunityLeadService {
       motivoPerda: newStageCiafal === 'perdida' ? motivoPerdaOuAnotacao : undefined,
     }
 
+    opp.data_saida_estagio = nowIso
+    opp.data_entrada_estagio = nowIso
     opp.estagioCiafal = newStageCiafal
     opp.etapa = newEtapaFunil
     opp.tempoNoEstagioDias = 0
@@ -748,9 +832,14 @@ export class OpportunityLeadService {
       ...(opp.historicoMovimentacao || []),
       {
         data: nowStr,
-        deEtapa: oldEtapaFunil,
-        paraEtapa: newEtapaFunil,
+        data_entrada: nowIso,
+        data_saida: undefined,
+        deEtapa: oldStageCiafal || oldEtapaFunil,
+        paraEtapa: newStageCiafal,
         usuario,
+        origem: opp.origemOportunidade || 'Funil Comercial',
+        observacao:
+          motivoPerdaOuAnotacao || `Mudança de estágio: ${oldStageCiafal} → ${newStageCiafal}`,
         motivo:
           motivoPerdaOuAnotacao ||
           `Avanço no funil CIAFAL para ${newStageCiafal} (${newEtapaFunil})`,
@@ -974,9 +1063,13 @@ export class OpportunityLeadService {
 
     const opp = opps[idx]
     const oldStage = opp.etapa
-    const nowStr = new Date().toISOString().split('T')[0]
-    const dataHoraFormatada = new Date().toLocaleString('pt-BR')
+    const now = new Date()
+    const nowIso = now.toISOString()
+    const nowStr = nowIso.split('T')[0]
+    const dataHoraFormatada = now.toLocaleString('pt-BR')
 
+    opp.data_saida_estagio = nowIso
+    opp.data_entrada_estagio = nowIso
     opp.etapa = newStage
     opp.estagioCiafal = mapearEtapaFunilParaEstagioCiafal(newStage)
     opp.tempoNoEstagioDias = 0
@@ -1003,12 +1096,34 @@ export class OpportunityLeadService {
       ...(opp.historicoMovimentacao || []),
       {
         data: nowStr,
+        data_entrada: nowIso,
         deEtapa: oldStage,
         paraEtapa: newStage,
         usuario,
+        origem: opp.origemOportunidade || 'Funil Comercial',
+        observacao: motivoPerda || `Movimentação para etapa ${newStage}`,
         motivo: motivoPerda || `Avanço comercial no funil para ${newStage}`,
       },
     ]
+
+    opps[idx] = opp
+    this.saveStoredOpportunities(opps)
+    return opp
+  }
+
+  /**
+   * Vínculo bidirecional entre Oportunidade e Cotação
+   */
+  linkQuotationToOpportunity(oppId: string, cotacaoCode: string): AdvancedOpportunity {
+    const opps = this.getStoredOpportunities()
+    const idx = opps.findIndex((o) => o.id === oppId || (o as any).numeroSequencial === oppId)
+    if (idx < 0) throw new Error('Oportunidade não encontrada')
+
+    const opp = opps[idx]
+    opp.cotacaoRelacionadaId = cotacaoCode
+    opp.estagioCiafal = 'cotacao_gerada'
+    opp.etapa = 'cotacao'
+    opp.ultimaAtualizacaoDataHora = new Date().toLocaleString('pt-BR')
 
     opps[idx] = opp
     this.saveStoredOpportunities(opps)

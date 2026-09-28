@@ -74,6 +74,7 @@ import {
   type PreloadedCustomer,
   type CatalogMaterial,
 } from '@/services/quotation_service'
+import { opportunityLeadService } from '@/services/opportunity_lead_service'
 import { defaultSAPCreditProvider } from '@/providers/SAPCreditProvider'
 import type { QuotationItem, Quotation } from '@/types/quotation'
 import { dataExposurePolicyService } from '@/services/data_exposure_policy_service'
@@ -670,9 +671,15 @@ export default function NovaCotacao() {
 
     try {
       setIsSubmitting(true)
+      const linkedOppId =
+        (location.state as any)?.opportunity_id ||
+        (location.state as any)?.opportunity_number ||
+        undefined
+
       const quotePayload: Partial<Quotation> = {
         code: quoteCode,
         customer_id: selectedCustomer.id,
+        opportunity_id: linkedOppId,
         customer_sap_code: selectedCustomer.sapCode,
         customer_name: selectedCustomer.razaoSocial,
         customer_cnpj: selectedCustomer.cnpj,
@@ -717,6 +724,15 @@ export default function NovaCotacao() {
       const saved = await quotationService.saveQuotation(quotePayload)
       setCreatedQuotation(saved)
       setQuoteStatus(saved.status)
+
+      // Se originada de uma oportunidade, vincular bidirecionalmente no opportunityLeadService
+      if (linkedOppId) {
+        try {
+          opportunityLeadService.linkQuotationToOpportunity(linkedOppId, saved.code)
+        } catch {
+          /* ignore link error */
+        }
+      }
 
       toast({
         title: '✓ Cotação Salva com Sucesso',

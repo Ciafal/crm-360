@@ -46,6 +46,12 @@ import {
 import { toast } from 'sonner'
 import { quotationService } from '@/services/quotation_service'
 import type { Quotation, QuotationStatus, LossReason } from '@/types/quotation'
+import {
+  opportunityLeadService,
+  AdvancedOpportunity,
+  formatBRL as formatBRLOpp,
+  formatTonsABNT as formatTonsOpp,
+} from '@/services/opportunity_lead_service'
 import { QuotationStatusBadge, ApprovalStatusBadge } from './QuotationStatusBadge'
 import { PriceDeviationBadge } from './PriceDeviationBadge'
 import { StockBadge } from './StockBadge'
@@ -65,11 +71,18 @@ import { LocalSellerCopilotAgent } from '@/providers/LocalAIAdapter'
 import type { QuoteCopilotInsight } from '@/providers/AIProvider'
 import { NovaOportunidadeModal } from '@/components/crm/NovaOportunidadeModal'
 import { useAuth } from '@/hooks/use-auth'
+import { cn } from '@/lib/utils'
 
 export default function CotacoesList() {
   const navigate = useNavigate()
   const [quotations, setQuotations] = useState<Quotation[]>([])
+  const [opportunities, setOpportunities] = useState<AdvancedOpportunity[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Filtro de Tipo de Registro: 'TODOS' | 'OPORTUNIDADES' | 'COTACOES'
+  const [tipoRegistroFilter, setTipoRegistroFilter] = useState<
+    'TODOS' | 'OPORTUNIDADES' | 'COTACOES'
+  >('TODOS')
 
   // Modos de visualização: KANBAN | LIST | DASHBOARD
   const [viewMode, setViewMode] = useState<'KANBAN' | 'LIST' | 'DASHBOARD'>('DASHBOARD')
@@ -112,10 +125,14 @@ export default function CotacoesList() {
   const loadQuotations = async () => {
     try {
       setLoading(true)
-      const data = await quotationService.getAllQuotations()
+      const [data, opps] = await Promise.all([
+        quotationService.getAllQuotations(),
+        Promise.resolve(opportunityLeadService.getStoredOpportunities()),
+      ])
       setQuotations(data)
+      setOpportunities(opps)
     } catch (err: any) {
-      toast.error(`Erro ao carregar cotações: ${err.message}`)
+      toast.error(`Erro ao carregar dados comerciais: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -123,6 +140,15 @@ export default function CotacoesList() {
 
   useEffect(() => {
     loadQuotations()
+
+    // Ouvir evento de criação de oportunidade para sincronizar sem F5
+    const handleOppCreated = () => {
+      loadQuotations()
+    }
+    window.addEventListener('crm360:opportunityCreated', handleOppCreated)
+    return () => {
+      window.removeEventListener('crm360:opportunityCreated', handleOppCreated)
+    }
   }, [])
 
   // Lista de vendedores únicos para filtro
@@ -513,11 +539,67 @@ export default function CotacoesList() {
                 setSelectedApprovalFilter('ALL')
                 setSelectedFollowUpFilter('ALL')
                 setSelectedUf('ALL')
+                setTipoRegistroFilter('TODOS')
               }}
               className="h-9 text-xs text-slate-600"
             >
               <RotateCw className="w-3.5 h-3.5 mr-1" /> Limpar Filtros
             </Button>
+          </div>
+
+          {/* BARRA DE SELEÇÃO: TIPO DE REGISTRO (TODOS / OPORTUNIDADES / COTAÇÕES) */}
+          <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-700">Tipo de Registro:</span>
+              <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setTipoRegistroFilter('TODOS')}
+                  className={cn(
+                    'px-3 py-1 text-xs font-semibold rounded-md transition-all',
+                    tipoRegistroFilter === 'TODOS'
+                      ? 'bg-white text-primary shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                >
+                  Todos ({filteredQuotations.length + opportunities.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoRegistroFilter('OPORTUNIDADES')}
+                  className={cn(
+                    'px-3 py-1 text-xs font-semibold rounded-md transition-all',
+                    tipoRegistroFilter === 'OPORTUNIDADES'
+                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                >
+                  Oportunidades ({opportunities.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipoRegistroFilter('COTACOES')}
+                  className={cn(
+                    'px-3 py-1 text-xs font-semibold rounded-md transition-all',
+                    tipoRegistroFilter === 'COTACOES'
+                      ? 'bg-[#003A70] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900',
+                  )}
+                >
+                  Cotações ({filteredQuotations.length})
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <span>Legenda:</span>
+              <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px]">
+                TIPO: Oportunidade
+              </Badge>
+              <Badge className="bg-sky-100 text-sky-900 border border-sky-300 font-mono text-[10px]">
+                TIPO: Cotação
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -543,30 +625,126 @@ export default function CotacoesList() {
               <table className="w-full text-xs text-left">
                 <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                   <tr>
-                    <th className="p-3">Código</th>
+                    <th className="p-3">Tipo / Código</th>
                     <th className="p-3">Cliente & SAP</th>
                     <th className="p-3">Vendedor</th>
                     <th className="p-3 text-right">Volume (t)</th>
                     <th className="p-3 text-right">Valor Total (R$)</th>
-                    <th className="p-3 text-center">Status Estoque</th>
-                    <th className="p-3 text-center">Alçada</th>
-                    <th className="p-3 text-center">Status Cotação</th>
-                    <th className="p-3 text-center">Pedido SAP</th>
+                    <th className="p-3 text-center">Status / Estágio</th>
+                    <th className="p-3 text-center">Vínculo Relacionado</th>
                     <th className="p-3 text-center">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredQuotations.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="p-8 text-center text-slate-400 italic">
-                        Nenhuma cotação encontrada com os filtros selecionados.
-                      </td>
-                    </tr>
-                  ) : (
+                  {/* LINHAS DE OPORTUNIDADES (se filtro permitir) */}
+                  {(tipoRegistroFilter === 'TODOS' || tipoRegistroFilter === 'OPORTUNIDADES') &&
+                    opportunities.map((opp) => {
+                      const valorText =
+                        opp.valorPotencialCalculado !== null &&
+                        opp.valorPotencialCalculado !== undefined &&
+                        opp.valorPotencialCalculado > 0
+                          ? formatBRLOpp(opp.valorPotencialCalculado)
+                          : opp.valor > 0
+                            ? formatBRLOpp(opp.valor)
+                            : 'Não estimado'
+
+                      const qtdText =
+                        opp.quantidadeEstimadaTons !== null &&
+                        opp.quantidadeEstimadaTons !== undefined &&
+                        opp.quantidadeEstimadaTons > 0
+                          ? formatTonsOpp(opp.quantidadeEstimadaTons)
+                          : opp.toneladas > 0
+                            ? formatTonsOpp(opp.toneladas)
+                            : 'Não estimada'
+
+                      return (
+                        <tr
+                          key={`opp-${opp.id}`}
+                          className="hover:bg-amber-50/40 bg-amber-50/15 transition-colors border-l-4 border-l-amber-400"
+                        >
+                          <td className="p-3">
+                            <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] block w-fit mb-1">
+                              TIPO: Oportunidade
+                            </Badge>
+                            <span className="font-mono font-bold text-slate-900">
+                              {opp.numeroSequencial || opp.id}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <span className="font-bold text-slate-900 block">
+                              {opp.clienteNome}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              SAP: {opp.clienteSap} • Grupo: {opp.grupoMercadoria || 'Geral'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-700">{opp.vendedorNome}</td>
+                          <td className="p-3 text-right font-medium text-slate-800 font-mono">
+                            {qtdText}
+                          </td>
+                          <td className="p-3 text-right font-bold text-emerald-700 font-mono">
+                            {valorText}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className="bg-amber-100 text-amber-900 border-none font-bold text-[10px]">
+                              Estágio:{' '}
+                              {opp.estagioCiafal ? opp.estagioCiafal.replace(/_/g, ' ') : opp.etapa}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            {opp.cotacaoRelacionadaId ? (
+                              <Badge className="bg-sky-100 text-sky-900 border border-sky-300 font-mono text-[10px]">
+                                Cotação vinculada: {opp.cotacaoRelacionadaId}
+                              </Badge>
+                            ) : (
+                              <span className="text-slate-400 font-mono text-[10px]">—</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigate('/crm/cotacoes/nova', {
+                                  state: {
+                                    clienteId: opp.clienteId,
+                                    codigoSap: opp.clienteSap,
+                                    razaoSocial: opp.clienteNome,
+                                    vendedorNome: opp.vendedorNome,
+                                    grupoMercadoriaSugerido: opp.grupoMercadoria,
+                                    quantidadeEstimadaSugerida: opp.quantidadeEstimadaTons,
+                                    precoEstimadoReferencia: opp.precoEstimadoPorTon,
+                                    observacoesOrigem: `Oportunidade vinculada: ${opp.numeroSequencial || opp.id}`,
+                                    origem: 'oportunidade_funil',
+                                    opportunity_id: opp.numeroSequencial || opp.id,
+                                    opportunity_number: opp.numeroSequencial,
+                                  },
+                                })
+                              }}
+                              className="h-7 px-2 text-xs border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 font-semibold"
+                            >
+                              Gerar Cotação
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+
+                  {/* LINHAS DE COTAÇÕES (se filtro permitir) */}
+                  {(tipoRegistroFilter === 'TODOS' || tipoRegistroFilter === 'COTACOES') &&
                     filteredQuotations.map((q) => (
-                      <tr key={q.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="p-3 font-bold text-blue-900 font-mono">
-                          {q.code} <span className="text-[10px] text-slate-400">v{q.version}</span>
+                      <tr
+                        key={`cot-${q.id}`}
+                        className="hover:bg-slate-50/70 transition-colors border-l-4 border-l-blue-600"
+                      >
+                        <td className="p-3">
+                          <Badge className="bg-sky-100 text-sky-900 border border-sky-300 font-bold text-[10px] block w-fit mb-1">
+                            TIPO: Cotação
+                          </Badge>
+                          <span className="font-bold text-blue-900 font-mono">
+                            {q.code}{' '}
+                            <span className="text-[10px] text-slate-400">v{q.version}</span>
+                          </span>
                         </td>
                         <td className="p-3">
                           <span className="font-bold text-slate-900 block">{q.customer_name}</span>
@@ -582,24 +760,19 @@ export default function CotacoesList() {
                           R$ {q.total_value.toLocaleString('pt-BR')}
                         </td>
                         <td className="p-3 text-center">
-                          <StockBadge situation={q.stock_status} />
-                        </td>
-                        <td className="p-3 text-center">
-                          <ApprovalStatusBadge
-                            status={q.approval_status}
-                            level={q.approval_level_required}
-                          />
-                        </td>
-                        <td className="p-3 text-center">
                           <QuotationStatusBadge status={q.status} />
                         </td>
                         <td className="p-3 text-center">
-                          {q.sap_order_number ? (
+                          {q.opportunity_id ? (
+                            <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px]">
+                              Origem: {q.opportunity_id}
+                            </Badge>
+                          ) : q.sap_order_number ? (
                             <Badge className="bg-emerald-600 text-white font-mono text-[10px]">
-                              #{q.sap_order_number}
+                              Ped. SAP #{q.sap_order_number}
                             </Badge>
                           ) : (
-                            <span className="text-slate-400 font-mono">—</span>
+                            <span className="text-slate-400 font-mono text-[10px]">—</span>
                           )}
                         </td>
                         <td className="p-3 text-center">
@@ -643,7 +816,14 @@ export default function CotacoesList() {
                           </div>
                         </td>
                       </tr>
-                    ))
+                    ))}
+
+                  {filteredQuotations.length === 0 && opportunities.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-slate-400 italic">
+                        Nenhum registro encontrado com os filtros selecionados.
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

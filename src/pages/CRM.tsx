@@ -79,6 +79,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn, formatWeight } from '@/lib/utils'
 import { Package, Truck, PackageCheck, AlertCircle } from 'lucide-react'
+import { FunilVendasVertical } from '@/components/crm/FunilVendasVertical'
 
 type SortColumn =
   | 'razaoSocial'
@@ -349,10 +350,11 @@ export default function CRM() {
     }
   }
 
-  // Oportunidades do Funil sincronizadas com as Cotações Reais e LocalStorage Service
+  // Oportunidades do Funil — leem o ESTÁGIO REAL da oportunidade no serviço
+  // (sem sobreposição por cotações: Oportunidade e Cotação são entidades distintas e relacionadas)
   const rawFunil = useMemo(() => {
     const storedOpps = opportunityLeadService.getStoredOpportunities()
-    const baseList = isVendedorOnly
+    return isVendedorOnly
       ? storedOpps.filter(
           (op) =>
             op.vendedorId === user?.id ||
@@ -363,54 +365,6 @@ export default function CRM() {
                 : op.vendedorId === 'qas-vendedor_teste'),
         )
       : storedOpps
-
-    // Mapear cotações armazenadas por customer_id, customer_sap_code e customer_name
-    const storedQuotes = quotationService.getStoredQuotations()
-
-    return baseList.map((op) => {
-      // Procurar se existe cotação para o cliente da oportunidade
-      const matchedQuote = storedQuotes.find(
-        (q) =>
-          (q.customer_id && q.customer_id.toLowerCase() === op.clienteId.toLowerCase()) ||
-          (q.customer_sap_code &&
-            op.clienteSap &&
-            (q.customer_sap_code.endsWith(op.clienteSap) ||
-              op.clienteSap.endsWith(q.customer_sap_code))) ||
-          (q.customer_name &&
-            op.clienteNome &&
-            (q.customer_name.toLowerCase().includes(op.clienteNome.toLowerCase()) ||
-              op.clienteNome.toLowerCase().includes(q.customer_name.toLowerCase()))),
-      )
-
-      if (!matchedQuote) {
-        return op
-      }
-
-      let mappedEtapa: EtapaFunil = op.etapa
-      const qStatus = matchedQuote.status
-
-      if (qStatus === 'ACEITA') {
-        mappedEtapa = 'pedido'
-      } else if (qStatus === 'PEDIDO_IMPLANTADO' || qStatus === 'PEDIDO_SAP_IMPLANTADO') {
-        mappedEtapa = 'pedido'
-      } else if (qStatus === 'CONVERSAO_SAP' || qStatus === 'AGUARDANDO_IMPLANTACAO_SAP') {
-        mappedEtapa = 'pedido'
-      } else if (qStatus === 'PERDIDA') {
-        mappedEtapa = 'perdido'
-      } else if (qStatus === 'CANCELADA') {
-        mappedEtapa = 'cancelado'
-      } else if (qStatus === 'ENVIADA_AO_CLIENTE' || qStatus === 'AGUARDANDO_RETORNO') {
-        mappedEtapa = 'cotacao'
-      } else if (qStatus === 'NEGOCIACAO' || qStatus === 'EM_NEGOCIACAO') {
-        mappedEtapa = 'negociacao'
-      }
-
-      return {
-        ...op,
-        etapa: mappedEtapa,
-        quotation_status: qStatus,
-      }
-    })
   }, [isVendedorOnly, userEmail, user?.id, oppsRefreshKey])
 
   const filteredFunil = useMemo(() => {
@@ -635,7 +589,7 @@ export default function CRM() {
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
             >
               <Kanban className="w-4 h-4" /> Funil de Vendas ({filteredFunil.length})
-            </TabsTrigger>
+            </TabsTrigger>{' '}
             <TabsTrigger
               value="oportunidades"
               className="data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-4 py-2.5 text-xs font-semibold gap-1.5"
@@ -1201,8 +1155,22 @@ export default function CRM() {
             )}
           </Card>
         </TabsContent>
-        {/* ABA 2: FUNIL DE VENDAS (KANBAN 8 ETAPAS + SAÍDAS + BARRA DE RESUMO) */}
+        {/* ABA 2: FUNIL DE VENDAS (GRÁFICO VERTICAL 9 NÍVEIS + KANBAN + SAÍDAS) */}
         <TabsContent value="funil" className="space-y-6 m-0">
+          {/* GRÁFICO VERTICAL DE FUNIL EM TRAPÉZIO (9 NÍVEIS MACRO) */}
+          <FunilVendasVertical
+            oportunidades={rawFunil as AdvancedOpportunity[]}
+            commercialMetric={commercialMetric === 'TONS' ? 'volume' : 'valor'}
+            onSelectOpportunity={(opp) => {
+              setSelectedOppForDetail(opp)
+              setDetalhesOppModalOpen(true)
+            }}
+            onNovaOportunidadeClick={() => {
+              setSelectedClienteForOpp(null)
+              setNovaOportunidadeOpen(true)
+            }}
+          />
+
           {/* BARRA DE FORECAST COMERCIAL (FASE 1: 4.10) */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
             <Card className="bg-white border-border/50 rounded-2xl p-3 shadow-xs">
@@ -1518,16 +1486,17 @@ export default function CRM() {
           </div>
         </TabsContent>
 
-        {/* ABA 3: OPORTUNIDADES */}
+        {/* ABA 3: OPORTUNIDADES COM COLUNAS COMPLETAS EXIGIDAS */}
         <TabsContent value="oportunidades" className="space-y-4 m-0">
           <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
-                  Lista de Oportunidades Comerciais
+                  Lista Completa de Oportunidades Comerciais
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Visão em lista de todas as negociações em andamento com probabilidade e volume.
+                  Visão corporativa com número sequencial único, cliente, estágio real, valor
+                  potencial e ações.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1551,74 +1520,132 @@ export default function CRM() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50 text-muted-foreground uppercase text-[10px] border-b">
                   <tr>
-                    <th className="py-3 px-3">Cliente</th>
-                    <th className="py-3 px-3">Título Oportunidade</th>
-                    <th className="py-3 px-3">Etapa</th>
-                    <th className="py-3 px-3 text-right">Valor R$</th>
-                    <th className="py-3 px-3 text-center">Ton</th>
-                    <th className="py-3 px-3 text-center">Prob.</th>
-                    <th className="py-3 px-3 text-center">Aging</th>
-                    <th className="py-3 px-3">Vendedor</th>
-                    <th className="py-3 px-3">Próxima Ação</th>
+                    <th className="py-3 px-2 font-bold">Número</th>
+                    <th className="py-3 px-2 font-bold">Cliente</th>
+                    <th className="py-3 px-2 font-bold">Cód. SAP</th>
+                    <th className="py-3 px-2 font-bold">Responsável</th>
+                    <th className="py-3 px-2 font-bold">Grupo</th>
+                    <th className="py-3 px-2 text-right font-bold">Qtd Estimada</th>
+                    <th className="py-3 px-2 text-right font-bold">Preço Estimado</th>
+                    <th className="py-3 px-2 text-right font-bold">Valor Potencial</th>
+                    <th className="py-3 px-2 font-bold">Estágio</th>
+                    <th className="py-3 px-2 text-center font-bold">Prob.</th>
+                    <th className="py-3 px-2 font-bold">Prev. Compra</th>
+                    <th className="py-3 px-2 font-bold">Origem</th>
+                    <th className="py-3 px-2 font-bold">Última Interação</th>
+                    <th className="py-3 px-2 font-bold">Criação</th>
+                    <th className="py-3 px-2 font-bold">Próxima Ação</th>
+                    <th className="py-3 px-2 font-bold">Status</th>
+                    <th className="py-3 px-2 text-center font-bold">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/20">
-                  {rawFunil.map((op) => (
-                    <tr
-                      key={op.id}
-                      onClick={() => {
-                        setSelectedOppForDetail(op as AdvancedOpportunity)
-                        setDetalhesOppModalOpen(true)
-                      }}
-                      className="hover:bg-primary/5 cursor-pointer transition-colors"
-                    >
-                      <td className="py-3 px-3 font-bold text-primary">
-                        <div>{op.clienteNome}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono">
-                          SAP {op.clienteSap}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-slate-800 font-medium">
-                        <div>{op.titulo}</div>
-                        {op.grupoMercadoria && (
-                          <div className="text-[10px] text-muted-foreground">
-                            {op.grupoMercadoria}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-3 px-3">
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {op.estagioCiafal ? op.estagioCiafal.replace(/_/g, ' ') : op.etapa}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-3 text-right font-serif font-bold text-emerald-600">
-                        {op.valorPotencialCalculado !== null &&
-                        op.valorPotencialCalculado !== undefined &&
-                        op.valorPotencialCalculado > 0
-                          ? formatBRL(op.valorPotencialCalculado)
-                          : op.valor > 0
-                            ? formatBRL(op.valor)
-                            : 'Não estimado'}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        {op.quantidadeEstimadaTons !== null &&
-                        op.quantidadeEstimadaTons !== undefined &&
-                        op.quantidadeEstimadaTons > 0
-                          ? `${op.quantidadeEstimadaTons} t`
-                          : op.toneladas > 0
-                            ? `${op.toneladas} t`
-                            : 'Não informada'}
-                      </td>
-                      <td className="py-3 px-3 text-center font-bold text-primary">
-                        {op.probabilidade}%
-                      </td>
-                      <td className="py-3 px-3 text-center text-muted-foreground">
-                        {op.agingDias || op.tempoNoEstagioDias || 0}d
-                      </td>
-                      <td className="py-3 px-3 text-slate-600">{op.vendedorNome}</td>
-                      <td className="py-3 px-3 text-slate-700">{op.proximaAcao}</td>
-                    </tr>
-                  ))}
+                  {rawFunil.map((op) => {
+                    const precoText =
+                      op.precoEstimadoPorTon !== null &&
+                      op.precoEstimadoPorTon !== undefined &&
+                      op.precoEstimadoPorTon > 0
+                        ? formatBRL(op.precoEstimadoPorTon)
+                        : '—'
+
+                    const valorText =
+                      op.valorPotencialCalculado !== null &&
+                      op.valorPotencialCalculado !== undefined &&
+                      op.valorPotencialCalculado > 0
+                        ? formatBRL(op.valorPotencialCalculado)
+                        : op.valor > 0
+                          ? formatBRL(op.valor)
+                          : 'Não estimado'
+
+                    const qtdText =
+                      op.quantidadeEstimadaTons !== null &&
+                      op.quantidadeEstimadaTons !== undefined &&
+                      op.quantidadeEstimadaTons > 0
+                        ? `${op.quantidadeEstimadaTons.toLocaleString('pt-BR')} t`
+                        : op.toneladas > 0
+                          ? `${op.toneladas.toLocaleString('pt-BR')} t`
+                          : 'Não estimada'
+
+                    return (
+                      <tr key={op.id} className="hover:bg-primary/5 transition-colors group">
+                        <td className="py-2.5 px-2 font-mono font-bold text-[#003A70] whitespace-nowrap">
+                          {op.numeroSequencial || op.id}
+                        </td>
+                        <td className="py-2.5 px-2 font-bold text-slate-900 whitespace-nowrap max-w-[180px] truncate">
+                          {op.clienteNome}
+                        </td>
+                        <td className="py-2.5 px-2 font-mono text-muted-foreground whitespace-nowrap">
+                          {op.clienteSap}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-700 whitespace-nowrap">
+                          {op.vendedorNome}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-600 max-w-[140px] truncate">
+                          {op.grupoMercadoria || 'Não definido'}
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                          {qtdText}
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-mono text-slate-700 whitespace-nowrap">
+                          {precoText}
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-serif font-bold text-emerald-700 whitespace-nowrap">
+                          {valorText}
+                        </td>
+                        <td className="py-2.5 px-2 whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] capitalize bg-sky-50 text-sky-900 border-sky-300"
+                          >
+                            {op.estagioCiafal ? op.estagioCiafal.replace(/_/g, ' ') : op.etapa}
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-2 text-center font-bold text-primary font-mono whitespace-nowrap">
+                          {op.probabilidade}%
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-600 whitespace-nowrap capitalize">
+                          {op.previsaoCompra
+                            ? op.previsaoCompra.replace(/_/g, ' ')
+                            : op.previsaoFechamento || 'Sem previsão'}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-600 whitespace-nowrap capitalize">
+                          {op.origemOportunidade
+                            ? op.origemOportunidade.replace(/_/g, ' ')
+                            : 'Contato'}
+                        </td>
+                        <td className="py-2.5 px-2 text-[11px] text-muted-foreground whitespace-nowrap">
+                          {op.ultimaAtualizacaoDataHora || op.dataCriacao || 'Recente'}
+                        </td>
+                        <td className="py-2.5 px-2 text-[11px] text-muted-foreground whitespace-nowrap">
+                          {op.dataCriacao || 'Hoje'}
+                        </td>
+                        <td
+                          className="py-2.5 px-2 text-slate-700 max-w-[160px] truncate"
+                          title={op.proximaAcao}
+                        >
+                          {op.proximaAcao || 'Qualificar especulação'}
+                        </td>
+                        <td className="py-2.5 px-2 whitespace-nowrap">
+                          <Badge className="bg-emerald-100 text-emerald-800 text-[10px] border-none">
+                            Ativa
+                          </Badge>
+                        </td>
+                        <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedOppForDetail(op as AdvancedOpportunity)
+                              setDetalhesOppModalOpen(true)
+                            }}
+                            className="h-7 px-2 text-xs text-[#003A70] hover:bg-sky-50"
+                          >
+                            Abrir
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1629,44 +1656,88 @@ export default function CRM() {
         <TabsContent value="cotacoes" className="space-y-4 m-0">
           <CotacoesList />
         </TabsContent>
-        {/* ABA 5: PIPELINE */}
+        {/* ABA 5: PIPELINE & FORECAST ALIMENTADO PELOS REGISTROS REAIS */}
         <TabsContent value="pipeline" className="space-y-4 m-0">
           <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
             <h3 className="font-serif text-lg font-bold text-primary mb-2">
-              Projeção de Pipeline & Forecast Preditivo
+              Projeção de Pipeline & Forecast Preditivo (Registros Reais)
             </h3>
             <p className="text-xs text-muted-foreground mb-6">
-              Modelo preditivo CIAFAL calibrado com histórico de 12 meses e probabilidade de
-              fechamento por etapa.
+              Modelo preditivo CIAFAL calibrado com Potencial Bruto (soma de todas as oportunidades
+              ativas) vs Forecast Ponderado (valor × probabilidade real).
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
-                <span className="text-xs font-semibold text-muted-foreground">
-                  Pipeline Nominal
-                </span>
-                <span className="font-serif text-2xl font-bold text-primary block">
-                  R$ 1.200.000
-                </span>
-                <span className="text-[11px] text-muted-foreground">Total de propostas ativas</span>
-              </div>
-              <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-2">
-                <span className="text-xs font-semibold text-emerald-800">Forecast Ponderado</span>
-                <span className="font-serif text-2xl font-bold text-emerald-700 block">
-                  R$ 780.000
-                </span>
-                <span className="text-[11px] text-emerald-700 font-medium">
-                  Previsão real de faturamento
-                </span>
-              </div>
-              <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-2">
-                <span className="text-xs font-semibold text-blue-800">Cobertura do Gap</span>
-                <span className="font-serif text-2xl font-bold text-blue-700 block">125%</span>
-                <span className="text-[11px] text-blue-700 font-medium">
-                  Suficiente para atingir 100% da meta
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const oppsAtivas = rawFunil.filter((o) => {
+                const est = (o.estagioCiafal || o.etapa || '').toLowerCase()
+                return (
+                  !est.includes('perdid') && !est.includes('cancel') && !est.includes('suspens')
+                )
+              })
+
+              const potencialBruto = oppsAtivas.reduce((acc, o) => {
+                const val = o.valorPotencialCalculado ?? (o.valor > 0 ? o.valor : 0)
+                return acc + val
+              }, 0)
+
+              const forecastPonderado = oppsAtivas.reduce((acc, o) => {
+                const val = o.valorPotencialCalculado ?? (o.valor > 0 ? o.valor : 0)
+                const prob = o.probabilidade || 20
+                return acc + (val * prob) / 100
+              }, 0)
+
+              const metaComercial = isVendedorOnly ? 600000 : 2500000
+              const cobertura =
+                metaComercial > 0 ? Math.round((potencialBruto / metaComercial) * 100) : 100
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-border/40 space-y-2">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      Potencial Bruto (Soma Valores)
+                    </span>
+                    <span className="font-serif text-2xl font-bold text-primary block">
+                      {formatBRL(potencialBruto)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {oppsAtivas.length} oportunidades ativas
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-2">
+                    <span className="text-xs font-semibold text-emerald-800">
+                      Forecast Ponderado (Valor × Prob)
+                    </span>
+                    <span className="font-serif text-2xl font-bold text-emerald-700 block">
+                      {formatBRL(forecastPonderado)}
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-medium">
+                      Previsão real calculada
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-200 space-y-2">
+                    <span className="text-xs font-semibold text-blue-800">Meta do Período</span>
+                    <span className="font-serif text-2xl font-bold text-blue-700 block">
+                      {formatBRL(metaComercial)}
+                    </span>
+                    <span className="text-[11px] text-blue-700 font-medium">
+                      Meta CIAFAL vigente
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-amber-50/60 rounded-2xl border border-amber-200 space-y-2">
+                    <span className="text-xs font-semibold text-amber-900">Cobertura da Meta</span>
+                    <span className="font-serif text-2xl font-bold text-amber-800 block">
+                      {cobertura}%
+                    </span>
+                    <span className="text-[11px] text-amber-800 font-medium">
+                      {cobertura >= 100 ? 'Suficiente para meta' : 'Atenção para prospecção'}
+                    </span>
+                  </div>
+                </div>
+              )
+            })()}
           </Card>
         </TabsContent>
       </Tabs>

@@ -95,8 +95,10 @@ export function DetalhesOportunidadeModal({
         grupoMercadoriaSugerido: opportunity.grupoMercadoria,
         quantidadeEstimadaSugerida: opportunity.quantidadeEstimadaTons,
         precoEstimadoReferencia: opportunity.precoEstimadoPorTon,
-        observacoesOrigem: `Oportunidade Funil CIAFAL (${opportunity.id}) - Grupo: ${opportunity.grupoMercadoria || 'Geral'}. ${opportunity.observacoes || ''}`,
+        observacoesOrigem: `Oportunidade Funil CIAFAL (${opportunity.numeroSequencial || opportunity.id}) - Grupo: ${opportunity.grupoMercadoria || 'Geral'}. ${opportunity.observacoes || ''}`,
         origem: 'oportunidade_funil',
+        opportunity_id: opportunity.numeroSequencial || opportunity.id,
+        opportunity_number: opportunity.numeroSequencial,
       },
     })
   }
@@ -146,6 +148,9 @@ export function DetalhesOportunidadeModal({
                   <Badge className="bg-sky-400 text-slate-950 font-bold text-[10px] border-none font-mono">
                     SAP {opportunity.clienteSap}
                   </Badge>
+                  <Badge className="bg-white/20 text-white font-mono font-bold text-[10px] border-none">
+                    {opportunity.numeroSequencial || opportunity.id}
+                  </Badge>
                   <Badge className={cn('text-[10px] font-bold border', currentStageObj.badgeClass)}>
                     {currentStageObj.label}
                   </Badge>
@@ -166,6 +171,16 @@ export function DetalhesOportunidadeModal({
               <span>GERAR COTAÇÃO</span>
             </Button>
           </div>
+
+          {/* Vínculo de cotação relacionada, se já existir */}
+          {opportunity.cotacaoRelacionadaId && (
+            <div className="mt-2 pt-2 border-t border-white/15 flex items-center gap-2 text-xs">
+              <span className="text-sky-200">Cotação vinculada:</span>
+              <Badge className="bg-white text-[#003A70] font-mono font-bold text-[11px] border-none">
+                {opportunity.cotacaoRelacionadaId}
+              </Badge>
+            </div>
+          )}
         </div>
 
         {/* Corpo com Grid de Informações */}
