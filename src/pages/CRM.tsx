@@ -1311,9 +1311,22 @@ export default function CRM() {
 
           {/* QUADRO KANBAN — 8 ETAPAS HORIZONTAIS */}
           <div className="space-y-4">
-            <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
-              <Kanban className="w-5 h-5 text-primary" /> Etapas do Funil Comercial
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-lg font-bold text-primary flex items-center gap-2">
+                <Kanban className="w-5 h-5 text-primary" /> Etapas do Funil Comercial
+              </h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelectedClienteForOpp(null)
+                  setNovaOportunidadeOpen(true)
+                }}
+                className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10 rounded-xl font-semibold shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" /> + Nova Oportunidade
+              </Button>
+            </div>
 
             <div className="flex gap-4 overflow-x-auto pb-4">
               {funilStages.map((stage) => {
@@ -1508,7 +1521,7 @@ export default function CRM() {
         {/* ABA 3: OPORTUNIDADES */}
         <TabsContent value="oportunidades" className="space-y-4 m-0">
           <Card className="bg-white/90 backdrop-blur-md border-border/40 rounded-3xl p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h3 className="font-serif text-lg font-bold text-primary">
                   Lista de Oportunidades Comerciais
@@ -1517,9 +1530,21 @@ export default function CRM() {
                   Visão em lista de todas as negociações em andamento com probabilidade e volume.
                 </p>
               </div>
-              <Badge className="bg-primary text-white text-xs">
-                {rawFunil.length} oportunidades
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setSelectedClienteForOpp(null)
+                    setNovaOportunidadeOpen(true)
+                  }}
+                  className="h-8 gap-1.5 text-xs bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" /> + Nova Oportunidade
+                </Button>
+                <Badge className="bg-primary text-white text-xs">
+                  {rawFunil.length} oportunidades
+                </Badge>
+              </div>
             </div>
 
             <div className="overflow-x-auto">

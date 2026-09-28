@@ -469,7 +469,7 @@ export function NovaOportunidadeModal({
                 </span>
               </div>
               <span className="text-[10px] text-muted-foreground block">
-                {quantidadeEstimada ? `${quantidadeEstimada} toneladas` : 'Não informada'}
+                {quantidadeEstimada ? `${quantidadeEstimada} t` : 'Não estimada'}
               </span>
             </div>
 

@@ -63,6 +63,8 @@ import { RegisterLossDialog } from './RegisterLossDialog'
 import { QuoteCopilotDialog } from './QuoteCopilotDialog'
 import { LocalSellerCopilotAgent } from '@/providers/LocalAIAdapter'
 import type { QuoteCopilotInsight } from '@/providers/AIProvider'
+import { NovaOportunidadeModal } from '@/components/crm/NovaOportunidadeModal'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function CotacoesList() {
   const navigate = useNavigate()
@@ -90,6 +92,8 @@ export default function CotacoesList() {
 
   // Modais e Drawers
   const [selectedQuote, setSelectedQuote] = useState<Quotation | null>(null)
+  const { user } = useAuth()
+  const [novaOportunidadeOpen, setNovaOportunidadeOpen] = useState(false)
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false)
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
@@ -355,6 +359,14 @@ export default function CotacoesList() {
             className="bg-primary hover:bg-primary/90 text-white font-semibold shadow-xs rounded-xl h-9 text-xs"
           >
             <Plus className="w-4 h-4 mr-1" /> Nova Cotação
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setNovaOportunidadeOpen(true)}
+            className="border-primary/40 text-primary hover:bg-primary/10 font-semibold shadow-xs rounded-xl h-9 text-xs gap-1"
+          >
+            <Plus className="w-4 h-4" /> Nova Oportunidade
           </Button>
         </div>
       </div>
@@ -720,6 +732,16 @@ export default function CotacoesList() {
           quoteCode={selectedQuote.code}
         />
       )}
+
+      {/* MODAL NOVA OPORTUNIDADE COMERCIAL CIAFAL */}
+      <NovaOportunidadeModal
+        open={novaOportunidadeOpen}
+        onOpenChange={setNovaOportunidadeOpen}
+        usuarioAtualNome={user?.name || 'Carlos Mendonça'}
+        onSuccess={() => {
+          loadQuotations()
+        }}
+      />
     </div>
   )
 }

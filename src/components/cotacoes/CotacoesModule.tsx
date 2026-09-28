@@ -27,11 +27,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import CotacoesList from '@/components/cotacoes/CotacoesList'
 import { smartCrossSellEngine, type CrossSellEfficiencyStats } from '@/services/cross_sell_engine'
 import { formatBRL, formatTons } from '@/pages/NovaCotacao'
+import { NovaOportunidadeModal } from '@/components/crm/NovaOportunidadeModal'
+import { useAuth } from '@/hooks/use-auth'
 
 export function CotacoesModule() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('tab') || 'central'
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [novaOportunidadeOpen, setNovaOportunidadeOpen] = useState(false)
 
   const [stats, setStats] = useState<CrossSellEfficiencyStats>(() =>
     smartCrossSellEngine.getEfficiencyStats(),
@@ -73,6 +77,14 @@ export function CotacoesModule() {
             <Link to="/crm/cotacoes/nova">
               <Plus className="w-4 h-4" /> Nova Cotação Clean
             </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setNovaOportunidadeOpen(true)}
+            className="bg-white/10 hover:bg-white/20 text-white border-white/30 font-bold text-xs rounded-xl shadow-md gap-1.5 h-10 px-4"
+          >
+            <Plus className="w-4 h-4 text-amber-300" /> Nova Oportunidade
           </Button>
         </div>
       </div>
@@ -403,6 +415,16 @@ export function CotacoesModule() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modal de Criação Rápida de Oportunidade */}
+      <NovaOportunidadeModal
+        open={novaOportunidadeOpen}
+        onOpenChange={setNovaOportunidadeOpen}
+        usuarioAtualNome={user?.name || 'Carlos Mendonça'}
+        onSuccess={() => {
+          setStats(smartCrossSellEngine.getEfficiencyStats())
+        }}
+      />
     </div>
   )
 }
