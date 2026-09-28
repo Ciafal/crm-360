@@ -375,4 +375,97 @@ describe('REGRESSÃO FUNCIONAL: CRM 360º CIAFAL — "+ Nova Oportunidade" & Cot
     expect(advanced.historicoAuditoria![1].estagioNovo).toBe('interesse')
     expect(advanced.historicoAuditoria![1].detalhe).toContain('linha pesada')
   })
+
+  // (16) Estrutura do Modal: Header fixo, corpo com scroll interno flex-1, footer fixo sticky bottom
+  it('(16) deve renderizar modal com header fixo, corpo scroll flex-1 e footer com botões Cancelar e Salvar Oportunidade', async () => {
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <NovaOportunidadeModal
+            open={true}
+            onOpenChange={() => {}}
+            usuarioAtualNome="Carlos Mendonça"
+          />
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    const dialogContent = screen.getByTestId('nova-oportunidade-dialog-content')
+    expect(dialogContent).toBeDefined()
+    expect(dialogContent.className).toContain('flex')
+    expect(dialogContent.className).toContain('flex-col')
+    expect(dialogContent.className).toContain('max-h-[90vh]')
+
+    const scrollBody = screen.getByTestId('nova-oportunidade-scroll-body')
+    expect(scrollBody).toBeDefined()
+    expect(scrollBody.className).toContain('flex-1')
+    expect(scrollBody.className).toContain('overflow-y-auto')
+    expect(scrollBody.className).toContain('min-h-0')
+
+    const footer = screen.getByTestId('nova-oportunidade-footer')
+    expect(footer).toBeDefined()
+    expect(footer.className).toContain('sticky')
+    expect(footer.className).toContain('bottom-0')
+    expect(footer.className).toContain('bg-white')
+
+    // Botões no footer
+    const cancelarBtn = screen.getByRole('button', { name: /cancelar/i })
+    const salvarBtn = screen.getByRole('button', { name: /salvar oportunidade/i })
+    expect(cancelarBtn).toBeDefined()
+    expect(salvarBtn).toBeDefined()
+  })
+
+  // (17) Tratamento de erro na persistência: mantém dados preenchidos e exibe mensagem de erro
+  it('(17) em caso de erro na persistência, exibe "Não foi possível salvar a oportunidade." e preserva campos preenchidos', async () => {
+    // Espiona createOpportunity para simular falha de gravação/rede
+    const spy = vi.spyOn(opportunityLeadService, 'createOpportunity').mockImplementationOnce(() => {
+      throw new Error('Falha simulada no backend/storage')
+    })
+
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <NovaOportunidadeModal
+            open={true}
+            onOpenChange={() => {}}
+            usuarioAtualNome="Carlos Mendonça"
+          />
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    // Seleciona um cliente
+    const searchInput = screen.getByPlaceholderText(/Digite SAP, Razão Social, Fantasia ou CNPJ/i)
+    fireEvent.change(searchInput, { target: { value: '100001' } })
+
+    await waitFor(() => {
+      const clienteOption = screen.getByText(/Metalúrgica ABC Ltda\./i)
+      fireEvent.click(clienteOption)
+    })
+
+    // Preenche quantidade e observação
+    const qtyInput = screen.getByPlaceholderText('Ex: 30')
+    fireEvent.change(qtyInput, { target: { value: '45.5' } })
+
+    const obsInput = screen.getByPlaceholderText(/Descreva detalhes livres levantados/i)
+    fireEvent.change(obsInput, { target: { value: 'Observação crítica para não perder no erro' } })
+
+    const salvarBtn = screen.getByRole('button', { name: /salvar oportunidade/i })
+    expect(salvarBtn).toHaveProperty('disabled', false)
+
+    fireEvent.click(salvarBtn)
+
+    await waitFor(() => {
+      // Deve exibir mensagem amigável de erro
+      expect(screen.getByText('Não foi possível salvar a oportunidade.')).toBeDefined()
+      // Não deve exibir mensagem de sucesso
+      expect(screen.queryByText(/Oportunidade criada com sucesso/i)).toBeNull()
+      // Os dados permanecem preenchidos no formulário
+      expect(screen.getByDisplayValue('45.5')).toBeDefined()
+      expect(screen.getByDisplayValue('Observação crítica para não perder no erro')).toBeDefined()
+      expect(screen.getByText(/Metalúrgica ABC Ltda\./i)).toBeDefined()
+    })
+
+    spy.mockRestore()
+  })
 })

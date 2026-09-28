@@ -286,22 +286,26 @@ export function NovaOportunidadeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] md:max-w-4xl max-h-[90vh] h-[90vh] flex flex-col rounded-3xl bg-white p-0 overflow-hidden shadow-2xl border-slate-200">
-        {/* Topo / Header CIAFAL - FIXO */}
-        <div className="bg-gradient-to-r from-[#003A70] to-sky-900 text-white p-5 shrink-0 z-10">
+      <DialogContent
+        data-testid="nova-oportunidade-dialog-content"
+        className="w-[90vw] max-w-[90vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] h-auto flex flex-col rounded-3xl bg-white p-0 overflow-hidden shadow-2xl border-slate-200 my-auto"
+        style={{ maxHeight: '90vh' }}
+      >
+        {/* Topo / Header CIAFAL - FIXO (flex-shrink: 0) */}
+        <div className="bg-gradient-to-r from-[#003A70] to-sky-900 text-white p-4 sm:p-5 shrink-0 flex-shrink-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-white/10 rounded-2xl backdrop-blur-sm">
-                <TrendingUp className="w-6 h-6 text-sky-300" />
+              <div className="p-2 sm:p-2.5 bg-white/10 rounded-2xl backdrop-blur-sm shrink-0">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-sky-300" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <DialogTitle className="font-serif text-xl font-bold text-white tracking-tight">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <DialogTitle className="font-serif text-lg sm:text-xl font-bold text-white tracking-tight">
                     {createdOpportunity
                       ? '✓ Oportunidade Criada com Sucesso!'
                       : '+ Nova Oportunidade Comercial'}
                   </DialogTitle>
-                  <Badge className="bg-amber-400 text-slate-950 font-bold text-[10px] border-none uppercase tracking-wide">
+                  <Badge className="bg-amber-400 text-slate-950 font-bold text-[10px] border-none uppercase tracking-wide shrink-0">
                     1. Especulação
                   </Badge>
                 </div>
@@ -312,7 +316,7 @@ export function NovaOportunidadeModal({
                 </DialogDescription>
               </div>
             </div>
-            <div className="hidden sm:flex flex-col items-end text-right text-[11px] text-sky-200">
+            <div className="hidden sm:flex flex-col items-end text-right text-[11px] text-sky-200 shrink-0">
               <span>
                 Tipo: <strong>ESPECULAÇÃO COMERCIAL</strong>
               </span>
@@ -323,86 +327,88 @@ export function NovaOportunidadeModal({
 
         {/* TELA DE CONFIRMAÇÃO SE PERSISTIDO COM SUCESSO */}
         {createdOpportunity ? (
-          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6 animate-in fade-in-50">
-            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
-              <CheckCircle2 className="w-8 h-8 text-emerald-600 shrink-0" />
-              <div>
-                <h3 className="font-bold text-emerald-950 text-sm">
-                  ✓ Oportunidade criada com sucesso!
-                </h3>
-                <p className="text-xs text-emerald-800">
-                  O registro foi persistido no CRM 360º e inserido no estágio{' '}
-                  <strong>1. Especulação</strong> do Funil Comercial.
-                </p>
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6 animate-in fade-in-50">
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 shrink-0" />
+                <div>
+                  <h3 className="font-bold text-emerald-950 text-sm">
+                    ✓ Oportunidade criada com sucesso!
+                  </h3>
+                  <p className="text-xs text-emerald-800">
+                    O registro foi persistido no CRM 360º e inserido no estágio{' '}
+                    <strong>1. Especulação</strong> do Funil Comercial.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quadro de Resumo da Oportunidade */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Número Sequencial:
+                  </span>
+                  <span className="font-mono text-base font-bold text-[#003A70] bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block">
+                    {createdOpportunity.numeroSequencial || createdOpportunity.id}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Cliente:
+                  </span>
+                  <strong className="text-sm text-slate-900 block font-serif">
+                    {createdOpportunity.clienteNome}
+                  </strong>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    SAP {createdOpportunity.clienteSap}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Estágio Inicial:
+                  </span>
+                  <Badge className="bg-slate-200 text-slate-800 font-bold border-none text-xs">
+                    1. Especulação
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Valor Potencial:
+                  </span>
+                  <span className="font-serif font-bold text-emerald-700 text-sm block">
+                    {createdOpportunity.valorPotencialCalculado !== null &&
+                    createdOpportunity.valorPotencialCalculado !== undefined &&
+                    createdOpportunity.valorPotencialCalculado > 0
+                      ? formatBRLService(createdOpportunity.valorPotencialCalculado)
+                      : 'Não estimado'}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Responsável:
+                  </span>
+                  <span className="text-slate-800 font-medium">
+                    {createdOpportunity.vendedorNome || usuarioAtualNome}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground block font-semibold">
+                    Grupo / Família:
+                  </span>
+                  <span className="text-slate-800 font-medium">
+                    {createdOpportunity.grupoMercadoria || 'Não definido'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Quadro de Resumo da Oportunidade */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Número Sequencial:
-                </span>
-                <span className="font-mono text-base font-bold text-[#003A70] bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block">
-                  {createdOpportunity.numeroSequencial || createdOpportunity.id}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Cliente:
-                </span>
-                <strong className="text-sm text-slate-900 block font-serif">
-                  {createdOpportunity.clienteNome}
-                </strong>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  SAP {createdOpportunity.clienteSap}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Estágio Inicial:
-                </span>
-                <Badge className="bg-slate-200 text-slate-800 font-bold border-none text-xs">
-                  1. Especulação
-                </Badge>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Valor Potencial:
-                </span>
-                <span className="font-serif font-bold text-emerald-700 text-sm block">
-                  {createdOpportunity.valorPotencialCalculado !== null &&
-                  createdOpportunity.valorPotencialCalculado !== undefined &&
-                  createdOpportunity.valorPotencialCalculado > 0
-                    ? formatBRLService(createdOpportunity.valorPotencialCalculado)
-                    : 'Não estimado'}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Responsável:
-                </span>
-                <span className="text-slate-800 font-medium">
-                  {createdOpportunity.vendedorNome || usuarioAtualNome}
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[11px] text-muted-foreground block font-semibold">
-                  Grupo / Família:
-                </span>
-                <span className="text-slate-800 font-medium">
-                  {createdOpportunity.grupoMercadoria || 'Não definido'}
-                </span>
-              </div>
-            </div>
-
-            {/* Ações da Confirmação */}
-            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-slate-200">
+            {/* Ações da Confirmação - FOOTER FIXO */}
+            <div className="shrink-0 flex-shrink-0 sticky bottom-0 z-20 p-4 bg-white border-t border-slate-200 flex flex-wrap items-center justify-end gap-2.5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
               <Button
                 type="button"
                 variant="outline"
@@ -448,8 +454,11 @@ export function NovaOportunidadeModal({
           </div>
         ) : (
           /* FORMULÁRIO DE CRIAÇÃO: CORPO CENTRAL COM SCROLL INTERNO + FOOTER FIXO STICKY */
-          <>
-            <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-5">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div
+              data-testid="nova-oportunidade-scroll-body"
+              className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-5 space-y-5"
+            >
               {/* Alerta de Erro caso salvamento falhe */}
               {saveError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
@@ -629,8 +638,8 @@ export function NovaOportunidadeModal({
                 )}
               </div>
 
-              {/* SEÇÃO 2: GRUPO DE MERCADORIAS & ESTIMATIVAS (Desktop 3, Notebook 2, Mobile 1 coluna) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* SEÇÃO 2: GRUPO DE MERCADORIAS & ESTIMATIVAS (Desktop 3 colunas, Notebook 2, Tablet/Mobile 1) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                 {/* Grupo de Mercadorias (Opcional - Regra 3) */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
@@ -638,7 +647,7 @@ export function NovaOportunidadeModal({
                     <span>Grupo de Mercadorias (Opcional)</span>
                   </Label>
                   <Select value={grupoMercadoria} onValueChange={setGrupoMercadoria}>
-                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50">
+                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50 w-full">
                       <SelectValue placeholder="Selecione o grupo" />
                     </SelectTrigger>
                     <SelectContent className="max-h-56">
@@ -668,7 +677,7 @@ export function NovaOportunidadeModal({
                       placeholder="Ex: 30"
                       value={quantidadeEstimada}
                       onChange={(e) => setQuantidadeEstimada(e.target.value)}
-                      className="h-9 text-xs rounded-xl bg-slate-50/50 pr-8"
+                      className="h-9 text-xs rounded-xl bg-slate-50/50 pr-8 w-full"
                     />
                     <span className="absolute right-3 top-2 text-xs font-bold text-muted-foreground">
                       t
@@ -680,7 +689,7 @@ export function NovaOportunidadeModal({
                 </div>
 
                 {/* Preço Estimado (Opcional - Regra 5) */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                     <DollarSign className="w-3.5 h-3.5 text-primary" />
                     <span>Preço Estimado (R$/t) (Opcional)</span>
@@ -696,7 +705,7 @@ export function NovaOportunidadeModal({
                       placeholder="Ex: 4500"
                       value={precoEstimado}
                       onChange={(e) => setPrecoEstimado(e.target.value)}
-                      className="h-9 text-xs rounded-xl bg-slate-50/50 pl-9"
+                      className="h-9 text-xs rounded-xl bg-slate-50/50 pl-9 w-full"
                     />
                   </div>
                   <span className="text-[10px] text-muted-foreground block">
@@ -741,8 +750,8 @@ export function NovaOportunidadeModal({
                 </div>
               </div>
 
-              {/* SEÇÃO 3: CAMPOS COMPLEMENTARES (Desktop 3, Notebook 2, Mobile 1 coluna) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* SEÇÃO 3: CAMPOS COMPLEMENTARES (Desktop 3 colunas, Notebook 2, Tablet/Mobile 1) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                 {/* Previsão de Compra (Regra 8) */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
@@ -753,7 +762,7 @@ export function NovaOportunidadeModal({
                     value={previsaoCompra}
                     onValueChange={(v) => setPrevisaoCompra(v as PrevisaoCompraTipo)}
                   >
-                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50">
+                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50 w-full">
                       <SelectValue placeholder="Selecione a previsão" />
                     </SelectTrigger>
                     <SelectContent>
@@ -776,7 +785,7 @@ export function NovaOportunidadeModal({
                     value={probabilidade}
                     onValueChange={(v) => setProbabilidade(v as ProbabilidadeNivel)}
                   >
-                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50">
+                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50 w-full">
                       <SelectValue placeholder="Selecione a probabilidade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -790,13 +799,13 @@ export function NovaOportunidadeModal({
                 </div>
 
                 {/* Origem da Oportunidade (Regra 7) */}
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                     <User className="w-3.5 h-3.5 text-primary" />
                     <span>Origem (Opcional)</span>
                   </Label>
                   <Select value={origem} onValueChange={(v) => setOrigem(v as OrigemOportunidade)}>
-                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50">
+                    <SelectTrigger className="h-9 text-xs rounded-xl bg-slate-50/50 w-full">
                       <SelectValue placeholder="Selecione a origem" />
                     </SelectTrigger>
                     <SelectContent className="max-h-56">
@@ -841,30 +850,33 @@ export function NovaOportunidadeModal({
               </div>
             </div>
 
-            {/* Rodapé / Ações - FIXO STICKY NO BOTTOM */}
-            <DialogFooter className="sticky bottom-0 z-20 shrink-0 p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-              <div className="text-[11px] text-muted-foreground">
+            {/* Rodapé / Ações - FOOTER FIXO (flex-shrink: 0, sticky bottom-0, background branco, z-20) */}
+            <DialogFooter
+              data-testid="nova-oportunidade-footer"
+              className="sticky bottom-0 z-20 shrink-0 flex-shrink-0 p-3.5 sm:p-4 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.06)]"
+            >
+              <div className="text-[11px] text-muted-foreground w-full sm:w-auto text-left">
                 {!isFormValid ? (
                   <span className="text-rose-600 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3.5 h-3.5" /> Selecione um cliente para habilitar o
-                    salvamento.
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Selecione um cliente para
+                    habilitar o salvamento.
                   </span>
                 ) : (
                   <span className="text-emerald-700 flex items-center gap-1 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Pronto para salvar oportunidade
-                    comercial.
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Pronto para salvar
+                    oportunidade comercial.
                   </span>
                 )}
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => onOpenChange(false)}
                   disabled={isSaving}
-                  className="h-9 text-xs rounded-xl"
+                  className="h-9 text-xs rounded-xl border-slate-300 hover:bg-slate-50"
                 >
                   Cancelar
                 </Button>
@@ -885,7 +897,7 @@ export function NovaOportunidadeModal({
                 </Button>
               </div>
             </DialogFooter>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
