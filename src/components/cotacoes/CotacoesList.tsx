@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -24,7 +24,12 @@ import {
   HelpCircle,
   ShieldCheck,
   Flame,
+  Edit2,
+  Calendar as CalendarIcon,
+  PhoneCall,
+  ArrowRight,
 } from 'lucide-react'
+import { DetalhesOportunidadeModal } from '@/components/crm/DetalhesOportunidadeModal'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -108,6 +113,8 @@ export default function CotacoesList() {
   const { user } = useAuth()
   const [novaOportunidadeOpen, setNovaOportunidadeOpen] = useState(false)
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false)
+  const [selectedOppForDetail, setSelectedOppForDetail] = useState<AdvancedOpportunity | null>(null)
+  const [detalhesOppModalOpen, setDetalhesOppModalOpen] = useState(false)
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
   const [acceptanceDialogOpen, setAcceptanceDialogOpen] = useState(false)
@@ -155,7 +162,7 @@ export default function CotacoesList() {
   const sellerOptions = Array.from(new Set(quotations.map((q) => q.seller_name).filter(Boolean)))
   const ufOptions = Array.from(new Set(quotations.map((q) => q.customer_uf).filter(Boolean)))
 
-  // Aplicação dos Filtros
+  // Aplicação dos Filtros de Cotações
   const filteredQuotations = quotations.filter((q) => {
     if (
       search &&
@@ -210,6 +217,56 @@ export default function CotacoesList() {
 
     return true
   })
+
+  // RBAC + Filtragem Unificada (Padrão CRM.tsx)
+  const userRole = (user?.role || '').toLowerCase()
+  const userEmail = (user?.email || '').toLowerCase()
+  const isVendedorOnly = userRole === 'vendedor' || userRole === 'representante_externo'
+
+  const rbacOpportunities = useMemo(() => {
+    if (isVendedorOnly) {
+      return opportunities.filter(
+        (op) =>
+          op.vendedorId === user?.id ||
+          (userEmail.includes('vendedor2')
+            ? op.vendedorId === 'qas-vendedor2_teste'
+            : userEmail.includes('representante')
+              ? op.vendedorId === 'qas-representante_teste'
+              : op.vendedorId === 'qas-vendedor_teste'),
+      )
+    }
+    return opportunities
+  }, [opportunities, isVendedorOnly, userEmail, user?.id])
+
+  const filteredOpportunities = useMemo(() => {
+    return rbacOpportunities.filter((op) => {
+      if (search) {
+        const s = search.toLowerCase()
+        const matchNum =
+          (op.numeroSequencial && op.numeroSequencial.toLowerCase().includes(s)) ||
+          op.id.toLowerCase().includes(s)
+        const matchCliente = op.clienteNome && op.clienteNome.toLowerCase().includes(s)
+        const matchSap = op.clienteSap && op.clienteSap.toLowerCase().includes(s)
+        const matchVendedor = op.vendedorNome && op.vendedorNome.toLowerCase().includes(s)
+        const matchGrupo = op.grupoMercadoria && op.grupoMercadoria.toLowerCase().includes(s)
+
+        if (!matchNum && !matchCliente && !matchSap && !matchVendedor && !matchGrupo) {
+          return false
+        }
+      }
+
+      if (selectedSeller !== 'ALL' && op.vendedorNome !== selectedSeller) {
+        return false
+      }
+
+      return true
+    })
+  }, [rbacOpportunities, search, selectedSeller])
+
+  // Contadores dinâmicos sem F5
+  const countOpps = filteredOpportunities.length
+  const countCots = filteredQuotations.length
+  const countTodos = countOpps + countCots
 
   // Mover Estágio no Kanban com Validações Rigorosas
   const handleMoveKanbanStage = async (quoteId: string, targetStatus: QuotationStatus) => {
@@ -420,7 +477,7 @@ export default function CotacoesList() {
             <div className="relative sm:col-span-2">
               <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
               <Input
-                placeholder="Buscar cliente, cotação, SAP ou material..."
+                placeholder="Buscar cliente, oportunidade, cotação, SAP ou material..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-9 text-xs"
@@ -562,7 +619,7 @@ export default function CotacoesList() {
                       : 'text-slate-600 hover:text-slate-900',
                   )}
                 >
-                  Todos ({filteredQuotations.length + opportunities.length})
+                  Todos ({countTodos})
                 </button>
                 <button
                   type="button"
@@ -574,7 +631,7 @@ export default function CotacoesList() {
                       : 'text-slate-600 hover:text-slate-900',
                   )}
                 >
-                  Oportunidades ({opportunities.length})
+                  Oportunidades ({countOpps})
                 </button>
                 <button
                   type="button"
@@ -586,7 +643,7 @@ export default function CotacoesList() {
                       : 'text-slate-600 hover:text-slate-900',
                   )}
                 >
-                  Cotações ({filteredQuotations.length})
+                  Cotações ({countCots})
                 </button>
               </div>
             </div>
@@ -638,13 +695,21 @@ export default function CotacoesList() {
                 <tbody className="divide-y divide-slate-100">
                   {/* LINHAS DE OPORTUNIDADES (se filtro permitir) */}
                   {(tipoRegistroFilter === 'TODOS' || tipoRegistroFilter === 'OPORTUNIDADES') &&
-                    opportunities.map((opp) => {
+                    filteredOpportunities.map((opp) => {
+                      const temPrecoOuQtd =
+                        (opp.quantidadeEstimadaTons !== null &&
+                          opp.quantidadeEstimadaTons !== undefined &&
+                          opp.quantidadeEstimadaTons > 0) ||
+                        (opp.precoEstimadoPorTon !== null &&
+                          opp.precoEstimadoPorTon !== undefined &&
+                          opp.precoEstimadoPorTon > 0)
+
                       const valorText =
                         opp.valorPotencialCalculado !== null &&
                         opp.valorPotencialCalculado !== undefined &&
                         opp.valorPotencialCalculado > 0
                           ? formatBRLOpp(opp.valorPotencialCalculado)
-                          : opp.valor > 0
+                          : temPrecoOuQtd && opp.valor > 0
                             ? formatBRLOpp(opp.valor)
                             : 'Não estimado'
 
@@ -657,6 +722,29 @@ export default function CotacoesList() {
                             ? formatTonsOpp(opp.toneladas)
                             : 'Não estimada'
 
+                      const precoUnitText =
+                        opp.precoEstimadoPorTon !== null &&
+                        opp.precoEstimadoPorTon !== undefined &&
+                        opp.precoEstimadoPorTon > 0
+                          ? `R$ ${opp.precoEstimadoPorTon.toLocaleString('pt-BR')}/t`
+                          : 'Não informado'
+
+                      const estagioFormatado = opp.estagioCiafal
+                        ? opp.estagioCiafal.replace(/_/g, ' ')
+                        : opp.etapa
+
+                      const dataCriacaoFormatada = opp.criadoEmDataHora
+                        ? new Date(opp.criadoEmDataHora).toLocaleDateString('pt-BR')
+                        : opp.dataCriacao
+                          ? new Date(opp.dataCriacao).toLocaleDateString('pt-BR')
+                          : '—'
+
+                      const ultimaInteracaoFormatada = opp.ultimaAtualizacaoDataHora
+                        ? new Date(opp.ultimaAtualizacaoDataHora).toLocaleDateString('pt-BR')
+                        : (opp as any).ultimaInteracao
+                          ? new Date((opp as any).ultimaInteracao).toLocaleDateString('pt-BR')
+                          : '—'
+
                       return (
                         <tr
                           key={`opp-${opp.id}`}
@@ -666,30 +754,94 @@ export default function CotacoesList() {
                             <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] block w-fit mb-1">
                               TIPO: Oportunidade
                             </Badge>
-                            <span className="font-mono font-bold text-slate-900">
+                            <span className="font-mono font-bold text-slate-900 block">
                               {opp.numeroSequencial || opp.id}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              Criada: {dataCriacaoFormatada}
                             </span>
                           </td>
                           <td className="p-3">
                             <span className="font-bold text-slate-900 block">
                               {opp.clienteNome}
                             </span>
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              SAP: {opp.clienteSap} • Grupo: {opp.grupoMercadoria || 'Geral'}
+                            <span className="text-[10px] text-slate-500 font-mono block">
+                              SAP: {opp.clienteSap || 'Não inf.'} • Grupo:{' '}
+                              {opp.grupoMercadoria || 'Não definido / A identificar'}
+                            </span>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap text-[10px] text-muted-foreground">
+                              <span>
+                                Origem:{' '}
+                                <strong className="text-slate-700 capitalize">
+                                  {opp.origemOportunidade
+                                    ? opp.origemOportunidade.replace(/_/g, ' ')
+                                    : 'Contato vendedor'}
+                                </strong>
+                              </span>
+                              <span>•</span>
+                              <span>
+                                Previsão:{' '}
+                                <strong className="text-slate-700">
+                                  {opp.previsaoCompra
+                                    ? opp.previsaoCompra.replace(/_/g, ' ')
+                                    : 'Sem previsão'}
+                                </strong>
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-slate-700">
+                            <span className="font-medium block">
+                              {opp.vendedorNome || opp.responsavelVendedor || 'Carlos Mendonça'}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              Últ. Interação: {ultimaInteracaoFormatada}
+                            </span>
+                            {opp.proximaAcao && (
+                              <span
+                                className="text-[10px] text-amber-800 font-medium block truncate max-w-[140px]"
+                                title={opp.proximaAcao}
+                              >
+                                Próx: {opp.proximaAcao}
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-medium text-slate-800 font-mono">
+                            <span className="block">{qtdText}</span>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {precoUnitText}
                             </span>
                           </td>
-                          <td className="p-3 text-slate-700">{opp.vendedorNome}</td>
-                          <td className="p-3 text-right font-medium text-slate-800 font-mono">
-                            {qtdText}
-                          </td>
                           <td className="p-3 text-right font-bold text-emerald-700 font-mono">
-                            {valorText}
+                            <span className="block">{valorText}</span>
+                            <div className="mt-0.5">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'text-[9px] font-bold capitalize',
+                                  opp.probabilidadeClassificacao === 'alta'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : opp.probabilidadeClassificacao === 'media'
+                                      ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                      : 'bg-slate-100 text-slate-700 border-slate-300',
+                                )}
+                              >
+                                Prob. {opp.probabilidade || 0}% (
+                                {opp.probabilidadeClassificacao || 'baixa'})
+                              </Badge>
+                            </div>
                           </td>
                           <td className="p-3 text-center">
-                            <Badge className="bg-amber-100 text-amber-900 border-none font-bold text-[10px]">
-                              Estágio:{' '}
-                              {opp.estagioCiafal ? opp.estagioCiafal.replace(/_/g, ' ') : opp.etapa}
+                            <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] block w-fit mx-auto mb-1 capitalize">
+                              Estágio: {estagioFormatado}
                             </Badge>
+                            <span className="text-[10px] text-slate-500 font-medium block">
+                              Status:{' '}
+                              {opp.estagioCiafal === 'perdida'
+                                ? 'Perdida'
+                                : opp.estagioCiafal === 'convertida_pedido'
+                                  ? 'Ganha'
+                                  : 'Em Andamento'}
+                            </span>
                           </td>
                           <td className="p-3 text-center">
                             {opp.cotacaoRelacionadaId ? (
@@ -701,30 +853,78 @@ export default function CotacoesList() {
                             )}
                           </td>
                           <td className="p-3 text-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                navigate('/crm/cotacoes/nova', {
-                                  state: {
-                                    clienteId: opp.clienteId,
-                                    codigoSap: opp.clienteSap,
-                                    razaoSocial: opp.clienteNome,
-                                    vendedorNome: opp.vendedorNome,
-                                    grupoMercadoriaSugerido: opp.grupoMercadoria,
-                                    quantidadeEstimadaSugerida: opp.quantidadeEstimadaTons,
-                                    precoEstimadoReferencia: opp.precoEstimadoPorTon,
-                                    observacoesOrigem: `Oportunidade vinculada: ${opp.numeroSequencial || opp.id}`,
-                                    origem: 'oportunidade_funil',
-                                    opportunity_id: opp.numeroSequencial || opp.id,
-                                    opportunity_number: opp.numeroSequencial,
-                                  },
-                                })
-                              }}
-                              className="h-7 px-2 text-xs border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 font-semibold"
-                            >
-                              Gerar Cotação
-                            </Button>
+                            <div className="flex items-center justify-center gap-1 flex-wrap">
+                              {/* Visualizar */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOppForDetail(opp)
+                                  setDetalhesOppModalOpen(true)
+                                }}
+                                className="h-7 w-7 p-0 text-amber-800 hover:bg-amber-100"
+                                title="Visualizar Detalhes"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </Button>
+
+                              {/* Editar */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOppForDetail(opp)
+                                  setDetalhesOppModalOpen(true)
+                                }}
+                                className="h-7 w-7 p-0 text-slate-700 hover:bg-slate-100"
+                                title="Editar Oportunidade"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+
+                              {/* Criar Tarefa */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  navigate('/tarefas', {
+                                    state: {
+                                      clienteId: opp.clienteId,
+                                      clienteNome: opp.clienteNome,
+                                      titulo: `Follow-up ${opp.numeroSequencial || 'OPP'}: ${opp.clienteNome}`,
+                                    },
+                                  })
+                                }}
+                                className="h-7 w-7 p-0 text-blue-700 hover:bg-blue-50"
+                                title="Criar Tarefa de Follow-up"
+                              >
+                                <CalendarIcon className="w-3.5 h-3.5" />
+                              </Button>
+
+                              {/* Registrar Interação */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  navigate(`/crm/${opp.clienteId}`)
+                                }}
+                                className="h-7 w-7 p-0 text-emerald-700 hover:bg-emerald-50"
+                                title="Registrar Interação"
+                              >
+                                <PhoneCall className="w-3.5 h-3.5" />
+                              </Button>
+
+                              {/* Gerar Cotação (Desabilitado) */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                title="Geração de cotação será ativada no próximo release"
+                                className="h-7 px-2 text-[11px] border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed opacity-60"
+                              >
+                                Gerar Cotação
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       )
@@ -818,7 +1018,9 @@ export default function CotacoesList() {
                       </tr>
                     ))}
 
-                  {filteredQuotations.length === 0 && opportunities.length === 0 && (
+                  {((tipoRegistroFilter === 'TODOS' && countTodos === 0) ||
+                    (tipoRegistroFilter === 'OPORTUNIDADES' && countOpps === 0) ||
+                    (tipoRegistroFilter === 'COTACOES' && countCots === 0)) && (
                     <tr>
                       <td colSpan={8} className="p-8 text-center text-slate-400 italic">
                         Nenhum registro encontrado com os filtros selecionados.
@@ -919,6 +1121,17 @@ export default function CotacoesList() {
         onOpenChange={setNovaOportunidadeOpen}
         usuarioAtualNome={user?.name || 'Carlos Mendonça'}
         onSuccess={() => {
+          loadQuotations()
+        }}
+      />
+
+      {/* MODAL DETALHES DA OPORTUNIDADE */}
+      <DetalhesOportunidadeModal
+        open={detalhesOppModalOpen}
+        onOpenChange={setDetalhesOppModalOpen}
+        opportunity={selectedOppForDetail}
+        usuarioAtualNome={user?.name || 'Carlos Mendonça'}
+        onUpdate={() => {
           loadQuotations()
         }}
       />
