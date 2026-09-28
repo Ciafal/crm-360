@@ -11,6 +11,7 @@ import {
   ProdutoCliente,
   NFCliente,
 } from '@/data/mockCommercialData'
+import { opportunityLeadService } from '@/services/opportunity_lead_service'
 import {
   initialCommercialPlaybooks,
   mockComplaints,
@@ -264,9 +265,32 @@ export default function Cliente360() {
     return mockNFsCliente[cliente.id] || mockNFsCliente['cli-100001'] || []
   }, [cliente.id])
 
+  const [oppsRefreshKey, setOppsRefreshKey] = useState(0)
+
+  // Ouvir evento de criação de oportunidade para sincronizar sem F5
+  useEffect(() => {
+    const handleOpportunityCreated = () => {
+      setOppsRefreshKey((k) => k + 1)
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      return () => {
+        window.removeEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      }
+    }
+  }, [])
+
   const oportunidades = useMemo(() => {
-    return mockFunilOportunidades.filter((op) => op.clienteId === cliente.id)
-  }, [cliente.id])
+    const allOpps = opportunityLeadService.getCombinedFunil()
+    return allOpps.filter(
+      (op) =>
+        op.clienteId === cliente.id ||
+        (op.clienteSap && cliente.sapCode && op.clienteSap === cliente.sapCode) ||
+        (op.clienteNome &&
+          cliente.razaoSocial &&
+          op.clienteNome.toLowerCase() === cliente.razaoSocial.toLowerCase()),
+    )
+  }, [cliente.id, cliente.sapCode, cliente.razaoSocial, oppsRefreshKey])
 
   // Gráficos Recharts: Histórico Mensal 12 Meses (Toneladas & Faturamento)
   const monthlyData24m = useMemo(() => {

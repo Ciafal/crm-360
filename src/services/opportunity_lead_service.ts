@@ -302,7 +302,8 @@ export interface NovaOportunidadePayload {
 }
 
 const STORAGE_KEY_ADVANCED_LEADS = 'ciafal_advanced_leads'
-const STORAGE_KEY_ADVANCED_OPPS = 'ciafal_advanced_opportunities'
+const STORAGE_KEY_ADVANCED_OPPS = 'ciafal_crm_opportunities'
+const STORAGE_KEY_ADVANCED_OPPS_LEGACY = 'ciafal_advanced_opportunities'
 
 /**
  * Mapeador entre o EstagioCiafal (1-10) e a EtapaFunil legada para compatibilidade retroativa
@@ -468,6 +469,15 @@ export class OpportunityLeadService {
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
       }
+      // Fallback para chave legada se existir
+      const parsedLegacy = crmStorage.getJSON<AdvancedOpportunity[] | null>(
+        STORAGE_KEY_ADVANCED_OPPS_LEGACY,
+        null,
+      )
+      if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+        this.saveStoredOpportunities(parsedLegacy)
+        return parsedLegacy
+      }
     } catch {
       /* intentionally ignored */
     }
@@ -533,11 +543,36 @@ export class OpportunityLeadService {
     })
 
     crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS, initial)
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS_LEGACY, initial)
     return initial
   }
 
   saveStoredOpportunities(opps: AdvancedOpportunity[]) {
     crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS, opps)
+    crmStorage.setJSON(STORAGE_KEY_ADVANCED_OPPS_LEGACY, opps)
+  }
+
+  /**
+   * Retorna o funil combinado de oportunidades (persistidas + enriquecidas)
+   */
+  getCombinedFunil(): AdvancedOpportunity[] {
+    return this.getStoredOpportunities()
+  }
+
+  /**
+   * Busca oportunidade por ID ou número sequencial
+   */
+  getOpportunityById(idOrSeq: string): AdvancedOpportunity | null {
+    const opps = this.getStoredOpportunities()
+    const cleanTerm = idOrSeq.trim().toLowerCase()
+    return (
+      opps.find(
+        (o) =>
+          o.id.toLowerCase() === cleanTerm ||
+          (o.numeroSequencial && o.numeroSequencial.toLowerCase() === cleanTerm) ||
+          (o.numeroSequencial && o.numeroSequencial.toLowerCase().includes(cleanTerm)),
+      ) || null
+    )
   }
 
   /**
@@ -605,7 +640,7 @@ export class OpportunityLeadService {
       id: `aud-${Date.now()}-1`,
       dataHora: dataHoraFormatada,
       usuario: usuarioAtual,
-      acao: 'Criação de Oportunidade',
+      acao: 'Criada no estágio inicial 1. Especulação',
       detalhe: `Oportunidade criada com estágio inicial "1. Especulação". Grupo: ${payload.grupoMercadoria || 'Não definido'}. Qtd: ${qty !== null ? `${qty} t` : 'Não informada'}. Preço: ${price !== null ? `R$ ${price}/t` : 'Não informado'}.`,
       estagioNovo: 'especulacao',
     }

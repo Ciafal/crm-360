@@ -217,6 +217,20 @@ export default function CRM() {
     }
   }, [searchParams, location.pathname])
 
+  // Listener reativo ao evento crm360:opportunityCreated para recarregar rawFunil sem F5
+  useEffect(() => {
+    const handleOpportunityCreated = () => {
+      setOppsRefreshKey((k) => k + 1)
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      return () => {
+        window.removeEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      }
+    }
+  }, [])
+
   const handleTabChange = (val: string) => {
     setActiveTab(val)
     if (location.pathname === '/crm/cotacoes' || location.pathname === '/cotacoes') {
@@ -353,7 +367,7 @@ export default function CRM() {
   // Oportunidades do Funil — leem o ESTÁGIO REAL da oportunidade no serviço
   // (sem sobreposição por cotações: Oportunidade e Cotação são entidades distintas e relacionadas)
   const rawFunil = useMemo(() => {
-    const storedOpps = opportunityLeadService.getStoredOpportunities()
+    const storedOpps = opportunityLeadService.getCombinedFunil()
     return isVendedorOnly
       ? storedOpps.filter(
           (op) =>

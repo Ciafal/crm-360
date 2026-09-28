@@ -209,30 +209,42 @@ export function NovaOportunidadeModal({
         usuarioAtual: usuarioAtualNome,
       }
 
-      // Validar cliente → gerar número atômico → persistir → gravar histórico → retornar persistido
+      // 1. Salvar e persistir no storage via opportunityLeadService
       const created = opportunityLeadService.createOpportunity(payload)
+      if (!created || !created.id) {
+        throw new Error('Não foi possível salvar a oportunidade.')
+      }
 
-      // Disparar evento para atualização reativa em todas as telas sem F5
+      // 2. RECONSULTAR o registro gravado para confirmar persistência e reatividade
+      const verified =
+        opportunityLeadService.getOpportunityById(created.id) ||
+        opportunityLeadService.getOpportunityById(created.numeroSequencial || '') ||
+        opportunityLeadService.getStoredOpportunities().find((o) => o.id === created.id)
+
+      if (!verified) {
+        throw new Error('Falha ao verificar persistência da oportunidade gravada.')
+      }
+
+      // 3. Disparar evento para atualização reativa em todas as telas sem F5
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('crm360:opportunityCreated', {
-            detail: created,
+            detail: verified,
           }),
         )
       }
 
+      // 4. Só então exibir sucesso e abrir tela de confirmação
       toast.success(
-        `Oportunidade ${created.numeroSequencial || created.id} criada com sucesso no estágio 1. Especulação!`,
+        `Oportunidade ${verified.numeroSequencial || verified.id} criada com sucesso no estágio 1. Especulação!`,
         {
           description: `Cliente: ${selectedCliente.nomeFantasia || selectedCliente.razaoSocial}`,
         },
       )
 
-      // Exibe tela de confirmação detalhada dentro do modal
-      setCreatedOpportunity(created)
-      onSuccess?.(created)
+      setCreatedOpportunity(verified)
+      onSuccess?.(verified)
     } catch (err: any) {
-      const errorMsg = err.message || 'Não foi possível salvar a oportunidade.'
       console.error('Falha técnica na persistência da oportunidade:', err)
       setSaveError('Não foi possível salvar a oportunidade.')
       toast.error('Não foi possível salvar a oportunidade.')
