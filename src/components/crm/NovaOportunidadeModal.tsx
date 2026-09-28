@@ -232,10 +232,11 @@ export function NovaOportunidadeModal({
       setCreatedOpportunity(created)
       onSuccess?.(created)
     } catch (err: any) {
-      const errorMsg = err.message || 'Erro ao criar oportunidade.'
-      setSaveError(errorMsg)
-      toast.error(errorMsg)
-      // Mantém o formulário aberto para correção
+      const errorMsg = err.message || 'Não foi possível salvar a oportunidade.'
+      console.error('Falha técnica na persistência da oportunidade:', err)
+      setSaveError('Não foi possível salvar a oportunidade.')
+      toast.error('Não foi possível salvar a oportunidade.')
+      // Mantém o formulário aberto com os dados preenchidos para correção
     } finally {
       setIsSaving(false)
     }
@@ -285,9 +286,9 @@ export function NovaOportunidadeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-3xl bg-white p-0 overflow-hidden shadow-2xl border-slate-200">
-        {/* Topo / Header CIAFAL */}
-        <div className="bg-gradient-to-r from-[#003A70] to-sky-900 text-white p-5">
+      <DialogContent className="max-w-[90vw] md:max-w-4xl max-h-[90vh] h-[90vh] flex flex-col rounded-3xl bg-white p-0 overflow-hidden shadow-2xl border-slate-200">
+        {/* Topo / Header CIAFAL - FIXO */}
+        <div className="bg-gradient-to-r from-[#003A70] to-sky-900 text-white p-5 shrink-0 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-white/10 rounded-2xl backdrop-blur-sm">
@@ -322,7 +323,7 @@ export function NovaOportunidadeModal({
 
         {/* TELA DE CONFIRMAÇÃO SE PERSISTIDO COM SUCESSO */}
         {createdOpportunity ? (
-          <div className="p-6 space-y-6 animate-in fade-in-50">
+          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-6 animate-in fade-in-50">
             <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 shrink-0" />
               <div>
@@ -446,9 +447,9 @@ export function NovaOportunidadeModal({
             </div>
           </div>
         ) : (
-          /* FORMULÁRIO DE CRIAÇÃO */
+          /* FORMULÁRIO DE CRIAÇÃO: CORPO CENTRAL COM SCROLL INTERNO + FOOTER FIXO STICKY */
           <>
-            <div className="p-5 max-h-[75vh] overflow-y-auto space-y-5">
+            <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-5">
               {/* Alerta de Erro caso salvamento falhe */}
               {saveError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
@@ -628,8 +629,8 @@ export function NovaOportunidadeModal({
                 )}
               </div>
 
-              {/* SEÇÃO 2: GRUPO DE MERCADORIAS & ESTIMATIVAS */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* SEÇÃO 2: GRUPO DE MERCADORIAS & ESTIMATIVAS (Desktop 3, Notebook 2, Mobile 1 coluna) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {/* Grupo de Mercadorias (Opcional - Regra 3) */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
@@ -740,8 +741,8 @@ export function NovaOportunidadeModal({
                 </div>
               </div>
 
-              {/* SEÇÃO 3: CAMPOS COMPLEMENTARES (PREVISÃO, PROBABILIDADE, ORIGEM) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* SEÇÃO 3: CAMPOS COMPLEMENTARES (Desktop 3, Notebook 2, Mobile 1 coluna) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {/* Previsão de Compra (Regra 8) */}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
@@ -840,8 +841,8 @@ export function NovaOportunidadeModal({
               </div>
             </div>
 
-            {/* Rodapé / Ações */}
-            <DialogFooter className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+            {/* Rodapé / Ações - FIXO STICKY NO BOTTOM */}
+            <DialogFooter className="sticky bottom-0 z-20 shrink-0 p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
               <div className="text-[11px] text-muted-foreground">
                 {!isFormValid ? (
                   <span className="text-rose-600 flex items-center gap-1 font-medium">
@@ -875,7 +876,7 @@ export function NovaOportunidadeModal({
                   disabled={!isFormValid || isSaving}
                   className={cn(
                     'h-9 px-5 text-xs font-semibold rounded-xl text-white shadow-sm transition-all',
-                    isFormValid
+                    isFormValid && !isSaving
                       ? 'bg-[#003A70] hover:bg-[#002d57] active:scale-[0.98]'
                       : 'bg-slate-300 cursor-not-allowed',
                   )}
