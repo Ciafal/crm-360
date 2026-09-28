@@ -7,7 +7,16 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { DollarSign, Percent, ShieldCheck, Scale, ArrowDownRight, CheckCircle2 } from 'lucide-react'
+import {
+  DollarSign,
+  Percent,
+  ShieldCheck,
+  Scale,
+  ArrowDownRight,
+  CheckCircle2,
+  TrendingUp,
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import type { QuotationItem, QuotationPricingSnapshot } from '@/types/quotation'
 
 import type { Quotation } from '@/types/quotation'
@@ -41,6 +50,7 @@ export function PricingDetailsDrawer({
   onRequestSapQueue,
   onViewSapMessages,
 }: PricingDetailsDrawerProps) {
+  const navigate = useNavigate()
   const item = itemProp || (quotation && quotation.items.length > 0 ? quotation.items[0] : null)
   if (!item && !quotation) return null
 
@@ -77,6 +87,38 @@ export function PricingDetailsDrawer({
               </div>
             </div>
           </SheetHeader>
+
+          {/* Origem Comercial (Regra 7 do Plano) */}
+          {(quotation?.origem_comercial ||
+            quotation?.opportunity_id ||
+            quotation?.origem_opp_numero) && (
+            <div className="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-1 text-xs">
+              <span className="text-[10px] uppercase font-bold text-amber-900 tracking-wider flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-amber-700" /> Origem Comercial
+              </span>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-slate-700 font-medium">
+                  {quotation.origem_comercial
+                    ? `${quotation.origem_comercial}: `
+                    : 'Oportunidade: '}
+                  <strong className="font-mono text-amber-950">
+                    {quotation.origem_opp_numero || quotation.opportunity_id}
+                  </strong>
+                </span>
+                <Badge
+                  onClick={() => {
+                    onOpenChange(false)
+                    const oppParam = quotation.origem_opp_numero || quotation.opportunity_id
+                    navigate(`/crm?search=${encodeURIComponent(oppParam || '')}`)
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-mono text-[10px] cursor-pointer"
+                  title="Abrir Oportunidade no Funil CRM"
+                >
+                  Abrir OPP
+                </Badge>
+              </div>
+            </div>
+          )}
 
           {/* Dados do Item */}
           <div className="p-3 bg-slate-50 rounded-2xl border border-border/40 space-y-1 text-xs">

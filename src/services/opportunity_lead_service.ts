@@ -260,6 +260,13 @@ export interface AdvancedOpportunity extends OportunidadeFunil {
   origemLeadId?: string
   origemNome?: string
   cotacaoRelacionadaId?: string
+  cotacoesVinculadas?: Array<{
+    cotacaoCode: string
+    data: string
+    valor?: number
+    status?: string
+    responsavel?: string
+  }>
   pedidoSapRelacionado?: string
   numeroSequencial?: string // OPP-000001/2026
   data_entrada_estagio?: string // ISO
@@ -1148,16 +1155,85 @@ export class OpportunityLeadService {
 
   /**
    * Vínculo bidirecional entre Oportunidade e Cotação
+   * Adiciona cotação a cotacoesVinculadas sem sobrescrever vínculos anteriores,
+   * mantém cotacaoRelacionadaId como a mais recente (retrocompatibilidade)
+   * e avança estágio para 'cotacao_gerada' apenas se estágio anterior for válido:
+   * 1. Especulação, 2. Interesse, 3. Necessidade, 4. Em Qualificação, 5. Solicitação de Cotação
    */
-  linkQuotationToOpportunity(oppId: string, cotacaoCode: string): AdvancedOpportunity {
+  linkQuotationToOpportunity(
+    oppId: string,
+    cotacaoCode: string,
+    vinculoMeta?: {
+      data?: string
+      valor?: number
+      status?: string
+      responsavel?: string
+      usuario?: string
+    },
+  ): AdvancedOpportunity {
     const opps = this.getStoredOpportunities()
     const idx = opps.findIndex((o) => o.id === oppId || (o as any).numeroSequencial === oppId)
-    if (idx < 0) throw new Error('Oportunidade não encontrada')
+    if (idx < 0) throw new Error(`Oportunidade "${oppId}" não encontrada para vincular cotação.`)
 
     const opp = opps[idx]
+    const existingList = Array.isArray(opp.cotacoesVinculadas) ? [...opp.cotacoesVinculadas] : []
+    const nowIso = vinculoMeta?.data || new Date().toISOString()
+    const responsavel =
+      vinculoMeta?.responsavel ||
+      vinculoMeta?.usuario ||
+      (opp as any).responsavel ||
+      opp.responsavelVendedor ||
+      opp.vendedorNome ||
+      'Vendedor Comercial'
+
+    const existingIndex = existingList.findIndex((item) => item.cotacaoCode === cotacaoCode)
+    const novoVinculo = {
+      cotacaoCode,
+      data: nowIso,
+      valor: vinculoMeta?.valor !== undefined ? vinculoMeta.valor : undefined,
+      status: vinculoMeta?.status || 'Em Aberto',
+      responsavel,
+    }
+
+    if (existingIndex >= 0) {
+      existingList[existingIndex] = {
+        ...existingList[existingIndex],
+        ...novoVinculo,
+      }
+    } else {
+      existingList.push(novoVinculo)
+    }
+
+    const estagiosPermitidosParaCotacao: EstagioOportunidadeCiafal[] = [
+      'especulacao',
+      'interesse',
+      'necessidade',
+      'qualificacao',
+      'solicitacao_cotacao',
+    ]
+
+    const estagioAnterior = opp.estagioCiafal || 'especulacao'
+    const deveAvancar = estagiosPermitidosParaCotacao.includes(estagioAnterior)
+
+    const historico = Array.isArray(opp.historicoMovimentacao) ? [...opp.historicoMovimentacao] : []
+
+    if (deveAvancar) {
+      historico.push({
+        data: nowIso,
+        deEtapa: estagioAnterior,
+        paraEtapa: 'cotacao_gerada',
+        usuario: vinculoMeta?.usuario || responsavel,
+        motivo: `Cotação ${cotacaoCode} gerada.`,
+      })
+      opp.estagioCiafal = 'cotacao_gerada'
+      opp.etapa = 'cotacao'
+      opp.data_saida_estagio = nowIso
+      opp.data_entrada_estagio = nowIso
+    }
+
     opp.cotacaoRelacionadaId = cotacaoCode
-    opp.estagioCiafal = 'cotacao_gerada'
-    opp.etapa = 'cotacao'
+    opp.cotacoesVinculadas = existingList
+    opp.historicoMovimentacao = historico
     opp.ultimaAtualizacaoDataHora = new Date().toLocaleString('pt-BR')
 
     opps[idx] = opp

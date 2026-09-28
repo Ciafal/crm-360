@@ -1096,6 +1096,11 @@ export class QuotationService {
         customer_uf: quoteData.customer_uf || 'SP',
         customer_archetype: quoteData.customer_archetype || 'INDÚSTRIA',
         customer_abc: quoteData.customer_abc || 'A',
+        opportunity_id: quoteData.opportunity_id,
+        opportunity_title: quoteData.opportunity_title,
+        origem_comercial:
+          quoteData.origem_comercial || (quoteData.opportunity_id ? 'Oportunidade' : undefined),
+        origem_opp_numero: quoteData.origem_opp_numero || quoteData.opportunity_id,
         contact_name: quoteData.contact_name || '',
         contact_role: quoteData.contact_role,
         contact_email: quoteData.contact_email,

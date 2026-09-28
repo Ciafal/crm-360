@@ -115,6 +115,7 @@ export default function CotacoesList() {
   const [pricingDrawerOpen, setPricingDrawerOpen] = useState(false)
   const [selectedOppForDetail, setSelectedOppForDetail] = useState<AdvancedOpportunity | null>(null)
   const [detalhesOppModalOpen, setDetalhesOppModalOpen] = useState(false)
+  const [generatingQuoteOppId, setGeneratingQuoteOppId] = useState<string | null>(null)
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false)
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false)
   const [acceptanceDialogOpen, setAcceptanceDialogOpen] = useState(false)
@@ -148,13 +149,17 @@ export default function CotacoesList() {
   useEffect(() => {
     loadQuotations()
 
-    // Ouvir evento de criação de oportunidade para sincronizar sem F5
-    const handleOppCreated = () => {
+    // Ouvir eventos para sincronizar sem F5
+    const handleRefresh = () => {
       loadQuotations()
     }
-    window.addEventListener('crm360:opportunityCreated', handleOppCreated)
+    window.addEventListener('crm360:opportunityCreated', handleRefresh)
+    window.addEventListener('crm360:opportunityUpdated', handleRefresh)
+    window.addEventListener('crm360:quotationCreated', handleRefresh)
     return () => {
-      window.removeEventListener('crm360:opportunityCreated', handleOppCreated)
+      window.removeEventListener('crm360:opportunityCreated', handleRefresh)
+      window.removeEventListener('crm360:opportunityUpdated', handleRefresh)
+      window.removeEventListener('crm360:quotationCreated', handleRefresh)
     }
   }, [])
 
@@ -914,15 +919,39 @@ export default function CotacoesList() {
                                 <PhoneCall className="w-3.5 h-3.5" />
                               </Button>
 
-                              {/* Gerar Cotação (Desabilitado) */}
+                              {/* Gerar Cotação (Ativado v0.0.74 com proteção duplo clique e loading) */}
                               <Button
                                 variant="outline"
                                 size="sm"
-                                disabled
-                                title="Geração de cotação será ativada no próximo release"
-                                className="h-7 px-2 text-[11px] border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed opacity-60"
+                                disabled={generatingQuoteOppId === opp.id}
+                                onClick={() => {
+                                  if (generatingQuoteOppId) return
+                                  setGeneratingQuoteOppId(opp.id)
+                                  toast.info('Carregando cotação...')
+                                  setTimeout(() => {
+                                    navigate('/crm/cotacoes/nova', {
+                                      state: {
+                                        clienteId: opp.clienteId,
+                                        codigoSap: opp.clienteSap,
+                                        razaoSocial: opp.clienteNome,
+                                        vendedorNome: opp.vendedorNome,
+                                        grupoMercadoriaSugerido: opp.grupoMercadoria,
+                                        quantidadeEstimadaSugerida: opp.quantidadeEstimadaTons,
+                                        precoEstimadoReferencia: opp.precoEstimadoPorTon,
+                                        observacoesOrigem: `Oportunidade Funil CIAFAL (${opp.numeroSequencial || opp.id}) - Grupo: ${opp.grupoMercadoria || 'Geral'}. ${opp.observacoes || ''}`,
+                                        origem: 'oportunidade_funil',
+                                        opportunity_id: opp.numeroSequencial || opp.id,
+                                        opportunity_number: opp.numeroSequencial,
+                                      },
+                                    })
+                                  }, 150)
+                                }}
+                                title="Gerar Cotação a partir desta Oportunidade"
+                                className="h-7 px-2 text-[11px] border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100 font-semibold"
                               >
-                                Gerar Cotação
+                                {generatingQuoteOppId === opp.id
+                                  ? 'Carregando cotação...'
+                                  : 'Gerar Cotação'}
                               </Button>
                             </div>
                           </td>
@@ -964,7 +993,23 @@ export default function CotacoesList() {
                         </td>
                         <td className="p-3 text-center">
                           {q.opportunity_id ? (
-                            <Badge className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px]">
+                            <Badge
+                              onClick={() => {
+                                const oppFound = opportunities.find(
+                                  (o) =>
+                                    o.numeroSequencial === q.opportunity_id ||
+                                    o.id === q.opportunity_id,
+                                )
+                                if (oppFound) {
+                                  setSelectedOppForDetail(oppFound)
+                                  setDetalhesOppModalOpen(true)
+                                } else {
+                                  navigate('/crm')
+                                }
+                              }}
+                              className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px] cursor-pointer hover:bg-amber-200 hover:underline transition-all"
+                              title="Clique para abrir a Oportunidade de Origem"
+                            >
                               Origem: {q.opportunity_id}
                             </Badge>
                           ) : q.sap_order_number ? (

@@ -267,15 +267,19 @@ export default function Cliente360() {
 
   const [oppsRefreshKey, setOppsRefreshKey] = useState(0)
 
-  // Ouvir evento de criação de oportunidade para sincronizar sem F5
+  // Ouvir eventos para sincronizar sem F5
   useEffect(() => {
-    const handleOpportunityCreated = () => {
+    const handleRefresh = () => {
       setOppsRefreshKey((k) => k + 1)
     }
     if (typeof window !== 'undefined') {
-      window.addEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      window.addEventListener('crm360:opportunityCreated', handleRefresh)
+      window.addEventListener('crm360:opportunityUpdated', handleRefresh)
+      window.addEventListener('crm360:quotationCreated', handleRefresh)
       return () => {
-        window.removeEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+        window.removeEventListener('crm360:opportunityCreated', handleRefresh)
+        window.removeEventListener('crm360:opportunityUpdated', handleRefresh)
+        window.removeEventListener('crm360:quotationCreated', handleRefresh)
       }
     }
   }, [])

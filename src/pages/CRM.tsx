@@ -217,16 +217,20 @@ export default function CRM() {
     }
   }, [searchParams, location.pathname])
 
-  // Listener reativo ao evento crm360:opportunityCreated para recarregar rawFunil sem F5
+  // Listener reativo aos eventos de Oportunidades e Cotações para recarregar sem F5
   useEffect(() => {
-    const handleOpportunityCreated = () => {
+    const handleRefresh = () => {
       setOppsRefreshKey((k) => k + 1)
     }
 
     if (typeof window !== 'undefined') {
-      window.addEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+      window.addEventListener('crm360:opportunityCreated', handleRefresh)
+      window.addEventListener('crm360:opportunityUpdated', handleRefresh)
+      window.addEventListener('crm360:quotationCreated', handleRefresh)
       return () => {
-        window.removeEventListener('crm360:opportunityCreated', handleOpportunityCreated)
+        window.removeEventListener('crm360:opportunityCreated', handleRefresh)
+        window.removeEventListener('crm360:opportunityUpdated', handleRefresh)
+        window.removeEventListener('crm360:quotationCreated', handleRefresh)
       }
     }
   }, [])

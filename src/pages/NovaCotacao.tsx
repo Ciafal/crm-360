@@ -157,6 +157,8 @@ export default function NovaCotacao() {
   const [materialSearch, setMaterialSearch] = useState('')
   const debouncedMaterialSearch = useDebounce(materialSearch, 180)
   const [selectedMaterial, setSelectedMaterial] = useState<CatalogMaterial | null>(null)
+  const [oppReferencePrice, setOppReferencePrice] = useState<number | null>(null)
+  const [linkedOppNumber, setLinkedOppNumber] = useState<string | null>(null)
   const [activeAsyncStatuses, setActiveAsyncStatuses] = useState<
     Record<string, MaterialAsyncStatus>
   >({})
@@ -296,6 +298,19 @@ export default function NovaCotacao() {
           setCommercialNotes((prev) =>
             prev ? `${prev}\n${st.observacoesOrigem}` : st.observacoesOrigem,
           )
+        }
+
+        const oppNum = st.opportunity_number || st.opportunity_id
+        if (oppNum) {
+          setLinkedOppNumber(oppNum)
+        }
+
+        if (
+          st.precoEstimadoReferencia !== undefined &&
+          st.precoEstimadoReferencia !== null &&
+          Number(st.precoEstimadoReferencia) > 0
+        ) {
+          setOppReferencePrice(Number(st.precoEstimadoReferencia))
         }
 
         if (
@@ -672,6 +687,7 @@ export default function NovaCotacao() {
     try {
       setIsSubmitting(true)
       const linkedOppId =
+        linkedOppNumber ||
         (location.state as any)?.opportunity_id ||
         (location.state as any)?.opportunity_number ||
         undefined
@@ -680,6 +696,8 @@ export default function NovaCotacao() {
         code: quoteCode,
         customer_id: selectedCustomer.id,
         opportunity_id: linkedOppId,
+        origem_comercial: linkedOppId ? 'Oportunidade' : undefined,
+        origem_opp_numero: linkedOppId,
         customer_sap_code: selectedCustomer.sapCode,
         customer_name: selectedCustomer.razaoSocial,
         customer_cnpj: selectedCustomer.cnpj,
@@ -722,16 +740,54 @@ export default function NovaCotacao() {
       }
 
       const saved = await quotationService.saveQuotation(quotePayload)
+
+      // Se a persistência falhar ou não retornar código válido, lançar erro (sem falso sucesso)
+      if (!saved || !saved.code) {
+        throw new Error('Não foi possível salvar a cotação.')
+      }
+
+      // Reconfirmar por reconsulta no storage (mesmo padrão da v0.0.72)
+      const reconsultada = await quotationService.getQuotationById(saved.id || saved.code)
+      if (!reconsultada) {
+        throw new Error('Não foi possível salvar a cotação.')
+      }
+
       setCreatedQuotation(saved)
       setQuoteStatus(saved.status)
 
-      // Se originada de uma oportunidade, vincular bidirecionalmente no opportunityLeadService
+      // Se originada de uma oportunidade, vincular bidirecionalmente e avançar estágio com auditoria
       if (linkedOppId) {
         try {
-          opportunityLeadService.linkQuotationToOpportunity(linkedOppId, saved.code)
-        } catch {
-          /* ignore link error */
+          const updatedOpp = opportunityLeadService.linkQuotationToOpportunity(
+            linkedOppId,
+            saved.code,
+            {
+              data: new Date().toISOString(),
+              valor: saved.total_value,
+              status: saved.status,
+              responsavel: selectedCustomer.vendedor || 'Carlos Mendonça',
+              usuario: selectedCustomer.vendedor || 'Carlos Mendonça',
+            },
+          )
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('crm360:opportunityUpdated', {
+                detail: updatedOpp,
+              }),
+            )
+          }
+        } catch (linkErr) {
+          console.error('Falha ao vincular cotação à oportunidade:', linkErr)
         }
+      }
+
+      // Notificar sistema sobre a nova cotação para atualização em tempo real
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('crm360:quotationCreated', {
+            detail: saved,
+          }),
+        )
       }
 
       toast({
@@ -745,9 +801,10 @@ export default function NovaCotacao() {
         navigate('/crm/cotacoes')
       }
     } catch (err: any) {
+      console.error('Erro ao salvar cotação:', err)
       toast({
         title: 'Erro ao salvar cotação',
-        description: err.message || 'Falha ao salvar proposta.',
+        description: err.message || 'Não foi possível salvar a cotação.',
         variant: 'destructive',
       })
     } finally {
@@ -1450,7 +1507,14 @@ export default function NovaCotacao() {
                   </div>
 
                   {/* Preenchimento: Quantidade e Preço Cotação */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+                  <div
+                    className={cn(
+                      'grid gap-3 pt-2',
+                      oppReferencePrice !== null
+                        ? 'grid-cols-1 sm:grid-cols-5'
+                        : 'grid-cols-1 sm:grid-cols-4',
+                    )}
+                  >
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold">Quantidade (t) *</Label>
                       <Input
@@ -1468,6 +1532,21 @@ export default function NovaCotacao() {
                         className="text-xs bg-slate-100 font-mono font-bold"
                       />
                     </div>
+                    {oppReferencePrice !== null && (
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-amber-700 flex items-center justify-between">
+                          <span>Preço de referência da oportunidade</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            Apenas ref.
+                          </span>
+                        </Label>
+                        <Input
+                          disabled
+                          value={formatBRL(oppReferencePrice)}
+                          className="text-xs bg-amber-50/70 border-amber-300 font-mono font-bold text-amber-900"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <Label className="text-xs font-semibold">Preço Cotação (R$/t) *</Label>
                       <Input

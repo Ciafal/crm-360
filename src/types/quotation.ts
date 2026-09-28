@@ -216,6 +216,8 @@ export interface Quotation {
   customer_abc?: 'A' | 'B' | 'C'
   opportunity_id?: string
   opportunity_title?: string
+  origem_comercial?: 'Oportunidade' | string
+  origem_opp_numero?: string
   contact_name: string
   contact_role?: string
   contact_email?: string

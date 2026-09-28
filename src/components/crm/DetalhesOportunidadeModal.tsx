@@ -63,6 +63,7 @@ export function DetalhesOportunidadeModal({
   const [selectedStage, setSelectedStage] = useState<EstagioOportunidadeCiafal | ''>('')
   const [motivoMudanca, setMotivoMudanca] = useState('')
   const [isUpdatingStage, setIsUpdatingStage] = useState(false)
+  const [isNavigatingCotacao, setIsNavigatingCotacao] = useState(false)
 
   if (!opportunity) return null
 
@@ -82,25 +83,29 @@ export function DetalhesOportunidadeModal({
 
   // Regra 11: Gerar Cotação a partir de Oportunidade
   const handleGerarCotacao = () => {
-    onOpenChange(false)
-    toast.success(
-      `Encaminhando dados da oportunidade de ${opportunity.clienteNome} para Nova Cotação!`,
-    )
-    navigate('/crm/cotacoes/nova', {
-      state: {
-        clienteId: opportunity.clienteId,
-        codigoSap: opportunity.clienteSap,
-        razaoSocial: opportunity.clienteNome,
-        vendedorNome: opportunity.vendedorNome,
-        grupoMercadoriaSugerido: opportunity.grupoMercadoria,
-        quantidadeEstimadaSugerida: opportunity.quantidadeEstimadaTons,
-        precoEstimadoReferencia: opportunity.precoEstimadoPorTon,
-        observacoesOrigem: `Oportunidade Funil CIAFAL (${opportunity.numeroSequencial || opportunity.id}) - Grupo: ${opportunity.grupoMercadoria || 'Geral'}. ${opportunity.observacoes || ''}`,
-        origem: 'oportunidade_funil',
-        opportunity_id: opportunity.numeroSequencial || opportunity.id,
-        opportunity_number: opportunity.numeroSequencial,
-      },
-    })
+    if (isNavigatingCotacao) return
+    setIsNavigatingCotacao(true)
+    toast.info('Carregando cotação...')
+
+    setTimeout(() => {
+      onOpenChange(false)
+      setIsNavigatingCotacao(false)
+      navigate('/crm/cotacoes/nova', {
+        state: {
+          clienteId: opportunity.clienteId,
+          codigoSap: opportunity.clienteSap,
+          razaoSocial: opportunity.clienteNome,
+          vendedorNome: opportunity.vendedorNome,
+          grupoMercadoriaSugerido: opportunity.grupoMercadoria,
+          quantidadeEstimadaSugerida: opportunity.quantidadeEstimadaTons,
+          precoEstimadoReferencia: opportunity.precoEstimadoPorTon,
+          observacoesOrigem: `Oportunidade Funil CIAFAL (${opportunity.numeroSequencial || opportunity.id}) - Grupo: ${opportunity.grupoMercadoria || 'Geral'}. ${opportunity.observacoes || ''}`,
+          origem: 'oportunidade_funil',
+          opportunity_id: opportunity.numeroSequencial || opportunity.id,
+          opportunity_number: opportunity.numeroSequencial,
+        },
+      })
+    }, 120)
   }
 
   const handleMudarEstagio = () => {
@@ -164,19 +169,29 @@ export function DetalhesOportunidadeModal({
             {/* BOTÃO GERAR COTAÇÃO (Regra 11) */}
             <Button
               size="sm"
+              disabled={isNavigatingCotacao}
               onClick={handleGerarCotacao}
               className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs gap-1.5 rounded-xl shadow-md shrink-0"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              <span>GERAR COTAÇÃO</span>
+              <span>{isNavigatingCotacao ? 'Carregando cotação...' : 'GERAR COTAÇÃO'}</span>
             </Button>
           </div>
 
           {/* Vínculo de cotação relacionada, se já existir */}
           {opportunity.cotacaoRelacionadaId && (
             <div className="mt-2 pt-2 border-t border-white/15 flex items-center gap-2 text-xs">
-              <span className="text-sky-200">Cotação vinculada:</span>
-              <Badge className="bg-white text-[#003A70] font-mono font-bold text-[11px] border-none">
+              <span className="text-sky-200">Cotação mais recente:</span>
+              <Badge
+                onClick={() => {
+                  onOpenChange(false)
+                  navigate(
+                    `/crm/cotacoes?search=${encodeURIComponent(opportunity.cotacaoRelacionadaId!)}`,
+                  )
+                }}
+                className="bg-white text-[#003A70] font-mono font-bold text-[11px] border-none cursor-pointer hover:bg-sky-100"
+                title="Abrir cotação vinculada"
+              >
                 {opportunity.cotacaoRelacionadaId}
               </Badge>
             </div>
@@ -282,6 +297,89 @@ export function DetalhesOportunidadeModal({
                 {opportunity.vendedorNome || 'Carlos Mendonça'}
               </strong>
             </div>
+          </div>
+
+          {/* SEÇÃO COTAÇÕES VINCULADAS (Regra 3 do Plano) */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <strong className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+                <FileSpreadsheet className="w-4 h-4 text-primary" />
+                Cotações Vinculadas
+              </strong>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {opportunity.cotacoesVinculadas && opportunity.cotacoesVinculadas.length > 0
+                  ? opportunity.cotacoesVinculadas.length
+                  : opportunity.cotacaoRelacionadaId
+                    ? 1
+                    : 0}{' '}
+                cotação(ões)
+              </span>
+            </div>
+
+            {(!opportunity.cotacoesVinculadas || opportunity.cotacoesVinculadas.length === 0) &&
+            !opportunity.cotacaoRelacionadaId ? (
+              <p className="text-[11px] text-slate-500 italic py-1">
+                Nenhuma cotação vinculada a esta oportunidade até o momento.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {(opportunity.cotacoesVinculadas && opportunity.cotacoesVinculadas.length > 0
+                  ? opportunity.cotacoesVinculadas
+                  : [
+                      {
+                        cotacaoCode: opportunity.cotacaoRelacionadaId!,
+                        data: opportunity.data_entrada_estagio || new Date().toISOString(),
+                        valor: opportunity.valorPotencialCalculado || undefined,
+                        status: 'Cotação Gerada',
+                        responsavel: opportunity.vendedorNome || 'Vendedor Comercial',
+                      },
+                    ]
+                ).map((vinculo, idx) => (
+                  <div
+                    key={`${vinculo.cotacaoCode}-${idx}`}
+                    className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-[11px] hover:border-primary/40 transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        onClick={() => {
+                          onOpenChange(false)
+                          navigate(
+                            `/crm/cotacoes?search=${encodeURIComponent(vinculo.cotacaoCode)}`,
+                          )
+                        }}
+                        className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-mono font-bold text-xs cursor-pointer"
+                        title="Abrir detalhes desta cotação"
+                      >
+                        {vinculo.cotacaoCode}
+                      </Badge>
+                      <span className="text-slate-600 font-mono text-[10px]">
+                        {vinculo.data ? new Date(vinculo.data).toLocaleDateString('pt-BR') : '—'}
+                      </span>
+                      <span className="text-slate-500">
+                        Resp:{' '}
+                        <strong className="text-slate-700">
+                          {vinculo.responsavel || 'Vendedor'}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 font-mono">
+                        {vinculo.valor !== undefined && vinculo.valor !== null
+                          ? formatBRL(vinculo.valor)
+                          : '—'}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] uppercase font-bold text-slate-600 bg-slate-50"
+                      >
+                        {vinculo.status || 'Em Aberto'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* OBSERVAÇÕES */}
