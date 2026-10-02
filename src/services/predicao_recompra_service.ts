@@ -399,7 +399,8 @@ export class PredicaoRecompraService {
    * Se falhar, preserva o último modelo válido em produção (nunca sobrescreve silenciosamente).
    */
   public treinarModelo(usuario: string = 'Administrador CIAFAL'): ModeloPreditivoSalvo {
-    const ultimoValido = this.getModeloProducao()
+    // Lê diretamente o modelo persistido para fallback sem disparar auto-treinamento recursivo
+    const ultimoValido = this.getModeloSalvo()
 
     try {
       const eventos = this.extrairEventosTransacionais()
@@ -704,16 +705,114 @@ export class PredicaoRecompraService {
   }
 
   /**
-   * 6. Obtém o modelo preditivo atualmente persistido em produção
-   * Se ainda não foi treinado nesta instância, realiza o treinamento inicial automaticamente.
+   * 6a. Lê APENAS o modelo persistido no storage (sem efeitos colaterais nem auto-treinamento).
+   * Retorna null se não houver modelo válido persistido.
    */
-  public getModeloProducao(): ModeloPreditivoSalvo {
+  public getModeloSalvo(): ModeloPreditivoSalvo | null {
     const salvo = crmStorage.getJSON<ModeloPreditivoSalvo | null>(STORAGE_KEY_PREDICAO_MODEL, null)
     if (salvo && salvo.predicoes && salvo.predicoes.length > 0) {
       return salvo
     }
-    // Treinamento inicial de calibração
-    return this.treinarModelo('Sistema Inicializador CIAFAL')
+    return null
+  }
+
+  /**
+   * Flag para prevenir qualquer recursão durante treinamento inicial ou sob demanda.
+   */
+  private isTreinando: boolean = false
+
+  /**
+   * Retorna um modelo padrão vazio (estado inicial não treinado) para exibição graciosa na UI
+   * sem disparar erro nem travar renderizações.
+   */
+  public getModeloVazioPadrao(): ModeloPreditivoSalvo {
+    return {
+      versao: 'Não calibrado',
+      treinadoEm: new Date().toISOString(),
+      treinadoPor: 'Não treinado',
+      periodoBase: {
+        inicio: '-',
+        fim: '-',
+        diasTotal: 0,
+      },
+      qtdeClientesTotal: 0,
+      qtdeClientesElegiveisBGNBD: 0,
+      qtdeClientesElegiveisGammaGamma: 0,
+      qtdeEventosTotal: 0,
+      qtdeNFsTotal: 0,
+      bgnbd: {
+        r: 0,
+        alpha: 0,
+        a: 0,
+        b: 0,
+        logLikelihood: 0,
+        converged: false,
+        iterations: 0,
+        status: 'Atenção',
+        error: 'Modelo ainda não treinado',
+      },
+      gammaGamma: {
+        p: 0,
+        q: 0,
+        v: 0,
+        logLikelihood: 0,
+        converged: false,
+        iterations: 0,
+        status: 'Atenção',
+        error: 'Modelo ainda não treinado',
+      },
+      validacao: {
+        periodoCalibracaoInicio: '-',
+        periodoCalibracaoFim: '-',
+        periodoHoldoutInicio: '-',
+        periodoHoldoutFim: '-',
+        diasHoldout: 90,
+        clientesAvaliados: 0,
+        comprasPrevistasTotal: 0,
+        comprasRealizadasTotal: 0,
+        maeCompras: 0,
+        desvioPercentualCompras: 0,
+        receitaPrevistaTotal: 0,
+        receitaRealizadaTotal: 0,
+        maeReceita: 0,
+        desvioPercentualReceita: 0,
+        tonelagemPrevistaTotal: 0,
+        tonelagemRealizadaTotal: 0,
+        maeTonelagem: 0,
+        desvioPercentualTonelagem: 0,
+        dataValidacao: '-',
+        statusValidacao: 'Atenção',
+      },
+      predicoes: [],
+    }
+  }
+
+  /**
+   * 6. Obtém o modelo preditivo atualmente persistido em produção.
+   * Se ainda não foi treinado nesta instância, tenta realizar o treinamento inicial UMA ÚNICA VEZ
+   * de forma segura (sem recursão mútua através de getModeloSalvo e flag de bloqueio).
+   * Se não houver modelo e o treinamento não puder ser executado, retorna um modelo vazio gracioso.
+   */
+  public getModeloProducao(): ModeloPreditivoSalvo {
+    const salvo = this.getModeloSalvo()
+    if (salvo) {
+      return salvo
+    }
+
+    // Se já estiver treinando, previne recursão e retorna modelo vazio seguro
+    if (this.isTreinando) {
+      return this.getModeloVazioPadrao()
+    }
+
+    try {
+      this.isTreinando = true
+      return this.treinarModelo('Sistema Inicializador CIAFAL')
+    } catch (err) {
+      console.warn('Treinamento inicial automático não pôde ser concluído:', err)
+      return this.getModeloVazioPadrao()
+    } finally {
+      this.isTreinando = false
+    }
   }
 
   /**
@@ -725,7 +824,7 @@ export class PredicaoRecompraService {
     userId?: string,
   ): PredicaoClienteView[] {
     const modelo = this.getModeloProducao()
-    let lista = modelo.predicoes
+    let lista = modelo.predicoes || []
 
     // RBAC
     if (userRole) {

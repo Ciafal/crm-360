@@ -180,6 +180,18 @@ describe('Pipeline de Predição de Recompra CIAFAL (Serviço Integrado)', () =>
     expect(modeloProd.predicoes.length).toBeGreaterThan(0)
   })
 
+  it('Evita recursão mútua infinita quando não existe modelo prévio persistido no storage', () => {
+    // Garante que o storage não possui modelo
+    crmStorage.removeItem('ciafal_crm_recorrencia_predicao_model_v2')
+
+    // Deve retornar modelo (produzido ou padrão) sem estourar a pilha de execução (too much recursion)
+    expect(() => {
+      const modelo = predicaoRecompraService.getModeloProducao()
+      expect(modelo).toBeDefined()
+      expect(modelo.validacao).toBeDefined()
+    }).not.toThrow()
+  })
+
   it('Calcula KPIs consolidados da Aba 5 com coerência monetária e de volume', () => {
     const predicoes = predicaoRecompraService.getPredicoesFiltradas({
       empresa: 'TODAS',
