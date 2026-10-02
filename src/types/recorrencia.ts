@@ -56,8 +56,16 @@ export interface RecorrenciaThresholds {
   trimestral: number // default >= 15%
 }
 
+export interface ThresholdsPredicao {
+  altaProbabilidadePAlive: number // default >= 70%
+  riscoModeradoPAlive: number // default >= 40% e < 70%
+  // < 40% = Alto Risco / Inativo
+  altaProbabilidade30d: number // default >= 50%
+}
+
 export interface ParametrosRecorrenciaConfig {
   thresholds: RecorrenciaThresholds
+  thresholdsPredicao: ThresholdsPredicao
   gruposExcluidos: string[] // Ex.: ['SUB-PRO', 'Subproduto', 'carepa', 'sucata']
   tiposOperacaoExcluidos: string[] // Ex.: ['Industrialização']
   updatedAt: string
@@ -224,4 +232,208 @@ export interface KpisVisaoGeral {
   clientesAltaProbabilidadeRecompra: number
   potencialRetomadaValor: number
   potencialRetomadaTons: number
+}
+
+// =========================================================================
+// FATIA 2 — MODELO PREDITIVO BG/NBD & GAMMA-GAMMA
+// =========================================================================
+
+export interface EventoTransacionalCliente {
+  clienteId: string
+  clienteSap: string
+  clienteNome: string
+  data: string // YYYY-MM-DD
+  faturamentoTotal: number
+  tonelagemTotal: number
+  nfsCount: number
+  nfsNumeros: string[]
+}
+
+export interface ResumoClienteBGNBD {
+  clienteId: string
+  clienteSap: string
+  clienteNome: string
+  primeiraCompraData: string // YYYY-MM-DD
+  ultimaCompraData: string // YYYY-MM-DD
+  x: number // frequency: compras repetidas APÓS a primeira
+  t_x: number // recency: dias entre primeira e última compra
+  T: number // tempo em dias entre primeira compra e fim da janela
+  eventosCount: number // x + 1
+  valorMedioEventoRecompra: number // m_x (R$)
+  tonelagemMediaEventoRecompra: number // t_x_tons (t)
+  temHistoricoSuficiente: boolean // se pode receber estimativa probabilística
+  motivoInsuficiencia?: string
+}
+
+export interface PredicaoHorizontes {
+  probabilidade30d: number // 0-1
+  probabilidade60d: number // 0-1
+  probabilidade90d: number // 0-1
+  probabilidade180d: number // 0-1
+  probabilidade365d: number // 0-1
+  comprasEsperadas30d: number
+  comprasEsperadas60d: number
+  comprasEsperadas90d: number
+  comprasEsperadas180d: number
+  comprasEsperadas365d: number
+  receitaEsperada30d: number
+  receitaEsperada60d: number
+  receitaEsperada90d: number
+  receitaEsperada180d: number
+  receitaEsperada365d: number
+  tonelagemEsperada30d: number
+  tonelagemEsperada60d: number
+  tonelagemEsperada90d: number
+  tonelagemEsperada180d: number
+  tonelagemEsperada365d: number
+}
+
+export interface PredicaoClienteView {
+  clienteId: string
+  codigoSap: string
+  razaoSocial: string
+  nomeFantasia?: string
+  vendedorId: string
+  vendedorNome: string
+  representanteNome: string
+  segmentoRFM: SegmentoRFM
+  scoreRFM: string
+
+  // Dados Transacionais BG/NBD
+  primeiraCompraData: string
+  ultimaCompraData: string
+  diasSemComprar: number
+  frequency: number
+  recencyDias: number
+  tempoTDias: number
+  eventosTotal: number
+  valorMedioEvento: number
+  tonelagemMediaEvento: number
+
+  // Status de Suficiência
+  temHistoricoSuficiente: boolean
+  motivoInsuficiencia?: string
+  temDadosMonetariosSuficientes: boolean
+  motivoInsuficienciaMonetaria?: string
+
+  // Resultados Probabilísticos
+  pAlive: number // 0 a 1
+  pAlivePercent: number // 0 a 100%
+  classificacaoRisco: 'Alta Probabilidade' | 'Em Risco' | 'Alto Risco / Inativo'
+  quadranteMatriz:
+    | 'Manutenção prioritária'
+    | 'Recuperação prioritária'
+    | 'Manutenção'
+    | 'Baixa prioridade'
+
+  // Projeções por horizonte
+  horizontes: PredicaoHorizontes
+  proximaCompraValorEsperado: number
+  proximaCompraTonsEsperada: number
+
+  // Crédito SAP Real
+  credito: DadosCreditoSAP
+
+  // Produtos e Estoque
+  produtosHistoricos: {
+    codigo: string
+    descricao: string
+    familia: string
+    status: string
+    saldoEstoqueTon: number
+  }[]
+  produtosQueDeixouDeComprar: {
+    codigo: string
+    descricao: string
+    saldoEstoqueTon: number
+  }[]
+  estoqueLivreTons: number
+
+  // Explicação de Risco Estruturada
+  explicacaoRisco: string
+}
+
+export interface ValidacaoHoldoutResult {
+  periodoCalibracaoInicio: string
+  periodoCalibracaoFim: string
+  periodoHoldoutInicio: string
+  periodoHoldoutFim: string
+  diasHoldout: number
+  clientesAvaliados: number
+  comprasPrevistasTotal: number
+  comprasRealizadasTotal: number
+  maeCompras: number
+  desvioPercentualCompras: number
+  receitaPrevistaTotal: number
+  receitaRealizadaTotal: number
+  maeReceita: number
+  desvioPercentualReceita: number
+  tonelagemPrevistaTotal: number
+  tonelagemRealizadaTotal: number
+  maeTonelagem: number
+  desvioPercentualTonelagem: number
+  dataValidacao: string
+  statusValidacao: 'OK' | 'Atenção' | 'Erro'
+}
+
+export interface ModeloPreditivoSalvo {
+  versao: string
+  treinadoEm: string
+  treinadoPor: string
+  periodoBase: {
+    inicio: string
+    fim: string
+    diasTotal: number
+  }
+  qtdeClientesTotal: number
+  qtdeClientesElegiveisBGNBD: number
+  qtdeClientesElegiveisGammaGamma: number
+  qtdeEventosTotal: number
+  qtdeNFsTotal: number
+
+  // Parâmetros BG/NBD
+  bgnbd: {
+    r: number
+    alpha: number
+    a: number
+    b: number
+    logLikelihood: number
+    converged: boolean
+    iterations: number
+    status: 'OK' | 'Atenção' | 'Erro'
+    error?: string
+  }
+
+  // Parâmetros Gamma-Gamma
+  gammaGamma: {
+    p: number
+    q: number
+    v: number
+    logLikelihood: number
+    converged: boolean
+    iterations: number
+    status: 'OK' | 'Atenção' | 'Erro'
+    error?: string
+  }
+
+  // Validação Holdout
+  validacao: ValidacaoHoldoutResult
+
+  // Cache das predições por cliente
+  predicoes: PredicaoClienteView[]
+}
+
+export interface KpisPredicaoAba {
+  altaProbabilidadeCount: number
+  altaProbabilidadeValor: number
+  altaProbabilidadeTons: number
+  emRiscoCount: number
+  emRiscoValor: number
+  emRiscoTons: number
+  receitaEsperada90d: number
+  tonelagemEsperada90d: number
+  comprasEsperadas90d: number
+  altoPotencialRecuperacaoCount: number
+  altoPotencialRecuperacaoValor: number
+  altoPotencialRecuperacaoTons: number
 }

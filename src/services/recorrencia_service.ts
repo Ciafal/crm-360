@@ -35,6 +35,11 @@ export const DEFAULT_RECORRENCIA_CONFIG: ParametrosRecorrenciaConfig = {
     trimestral: 15, // >= 15% e < 30%
     // < 15% = Esporádico
   },
+  thresholdsPredicao: {
+    altaProbabilidadePAlive: 70, // >= 70%
+    riscoModeradoPAlive: 40, // >= 40% e < 70%
+    altaProbabilidade30d: 50, // >= 50%
+  },
   gruposExcluidos: ['SUB-PRO', 'Subproduto', 'carepa', 'sucata'],
   tiposOperacaoExcluidos: ['Industrialização'],
   updatedAt: new Date().toISOString(),

@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { mockClientes } from '@/data/mockCommercialData'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
+import { predicaoRecompraService } from '@/services/predicao_recompra_service'
 
 interface AssistantMessage {
   id: string
@@ -38,14 +39,14 @@ export function GlobalAssistant() {
     {
       id: 'init-1',
       sender: 'assistant',
-      text: 'Olá! Sou o Assistente CRM 360º CIAFAL. Posso consultar posição de crédito SAP ECC, entregas no TMS, reclamações de qualidade, localização e dispersão no Mapa da Carteira e sugerir a melhor abordagem comercial por arquétipo (Indústria, Revenda, Serralheria, Consumidor Final). O que você deseja consultar agora?',
+      text: 'Olá! Sou o Assistente CRM 360º CIAFAL. Posso consultar posição de crédito SAP ECC, entregas no TMS, reclamações de qualidade, localização no Mapa e scores probabilísticos do motor BG/NBD & Gamma-Gamma de Recorrência. O que você deseja consultar agora?',
       quickPrompts: [
+        'Quem devo contatar hoje?',
+        'Quais clientes têm maior risco de perda?',
+        'Quem deve voltar a comprar nos próximos 30 dias?',
+        'Qual receita provável da minha carteira nos próximos 90 dias?',
+        'Qual tonelagem provável nos próximos 90 dias?',
         'Mostre clientes A próximos de Belo Horizonte',
-        'Quais clientes em Divinópolis estão em janela de recompra?',
-        'Tenho uma visita em Contagem amanhã. Quem mais deveria visitar?',
-        'Mostre inativos A da região Centro-Oeste',
-        'Esse cliente tem reclamação aberta?',
-        'Qual o limite de crédito disponível no SAP?',
       ],
     },
   ])
@@ -131,6 +132,192 @@ export function GlobalAssistant() {
         reply =
           'Camada de Inativos: 6 contas prioritárias identificadas em Minas Gerais com potencial de 240 toneladas. Disponível reatribuição territorial para representantes externos.'
         link = { label: 'Ver Inativos no Mapa', url: '/crm?tab=mapa' }
+      } else if (
+        lower.includes('quem devo contatar') ||
+        lower.includes('contatar hoje') ||
+        lower.includes('prioridade de contato')
+      ) {
+        // Consulta resultados estruturados do BG/NBD
+        const predicoes = predicaoRecompraService.getPredicoesFiltradas(
+          {
+            empresa: 'TODAS',
+            vendedor: 'TODOS',
+            representante: 'TODOS',
+            cliente: '',
+            uf: 'TODOS',
+            cidade: 'TODAS',
+            setorIndustrial: 'TODOS',
+            grupoMercadoria: 'TODOS',
+            produto: '',
+            periodo: '12M',
+            classeRecorrencia: 'TODAS',
+            segmentoRFM: 'TODOS',
+            statusCliente: 'TODOS',
+            riscoPerda: 'TODOS',
+            situacaoCredito: 'TODOS',
+            unitMode: 'BRL',
+          },
+          user?.role,
+          user?.id,
+        )
+        const prioritarios = predicoes
+          .filter(
+            (p) =>
+              p.quadranteMatriz === 'Recuperação prioritária' ||
+              (p.pAlivePercent < 60 && p.horizontes.receitaEsperada90d >= 30000),
+          )
+          .slice(0, 3)
+
+        if (prioritarios.length > 0) {
+          const nomes = prioritarios
+            .map(
+              (p) =>
+                `• ${p.razaoSocial} (SAP ${p.codigoSap}) - P(Alive): ${p.pAlivePercent}%, há ${p.diasSemComprar}d inativo, potencial: R$ ${p.horizontes.receitaEsperada90d.toLocaleString('pt-BR')}`,
+            )
+            .join('\n')
+          reply = `Com base nas predições do motor BG/NBD, os 3 clientes prioritários para contato imediato são:\n\n${nomes}\n\nTodos possuem probabilidade de abandono com alto valor de recompra projetado.`
+        } else {
+          reply =
+            'Não há clientes em risco crítico no momento. Toda a carteira prioritária está com cadência regular.'
+        }
+        link = { label: 'Ver Predição de Recompra (Aba 5)', url: '/crm/recorrencia' }
+      } else if (
+        lower.includes('risco de perda') ||
+        lower.includes('maior risco') ||
+        lower.includes('risco de churn')
+      ) {
+        const predicoes = predicaoRecompraService.getPredicoesFiltradas(
+          {
+            empresa: 'TODAS',
+            vendedor: 'TODOS',
+            representante: 'TODOS',
+            cliente: '',
+            uf: 'TODOS',
+            cidade: 'TODAS',
+            setorIndustrial: 'TODOS',
+            grupoMercadoria: 'TODOS',
+            produto: '',
+            periodo: '12M',
+            classeRecorrencia: 'TODAS',
+            segmentoRFM: 'TODOS',
+            statusCliente: 'TODOS',
+            riscoPerda: 'TODOS',
+            situacaoCredito: 'TODOS',
+            unitMode: 'BRL',
+          },
+          user?.role,
+          user?.id,
+        )
+        const emRisco = predicoes.filter((p) => p.pAlivePercent < 45).slice(0, 3)
+        const lista = emRisco
+          .map(
+            (p) =>
+              `• ${p.razaoSocial} (P(Alive) ${p.pAlivePercent}%, sem compra há ${p.diasSemComprar} dias, RFM: ${p.scoreRFM})`,
+          )
+          .join('\n')
+        reply = `Identificamos ${emRisco.length} clientes com risco iminente de perda (P(Alive) < 45%):\n\n${lista}\n\nRecomenda-se acionar a Aba 5 e gerar oportunidade de retomada com os produtos que deixaram de comprar.`
+        link = { label: 'Abrir Painel Preditivo', url: '/crm/recorrencia' }
+      } else if (
+        lower.includes('30 dias') ||
+        lower.includes('voltar a comprar') ||
+        lower.includes('próximos 30')
+      ) {
+        const predicoes = predicaoRecompraService.getPredicoesFiltradas(
+          {
+            empresa: 'TODAS',
+            vendedor: 'TODOS',
+            representante: 'TODOS',
+            cliente: '',
+            uf: 'TODOS',
+            cidade: 'TODAS',
+            setorIndustrial: 'TODOS',
+            grupoMercadoria: 'TODOS',
+            produto: '',
+            periodo: '12M',
+            classeRecorrencia: 'TODAS',
+            segmentoRFM: 'TODOS',
+            statusCliente: 'TODOS',
+            riscoPerda: 'TODOS',
+            situacaoCredito: 'TODOS',
+            unitMode: 'BRL',
+          },
+          user?.role,
+          user?.id,
+        )
+        const proximos = predicoes
+          .filter((p) => p.horizontes.probabilidade30d >= 0.4)
+          .sort((a, b) => b.horizontes.probabilidade30d - a.horizontes.probabilidade30d)
+          .slice(0, 3)
+
+        const lista = proximos
+          .map(
+            (p) =>
+              `• ${p.razaoSocial} - Prob. 30d: ${Math.round(p.horizontes.probabilidade30d * 100)}% | Receita prevista: R$ ${p.horizontes.receitaEsperada30d.toLocaleString('pt-BR')} (${p.horizontes.tonelagemEsperada30d}t)`,
+          )
+          .join('\n')
+        reply = `Clientes com maior probabilidade estatística de retorno nos próximos 30 dias (modelo BG/NBD):\n\n${lista}`
+        link = { label: 'Ver Tabela Preditiva Completa', url: '/crm/recorrencia' }
+      } else if (
+        lower.includes('receita provável') ||
+        lower.includes('receita provavel') ||
+        (lower.includes('receita') && lower.includes('90'))
+      ) {
+        const predicoes = predicaoRecompraService.getPredicoesFiltradas(
+          {
+            empresa: 'TODAS',
+            vendedor: 'TODOS',
+            representante: 'TODOS',
+            cliente: '',
+            uf: 'TODOS',
+            cidade: 'TODAS',
+            setorIndustrial: 'TODOS',
+            grupoMercadoria: 'TODOS',
+            produto: '',
+            periodo: '12M',
+            classeRecorrencia: 'TODAS',
+            segmentoRFM: 'TODOS',
+            statusCliente: 'TODOS',
+            riscoPerda: 'TODOS',
+            situacaoCredito: 'TODOS',
+            unitMode: 'BRL',
+          },
+          user?.role,
+          user?.id,
+        )
+        const total = predicoes.reduce((acc, p) => acc + p.horizontes.receitaEsperada90d, 0)
+        reply = `A projeção matemática para os próximos 90 dias (calibrada via BG/NBD e Gamma-Gamma MLE) aponta uma receita esperada de R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} na carteira avaliada.`
+        link = { label: 'Ver Detalhamento na Aba 5', url: '/crm/recorrencia' }
+      } else if (
+        lower.includes('tonelagem provável') ||
+        lower.includes('tonelagem provavel') ||
+        (lower.includes('tonelagem') && lower.includes('90')) ||
+        (lower.includes('volume') && lower.includes('90'))
+      ) {
+        const predicoes = predicaoRecompraService.getPredicoesFiltradas(
+          {
+            empresa: 'TODAS',
+            vendedor: 'TODOS',
+            representante: 'TODOS',
+            cliente: '',
+            uf: 'TODOS',
+            cidade: 'TODAS',
+            setorIndustrial: 'TODOS',
+            grupoMercadoria: 'TODOS',
+            produto: '',
+            periodo: '12M',
+            classeRecorrencia: 'TODAS',
+            segmentoRFM: 'TODOS',
+            statusCliente: 'TODOS',
+            riscoPerda: 'TODOS',
+            situacaoCredito: 'TODOS',
+            unitMode: 'BRL',
+          },
+          user?.role,
+          user?.id,
+        )
+        const totalTons = predicoes.reduce((acc, p) => acc + p.horizontes.tonelagemEsperada90d, 0)
+        reply = `O volume físico projetado para os próximos 90 dias é de ${totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} toneladas, calculado pela média histórica de entrega condicionada aos eventos previstos do BG/NBD.`
+        link = { label: 'Ver Detalhamento de Volume (t)', url: '/crm/recorrencia' }
       } else {
         reply = `Entendido. Analisei os dados de ERP SAP ECC, TMS e Gestão de Performance para responder sua solicitação: "${q}". Deseja aprofundar na visão 360º?`
         link = { label: 'Abrir Cliente 360º', url: '/crm/cli-100001' }

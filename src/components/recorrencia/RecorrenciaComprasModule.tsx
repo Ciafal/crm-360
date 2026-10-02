@@ -262,9 +262,13 @@ export function RecorrenciaComprasModule({ onOpenCliente360 }: RecorrenciaCompra
           />
         </TabsContent>
 
-        {/* ABA 5: Predição de Recompra (Fatia 2 Informativa) */}
+        {/* ABA 5: Predição de Recompra (Fatia 2 Funcional BG/NBD & Gamma-Gamma) */}
         <TabsContent value="predicao" className="space-y-4">
-          <AbaPredicaoRecompra />
+          <AbaPredicaoRecompra
+            filtros={filtros}
+            unitMode={filtros.unitMode}
+            onSelectCliente360={onOpenCliente360}
+          />
         </TabsContent>
 
         {/* ABA 6: Ações Comerciais */}
