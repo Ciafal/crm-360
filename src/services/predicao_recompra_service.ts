@@ -789,17 +789,23 @@ export class PredicaoRecompraService {
 
   /**
    * 6. Obtém o modelo preditivo atualmente persistido em produção.
-   * Se ainda não foi treinado nesta instância, tenta realizar o treinamento inicial UMA ÚNICA VEZ
-   * de forma segura (sem recursão mútua através de getModeloSalvo e flag de bloqueio).
-   * Se não houver modelo e o treinamento não puder ser executado, retorna um modelo vazio gracioso.
+   * Apenas LÊ o modelo salvo no storage (chamada pura). NUNCA dispara treinarModelo.
+   * Se não houver modelo salvo válido, retorna um modelo padrão vazio (estado inicial não treinado)
+   * de forma totalmente graciosa, sem lançar erro, sem recursão e sem travar a interface.
+   * Opcionalmente aceita permitirTreinar (false por padrão) caso algum chamador explícito queira auto-treinar.
    */
-  public getModeloProducao(): ModeloPreditivoSalvo {
+  public getModeloProducao(permitirTreinar: boolean = false): ModeloPreditivoSalvo {
     const salvo = this.getModeloSalvo()
     if (salvo) {
       return salvo
     }
 
-    // Se já estiver treinando, previne recursão e retorna modelo vazio seguro
+    // Por padrão (leitura pura), NUNCA dispara treinamento automático
+    if (!permitirTreinar) {
+      return this.getModeloVazioPadrao()
+    }
+
+    // Guard contra reentrância caso permitirTreinar seja true
     if (this.isTreinando) {
       return this.getModeloVazioPadrao()
     }
@@ -808,7 +814,7 @@ export class PredicaoRecompraService {
       this.isTreinando = true
       return this.treinarModelo('Sistema Inicializador CIAFAL')
     } catch (err) {
-      console.warn('Treinamento inicial automático não pôde ser concluído:', err)
+      console.warn('Treinamento não pôde ser concluído:', err)
       return this.getModeloVazioPadrao()
     } finally {
       this.isTreinando = false
@@ -885,50 +891,54 @@ export class PredicaoRecompraService {
   /**
    * 8. KPIs da Aba 5 (Predição de Recompra)
    */
-  public calcularKpisPredicao(predicoes: PredicaoClienteView[]): KpisPredicaoAba {
-    const altaProb = predicoes.filter((p) => p.pAlivePercent >= 70)
-    const emRisco = predicoes.filter((p) => p.pAlivePercent >= 40 && p.pAlivePercent < 70)
-    const altoPotencialRecuperacao = predicoes.filter(
+  public calcularKpisPredicao(predicoes: PredicaoClienteView[] = []): KpisPredicaoAba {
+    const lista = predicoes || []
+    const altaProb = lista.filter((p) => p.pAlivePercent >= 70)
+    const emRisco = lista.filter((p) => p.pAlivePercent >= 40 && p.pAlivePercent < 70)
+    const altoPotencialRecuperacao = lista.filter(
       (p) =>
         (p.pAlivePercent < 45 || p.quadranteMatriz === 'Recuperação prioritária') &&
-        p.horizontes.receitaEsperada90d >= 30000,
+        p.horizontes?.receitaEsperada90d >= 30000,
     )
 
-    const receitaEsperada90d = predicoes.reduce(
-      (acc, p) => acc + p.horizontes.receitaEsperada90d,
+    const receitaEsperada90d = lista.reduce(
+      (acc, p) => acc + (p.horizontes?.receitaEsperada90d || 0),
       0,
     )
-    const tonelagemEsperada90d = predicoes.reduce(
-      (acc, p) => acc + p.horizontes.tonelagemEsperada90d,
+    const tonelagemEsperada90d = lista.reduce(
+      (acc, p) => acc + (p.horizontes?.tonelagemEsperada90d || 0),
       0,
     )
-    const comprasEsperadas90d = predicoes.reduce(
-      (acc, p) => acc + p.horizontes.comprasEsperadas90d,
+    const comprasEsperadas90d = lista.reduce(
+      (acc, p) => acc + (p.horizontes?.comprasEsperadas90d || 0),
       0,
     )
 
     return {
       altaProbabilidadeCount: altaProb.length,
-      altaProbabilidadeValor: altaProb.reduce((acc, p) => acc + p.horizontes.receitaEsperada90d, 0),
+      altaProbabilidadeValor: altaProb.reduce(
+        (acc, p) => acc + (p.horizontes?.receitaEsperada90d || 0),
+        0,
+      ),
       altaProbabilidadeTons: Number(
-        altaProb.reduce((acc, p) => acc + p.horizontes.tonelagemEsperada90d, 0).toFixed(1),
+        altaProb.reduce((acc, p) => acc + (p.horizontes?.tonelagemEsperada90d || 0), 0).toFixed(1),
       ),
       emRiscoCount: emRisco.length,
-      emRiscoValor: emRisco.reduce((acc, p) => acc + p.horizontes.receitaEsperada90d, 0),
+      emRiscoValor: emRisco.reduce((acc, p) => acc + (p.horizontes?.receitaEsperada90d || 0), 0),
       emRiscoTons: Number(
-        emRisco.reduce((acc, p) => acc + p.horizontes.tonelagemEsperada90d, 0).toFixed(1),
+        emRisco.reduce((acc, p) => acc + (p.horizontes?.tonelagemEsperada90d || 0), 0).toFixed(1),
       ),
       receitaEsperada90d: Math.round(receitaEsperada90d),
       tonelagemEsperada90d: Number(tonelagemEsperada90d.toFixed(1)),
       comprasEsperadas90d: Number(comprasEsperadas90d.toFixed(1)),
       altoPotencialRecuperacaoCount: altoPotencialRecuperacao.length,
       altoPotencialRecuperacaoValor: altoPotencialRecuperacao.reduce(
-        (acc, p) => acc + p.horizontes.receitaEsperada90d,
+        (acc, p) => acc + (p.horizontes?.receitaEsperada90d || 0),
         0,
       ),
       altoPotencialRecuperacaoTons: Number(
         altoPotencialRecuperacao
-          .reduce((acc, p) => acc + p.horizontes.tonelagemEsperada90d, 0)
+          .reduce((acc, p) => acc + (p.horizontes?.tonelagemEsperada90d || 0), 0)
           .toFixed(1),
       ),
     }

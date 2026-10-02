@@ -174,19 +174,60 @@ describe('Pipeline de Predição de Recompra CIAFAL (Serviço Integrado)', () =>
     expect(primeiro.explicacaoRisco).toContain('P(Alive)')
   })
 
+  it('Sem modelo no storage, getModeloProducao retorna estado padrão vazio sem recursão e sem auto-treinar', () => {
+    crmStorage.removeItem('ciafal_crm_recorrencia_predicao_model_v2')
+
+    // getModeloProducao() pura sem modelo no storage nunca quebra nem causa recursão
+    expect(() => {
+      const modelo = predicaoRecompraService.getModeloProducao()
+      expect(modelo).toBeDefined()
+      expect(modelo.bgnbd.error).toBe('Modelo ainda não treinado')
+      expect(modelo.predicoes).toEqual([])
+    }).not.toThrow()
+
+    // getPredicoesFiltradas e calcularKpisPredicao funcionam graciosamente com o estado vazio
+    expect(() => {
+      const predicoes = predicaoRecompraService.getPredicoesFiltradas({
+        empresa: 'TODAS',
+        vendedor: 'TODOS',
+        representante: 'TODOS',
+        cliente: '',
+        uf: 'TODOS',
+        cidade: 'TODAS',
+        setorIndustrial: 'TODOS',
+        grupoMercadoria: 'TODOS',
+        produto: '',
+        periodo: '12M',
+        classeRecorrencia: 'TODAS',
+        segmentoRFM: 'TODOS',
+        statusCliente: 'TODOS',
+        riscoPerda: 'TODOS',
+        situacaoCredito: 'TODOS',
+        unitMode: 'BRL',
+      })
+      expect(predicoes).toEqual([])
+      const kpis = predicaoRecompraService.calcularKpisPredicao(predicoes)
+      expect(kpis.altaProbabilidadeCount).toBe(0)
+      expect(kpis.receitaEsperada90d).toBe(0)
+    }).not.toThrow()
+  })
+
   it('Recupera modelo em produção já persistido sem recalcular MLE desnecessariamente', () => {
+    // Treina e persiste
+    predicaoRecompraService.treinarModelo('Suite Persist Test')
+
     const modeloProd = predicaoRecompraService.getModeloProducao()
     expect(modeloProd).toBeDefined()
     expect(modeloProd.predicoes.length).toBeGreaterThan(0)
+    expect(modeloProd.bgnbd.converged).toBe(true)
   })
 
-  it('Evita recursão mútua infinita quando não existe modelo prévio persistido no storage', () => {
-    // Garante que o storage não possui modelo
+  it('Evita recursão mútua infinita mesmo se invocado com permitirTreinar = true', () => {
     crmStorage.removeItem('ciafal_crm_recorrencia_predicao_model_v2')
 
-    // Deve retornar modelo (produzido ou padrão) sem estourar a pilha de execução (too much recursion)
+    // Deve retornar modelo sem estourar a pilha de execução (too much recursion)
     expect(() => {
-      const modelo = predicaoRecompraService.getModeloProducao()
+      const modelo = predicaoRecompraService.getModeloProducao(true)
       expect(modelo).toBeDefined()
       expect(modelo.validacao).toBeDefined()
     }).not.toThrow()
