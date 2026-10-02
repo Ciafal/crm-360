@@ -63,6 +63,7 @@ import { LeadsProspectsTab } from '@/components/gestao-clientes/LeadsProspectsTa
 import { CrmParty360FichaModal } from '@/components/gestao-clientes/CrmParty360FichaModal'
 import { TransferenciaCarteiraModal } from '@/components/gestao-clientes/TransferenciaCarteiraModal'
 import { ReativarOportunidadeModal } from '@/components/gestao-clientes/ReativarOportunidadeModal'
+import { RecorrenciaComprasModule } from '@/components/recorrencia/RecorrenciaComprasModule'
 
 export default function GestaoClientesPage() {
   const navigate = useNavigate()
@@ -208,6 +209,20 @@ export default function GestaoClientesPage() {
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
+                variant="outline"
+                onClick={() => setActiveSection('recorrencia')}
+                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                  activeSection === 'recorrencia'
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-sm'
+                    : 'border-blue-300 bg-blue-50/70 text-[#003A70] hover:bg-blue-100'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4 text-sky-600" />
+                <span>[ RECORRÊNCIA DE COMPRAS ]</span>
+              </Button>
+
+              <Button
+                size="sm"
                 onClick={() => setIsCadastroLeadOpen(true)}
                 className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5 shadow-sm transition-all"
               >
@@ -302,6 +317,12 @@ export default function GestaoClientesPage() {
         <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
           <TabsList className="bg-slate-100 border border-border p-1 rounded-2xl flex items-center gap-1 overflow-x-auto h-auto">
             <TabsTrigger
+              value="recorrencia"
+              className="text-xs font-bold px-4 py-2 rounded-xl data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-[#003A70]"
+            >
+              🔄 RECORRÊNCIA DE COMPRAS
+            </TabsTrigger>
+            <TabsTrigger
               value="visao-geral"
               className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
             >
@@ -350,6 +371,11 @@ export default function GestaoClientesPage() {
               ✨ CENTRAL DE AÇÕES
             </TabsTrigger>
           </TabsList>
+
+          {/* SEÇÃO 0: RECORRÊNCIA DE COMPRAS (Módulo Completo de 6 Abas Integradas) */}
+          <TabsContent value="recorrencia" className="space-y-4">
+            <RecorrenciaComprasModule onOpenCliente360={handleOpenParty360} />
+          </TabsContent>
 
           {/* SEÇÃO 1: VISÃO GERAL & COBERTURA */}
           <TabsContent value="visao-geral" className="space-y-4">
