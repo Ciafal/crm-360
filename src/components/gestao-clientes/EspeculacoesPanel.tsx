@@ -15,7 +15,7 @@ import { Sparkles, PlusCircle } from 'lucide-react'
 import type { EspeculacaoItem, EspeculacaoStatus } from '@/types/customer_management'
 import { customerManagementService } from '@/services/customer_management_service'
 import { toast } from 'sonner'
-import { StatusBadge } from './shared/GestaoClientesUiKit'
+import { StatusBadge, SectionHeader, EmptyState } from './shared/GestaoClientesUiKit'
 
 interface EspeculacoesPanelProps {
   especulacoes: EspeculacaoItem[]
@@ -110,39 +110,22 @@ export function EspeculacoesPanel({ especulacoes, onUpdateList }: EspeculacoesPa
   return (
     <div className="space-y-4 text-slate-900">
       {/* 1. CABEÇALHO (Fundo Claro / Azul CIAFAL) */}
-      <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#003A70]/10 text-[#003A70] border border-[#003A70]/20 shrink-0">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-serif text-base sm:text-lg font-bold text-[#003A70] tracking-tight">
-                Gestão de Especulações Comerciais
-              </h3>
-              <Badge
-                variant="outline"
-                className="bg-[#EBF3FA] text-[#003A70] border-[#003A70]/30 text-[10px] font-medium"
-              >
-                Demanda Não Formalizada
-              </Badge>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Mapeamento proativo de projetos futuros, consultas informais, concorrentes e
-              sazonalidade para antecipação ao PCP.
-            </p>
-          </div>
-        </div>
-
-        <Button
-          size="sm"
-          onClick={() => setNewModalOpen(true)}
-          className="h-9 bg-[#003A70] hover:bg-[#002850] text-white text-xs font-semibold rounded-xl gap-1.5 shadow-2xs"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Nova Especulação</span>
-        </Button>
-      </div>
+      <SectionHeader
+        title="Gestão de Especulações Comerciais"
+        subtitle="Mapeamento de projetos futuros, consultas informais e sazonalidade para antecipação ao PCP."
+        icon={Sparkles}
+        badge={<StatusBadge label="Demanda Não Formalizada" variant="default" />}
+        actions={
+          <Button
+            size="sm"
+            onClick={() => setNewModalOpen(true)}
+            className="h-9 bg-[#003A70] hover:bg-[#002850] text-white text-xs font-semibold rounded-xl gap-1.5 shadow-2xs"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Nova Especulação</span>
+          </Button>
+        }
+      />
 
       {/* 2. GRID DE ESPECULAÇÕES (Padronizado CIAFAL) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -228,19 +211,38 @@ export function EspeculacoesPanel({ especulacoes, onUpdateList }: EspeculacoesPa
         ))}
       </div>
 
-      {/* MODAL NOVA ESPECULAÇÃO */}
-      <Dialog open={newModalOpen} onOpenChange={setNewModalOpen}>
-        <DialogContent className="bg-white text-slate-900 border border-slate-200 max-w-lg rounded-2xl shadow-xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-serif text-[#003A70] font-bold">
-              Cadastrar Nova Especulação Comercial
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Registre uma necessidade preliminar mapeada em conversas informais com o cliente.
-            </DialogDescription>
-          </DialogHeader>
+      {especulacoes.length === 0 && (
+        <EmptyState
+          title="Nenhuma especulação comercial ativa"
+          description="Registre demandas futuras e consultas informais para alimentar o PCP e a área de compras."
+          icon={Sparkles}
+          action={
+            <Button
+              size="sm"
+              onClick={() => setNewModalOpen(true)}
+              className="h-8 bg-[#003A70] hover:bg-[#002850] text-white text-xs font-semibold rounded-xl"
+            >
+              Criar Primeira Especulação
+            </Button>
+          }
+        />
+      )}
 
-          <div className="space-y-3 py-2 text-xs">
+      {/* MODAL NOVA ESPECULAÇÃO (Padronizado CIAFAL: header fixo, body scroll, footer fixo) */}
+      <Dialog open={newModalOpen} onOpenChange={setNewModalOpen}>
+        <DialogContent className="bg-white text-slate-900 border border-slate-200 max-w-lg rounded-2xl shadow-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div>
+              <DialogTitle className="text-base font-serif text-[#003A70] font-bold tracking-tight">
+                Cadastrar Nova Especulação Comercial
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                Registre uma necessidade preliminar mapeada em conversas informais com o cliente.
+              </DialogDescription>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-3 overflow-y-auto flex-1 text-xs">
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] uppercase font-bold text-slate-600 block mb-1">
@@ -325,10 +327,23 @@ export function EspeculacoesPanel({ especulacoes, onUpdateList }: EspeculacoesPa
                 placeholder="Ex.: Cliente aguarda liberação de verba orçamentária do projeto..."
               />
             </div>
+          </div>
 
+          <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2 shrink-0">
             <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setNewModalOpen(false)}
+              className="h-8 text-xs border-slate-200 bg-white text-slate-700 rounded-xl"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               onClick={handleSaveEspeculacao}
-              className="w-full h-9 bg-[#003A70] hover:bg-[#002850] text-white font-semibold text-xs rounded-xl mt-2 shadow-2xs"
+              className="h-8 bg-[#003A70] hover:bg-[#002850] text-white font-semibold text-xs rounded-xl shadow-2xs"
             >
               Gravar Especulação
             </Button>

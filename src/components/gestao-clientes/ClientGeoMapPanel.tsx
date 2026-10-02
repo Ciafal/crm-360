@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button'
 import { MapPin, Sparkles, Globe2 } from 'lucide-react'
 import type { CustomerManagementItem, RegionalGeoMetric } from '@/types/customer_management'
 import { toast } from 'sonner'
-import { StatusBadge } from './shared/GestaoClientesUiKit'
+import {
+  StatusBadge,
+  SectionHeader,
+  EmptyState,
+  AlertBlock,
+  ProgressBar,
+} from './shared/GestaoClientesUiKit'
 
 interface ClientGeoMapPanelProps {
   clientes: CustomerManagementItem[]
@@ -53,78 +59,48 @@ export function ClientGeoMapPanel({
       <div className="p-4 rounded-2xl bg-white border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-2xs">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[#003A70]/10 text-[#003A70] border border-[#003A70]/20 shrink-0">
-            <Globe2 className="w-6 h-6" />
+            <Globe2 className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-serif text-base sm:text-lg font-bold text-[#003A70] tracking-tight">
+              <h3 className="font-serif text-base font-bold text-[#003A70] tracking-tight">
                 Mapa Geral da Carteira & Penetração Regional
               </h3>
-              <Badge
-                variant="outline"
-                className="bg-[#EBF3FA] text-[#003A70] border-[#003A70]/30 text-[10px] font-medium"
-              >
-                Brasil → Estado → Município
-              </Badge>
+              <StatusBadge label="Brasil → Estado → Município" variant="default" />
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Visualização de concentração de carteira, vazios territoriais, cobertura por estado e
-              clientes em risco.
+              Concentração de carteira, vazios territoriais e cobertura por estado.
             </p>
           </div>
         </div>
 
-        {/* Camadas do Mapa (Padronizado CIAFAL: Ativo em #003A70, sem rainbow) */}
+        {/* Camadas do Mapa (Padronizado CIAFAL: Ativo em #003A70 com micro-badges semânticos discretos) */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] text-slate-500 uppercase font-bold mr-1">Camadas:</span>
-          <Button
-            size="sm"
-            variant={activeLayer === 'todos' ? 'default' : 'outline'}
-            onClick={() => setActiveLayer('todos')}
-            className={`h-7 text-xs rounded-xl font-medium ${
-              activeLayer === 'todos'
-                ? 'bg-[#003A70] text-white hover:bg-[#002850] shadow-2xs'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            Todos
-          </Button>
-          <Button
-            size="sm"
-            variant={activeLayer === 'descobertos' ? 'default' : 'outline'}
-            onClick={() => setActiveLayer('descobertos')}
-            className={`h-7 text-xs rounded-xl font-medium ${
-              activeLayer === 'descobertos'
-                ? 'bg-red-700 text-white hover:bg-red-800 shadow-2xs'
-                : 'border-slate-200 bg-white text-red-700 hover:bg-red-50'
-            }`}
-          >
-            Sem Cobertura
-          </Button>
-          <Button
-            size="sm"
-            variant={activeLayer === 'risco' ? 'default' : 'outline'}
-            onClick={() => setActiveLayer('risco')}
-            className={`h-7 text-xs rounded-xl font-medium ${
-              activeLayer === 'risco'
-                ? 'bg-amber-700 text-white hover:bg-amber-800 shadow-2xs'
-                : 'border-slate-200 bg-white text-amber-800 hover:bg-amber-50'
-            }`}
-          >
-            Em Risco
-          </Button>
-          <Button
-            size="sm"
-            variant={activeLayer === 'cotacoes' ? 'default' : 'outline'}
-            onClick={() => setActiveLayer('cotacoes')}
-            className={`h-7 text-xs rounded-xl font-medium ${
-              activeLayer === 'cotacoes'
-                ? 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-2xs'
-                : 'border-slate-200 bg-white text-emerald-800 hover:bg-emerald-50'
-            }`}
-          >
-            Com Cotações
-          </Button>
+          {(
+            [
+              { id: 'todos', label: 'Todos' },
+              { id: 'descobertos', label: 'Sem Cobertura' },
+              { id: 'risco', label: 'Em Risco' },
+              { id: 'cotacoes', label: 'Com Cotações' },
+            ] as const
+          ).map((layer) => {
+            const isSelected = activeLayer === layer.id
+            return (
+              <button
+                key={layer.id}
+                type="button"
+                onClick={() => setActiveLayer(layer.id)}
+                className={`h-7 px-3 text-xs rounded-xl font-medium transition-colors border select-none ${
+                  isSelected
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-2xs'
+                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-[#003A70]'
+                }`}
+              >
+                {layer.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -200,12 +176,12 @@ export function ClientGeoMapPanel({
         {/* Painel Central e Direito: Municípios */}
         <div className="lg:col-span-2 space-y-3">
           {aiRegionalInsight && (
-            <div className="p-4 rounded-2xl bg-[#EBF3FA] border border-[#003A70]/30 text-xs text-[#003A70] space-y-1.5 animate-fade-in shadow-2xs">
-              <span className="font-bold uppercase tracking-wider flex items-center gap-1.5 text-[#003A70] text-[11px]">
-                <Sparkles className="w-3.5 h-3.5" /> Diagnóstico Territorial de Inteligência IA
-              </span>
-              <p className="leading-relaxed text-[11px] text-slate-700">{aiRegionalInsight}</p>
-            </div>
+            <AlertBlock
+              variant="info"
+              icon={Sparkles}
+              title="Diagnóstico Territorial de Inteligência IA"
+              message={aiRegionalInsight}
+            />
           )}
 
           <Card className="p-4 rounded-2xl bg-white border border-slate-200 space-y-3 text-slate-900 shadow-2xs">
@@ -268,9 +244,12 @@ export function ClientGeoMapPanel({
               ))}
 
               {filteredGeoClients.length === 0 && (
-                <div className="col-span-2 p-8 text-center text-xs text-slate-500 border border-dashed border-slate-200 rounded-2xl">
-                  Nenhum cliente encontrado para a camada "{activeLayer}" no estado de{' '}
-                  {selectedMetric.nomeEstado}.
+                <div className="col-span-2">
+                  <EmptyState
+                    title="Nenhum cliente mapeado"
+                    description={`Nenhum cliente atende ao filtro "${activeLayer}" no estado de ${selectedMetric.nomeEstado}.`}
+                    icon={MapPin}
+                  />
                 </div>
               )}
             </div>

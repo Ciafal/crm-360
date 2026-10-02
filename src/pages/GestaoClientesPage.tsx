@@ -23,8 +23,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { StatusBadge } from '@/components/gestao-clientes/shared/GestaoClientesUiKit'
 import {
   Select,
   SelectContent,
@@ -186,64 +186,64 @@ export default function GestaoClientesPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             {/* Título & Badge de Origem Mestre */}
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-primary/10 text-primary rounded-2xl border border-primary/20 shadow-xs">
-                <Compass className="w-6 h-6" />
+              <div className="p-2.5 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20 shadow-2xs">
+                <Compass className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-serif font-bold text-primary tracking-tight">
-                    GESTÃO DE CLIENTES & COBERTURA DA CARTEIRA
+                  <h1 className="text-lg sm:text-xl font-serif font-bold text-[#003A70] tracking-tight">
+                    Gestão de Clientes & Cobertura da Carteira
                   </h1>
-                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-mono">
-                    CRM 360º CIAFAL
-                  </Badge>
+                  <StatusBadge label="CRM 360º CIAFAL" variant="default" />
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-slate-500">
                   Registro Comercial Único · Jornada Lead → Prospect → Cliente SAP · Sem Cadastros
                   Paralelos
                 </p>
               </div>
             </div>
 
-            {/* BOTÕES DE AÇÃO OBRIGATÓRIOS NO CABEÇALHO (Regra 31) */}
+            {/* BOTÕES DE AÇÃO OBRIGATÓRIOS NO CABEÇALHO */}
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setActiveSection('recorrencia')}
-                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                className={`h-8 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'recorrencia'
-                    ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-sm'
-                    : 'border-blue-300 bg-blue-50/70 text-[#003A70] hover:bg-blue-100'
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-semibold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
                 }`}
               >
-                <TrendingUp className="w-4 h-4 text-sky-600" />
-                <span>[ RECORRÊNCIA DE COMPRAS ]</span>
+                <TrendingUp className="w-3.5 h-3.5 text-[#003A70]" />
+                <span>Recorrência de Compras</span>
               </Button>
 
               <Button
                 size="sm"
                 onClick={() => setIsCadastroLeadOpen(true)}
-                className="h-9 text-xs bg-primary hover:bg-primary/90 text-white font-bold rounded-xl gap-1.5 shadow-sm transition-all"
+                className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white font-semibold rounded-xl gap-1.5 shadow-2xs transition-all"
               >
-                <UserPlus className="w-4 h-4" /> [ + CADASTRAR LEAD ]
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Cadastrar Lead</span>
               </Button>
 
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setActiveSection('cadastros')}
-                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                className={`h-8 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'cadastros'
-                    ? 'bg-purple-100 text-purple-900 border-purple-300 font-bold'
-                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-semibold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
                 }`}
               >
-                <FileSpreadsheet className="w-4 h-4 text-purple-600" />[ CENTRAL DE CADASTROS ]
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Central de Cadastros</span>
                 {kpis.cadastrosPendentes > 0 && (
-                  <Badge className="bg-purple-600 text-white text-[10px] px-1.5 py-0 rounded-full font-mono">
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold">
                     {kpis.cadastrosPendentes}
-                  </Badge>
+                  </span>
                 )}
               </Button>
 
@@ -251,26 +251,28 @@ export default function GestaoClientesPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => setActiveSection('central-acoes')}
-                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                className={`h-8 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'central-acoes'
-                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-semibold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
                 }`}
               >
-                <Sparkles className="w-4 h-4 text-amber-600" />[ CENTRAL DE AÇÕES ]
+                <Sparkles className="w-3.5 h-3.5 text-[#003A70]" />
+                <span>Central de Ações</span>
               </Button>
 
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setActiveSection('quem-contatar')}
-                className={`h-9 text-xs rounded-xl gap-1.5 transition-all ${
+                className={`h-8 text-xs rounded-xl gap-1.5 transition-all ${
                   activeSection === 'quem-contatar'
-                    ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-bold'
-                    : 'border-border bg-white text-slate-700 hover:text-primary hover:bg-slate-50'
+                    ? 'bg-[#003A70] text-white border-[#003A70] font-semibold shadow-2xs'
+                    : 'border-slate-200 bg-white text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
                 }`}
               >
-                <PhoneCall className="w-4 h-4 text-emerald-600" />[ QUEM CONTATAR HOJE? ]
+                <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Quem Contatar Hoje</span>
               </Button>
             </div>
           </div>
@@ -288,24 +290,22 @@ export default function GestaoClientesPage() {
             </div>
 
             {/* Micro Indicadores do Registro Único */}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground overflow-x-auto w-full sm:w-auto">
-              <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-border/60">
-                <span className="text-[10px] text-slate-600 font-bold uppercase">Base Mestre</span>
+            <div className="flex items-center gap-2 text-xs text-slate-600 overflow-x-auto w-full sm:w-auto">
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Base Mestre</span>
                 <strong className="text-slate-900 font-mono">{kpis.total}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
-                <span className="text-[10px] text-amber-800 font-bold uppercase">Leads</span>
-                <strong className="text-amber-900 font-mono">{kpis.leads}</strong>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Leads</span>
+                <strong className="text-slate-900 font-mono">{kpis.leads}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200">
-                <span className="text-[10px] text-purple-800 font-bold uppercase">Prospects</span>
-                <strong className="text-purple-900 font-mono">{kpis.prospects}</strong>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Prospects</span>
+                <strong className="text-slate-900 font-mono">{kpis.prospects}</strong>
               </div>
-              <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                <span className="text-[10px] text-emerald-800 font-bold uppercase">
-                  Clientes SAP
-                </span>
-                <strong className="text-emerald-900 font-mono">{kpis.clientesSap}</strong>
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                <span className="text-[10px] text-slate-500 font-bold uppercase">Clientes SAP</span>
+                <strong className="text-[#003A70] font-mono">{kpis.clientesSap}</strong>
               </div>
             </div>
           </div>
@@ -315,60 +315,60 @@ export default function GestaoClientesPage() {
       {/* 2. CORPO PRINCIPAL COM 6 SEÇÕES ORGANIZADAS (Regra 31) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 space-y-5">
         <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-4">
-          <TabsList className="bg-slate-100 border border-border p-1 rounded-2xl flex items-center gap-1 overflow-x-auto h-auto">
+          <TabsList className="bg-slate-100 border border-slate-200 p-1 rounded-xl flex items-center gap-1 overflow-x-auto h-auto">
             <TabsTrigger
               value="recorrencia"
-              className="text-xs font-bold px-4 py-2 rounded-xl data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:shadow-md transition-all text-[#003A70]"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              🔄 RECORRÊNCIA DE COMPRAS
+              Recorrência de Compras
             </TabsTrigger>
             <TabsTrigger
               value="visao-geral"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              1. VISÃO GERAL & COBERTURA
+              Visão Geral & Cobertura
             </TabsTrigger>
             <TabsTrigger
               value="quem-contatar"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              2. QUEM DEVO CONTATAR HOJE?
+              Quem Contatar Hoje
             </TabsTrigger>
             <TabsTrigger
               value="leads-prospects"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              3. LEADS & PROSPECTS
+              Leads & Prospects
             </TabsTrigger>
             <TabsTrigger
               value="lista-clientes"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              4. LISTA DE CLIENTES
+              Lista de Clientes
             </TabsTrigger>
             <TabsTrigger
               value="cadastros"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              5. CENTRAL DE CADASTROS
+              Central de Cadastros
             </TabsTrigger>
             <TabsTrigger
               value="cobertura-vendedor"
-              className="text-xs font-semibold px-4 py-2 rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              6. COBERTURA POR VENDEDOR
+              Cobertura por Vendedor
             </TabsTrigger>
             <TabsTrigger
               value="funil-cohort"
-              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-emerald-700 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              📈 FUNIL & COHORT
+              Funil & Cohort
             </TabsTrigger>
             <TabsTrigger
               value="central-acoes"
-              className="text-xs font-semibold px-3 py-2 rounded-xl data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow-sm transition-all"
+              className="text-xs font-semibold px-3.5 py-1.5 rounded-lg data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:shadow-2xs transition-colors select-none text-slate-700"
             >
-              ✨ CENTRAL DE AÇÕES
+              Central de Ações
             </TabsTrigger>
           </TabsList>
 

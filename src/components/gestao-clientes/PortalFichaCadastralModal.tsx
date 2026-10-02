@@ -40,6 +40,7 @@ import {
 import { crmPartyService } from '@/services/crm_party_service'
 import type { CrmPartyMaster, CrmOnboardingProcess, CrmDocumentItem } from '@/types/crm_party'
 import { toast } from 'sonner'
+import { StatusBadge, ProgressBar, AlertBlock } from './shared/GestaoClientesUiKit'
 
 interface PortalFichaCadastralModalProps {
   party: CrmPartyMaster | null
@@ -212,38 +213,33 @@ export function PortalFichaCadastralModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-slate-950 text-slate-100 border border-slate-800 rounded-3xl p-6 max-h-[92vh] overflow-y-auto">
-        <DialogHeader className="border-b border-slate-800 pb-4">
+      <DialogContent className="max-w-4xl bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl max-h-[92vh] flex flex-col p-0 overflow-hidden">
+        {/* Header fixo */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col gap-3 shrink-0 bg-slate-50/50">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+              <div className="p-2 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="font-serif text-xl font-bold text-white tracking-tight">
+                  <DialogTitle className="font-serif text-lg font-bold text-[#003A70] tracking-tight">
                     Ficha Cadastral & Onboarding
                   </DialogTitle>
-                  <Badge className="bg-sky-950 text-sky-300 border-sky-800 font-mono text-xs">
-                    {protocolo}
-                  </Badge>
+                  <StatusBadge label={protocolo} variant="default" />
                 </div>
-                <DialogDescription className="text-xs text-slate-400">
-                  {party.friendly_code} · {party.razao_social} (CRM Party ID:{' '}
-                  <span className="font-mono text-sky-400">
-                    {party.crm_party_id.slice(0, 8)}...
-                  </span>
-                  )
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  {party.friendly_code} · {party.razao_social}
                 </DialogDescription>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-8 text-[11px] border-emerald-600/40 text-emerald-400 hover:bg-emerald-950/40 rounded-xl gap-1.5"
+                className="h-7 text-xs border-slate-200 bg-white text-slate-700 hover:text-[#003A70] rounded-lg gap-1.5"
                 onClick={() => {
                   navigator.clipboard.writeText(portalUrl)
                   toast.success('Link do Portal do Cliente copiado!', {
@@ -251,39 +247,39 @@ export function PortalFichaCadastralModal({
                   })
                 }}
               >
-                <Link2 className="w-3.5 h-3.5" /> Copiar Link do Portal
+                <Link2 className="w-3.5 h-3.5" /> Copiar Link
               </Button>
               <Button
                 type="button"
                 size="sm"
-                className="h-8 text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl gap-1.5"
+                className="h-7 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg gap-1.5 shadow-2xs"
                 onClick={() => {
                   toast.success('Ficha enviada via WhatsApp Business e E-mail!', {
                     description: `Destinatário: ${party.whatsapp} / ${party.email}`,
                   })
                 }}
               >
-                <Send className="w-3.5 h-3.5" /> Enviar p/ WhatsApp
+                <Send className="w-3.5 h-3.5" /> Enviar WhatsApp
               </Button>
             </div>
           </div>
 
           {/* CHECKLIST VISUAL DE PROGRESSO (Regra 17) */}
-          <div className="pt-3 space-y-1.5">
+          <div className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-semibold">
+              <span className="text-slate-500 font-medium">
                 Progresso do Cadastramento ({calculateProgress()}%)
               </span>
-              <span className="text-emerald-400 font-mono text-xs font-bold">
+              <span className="text-[#003A70] font-mono text-xs font-bold">
                 Passo {activeStep} de 6
               </span>
             </div>
-            <Progress value={calculateProgress()} className="h-2 bg-slate-900" />
+            <ProgressBar value={calculateProgress()} />
           </div>
-        </DialogHeader>
+        </div>
 
         {/* NAVEGAÇÃO ENTRE PASSOS DO WIZARD (Regra 14) */}
-        <div className="flex items-center gap-1.5 border-b border-slate-800/80 pb-2 overflow-x-auto text-xs">
+        <div className="flex items-center gap-1.5 border-b border-slate-200 px-4 py-2 overflow-x-auto text-xs bg-slate-50 shrink-0">
           {[
             { step: 1, label: '1. Empresa', icon: Building2 },
             { step: 2, label: '2. Endereços', icon: MapPin },
@@ -300,12 +296,12 @@ export function PortalFichaCadastralModal({
                 key={item.step}
                 type="button"
                 onClick={() => setActiveStep(item.step)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors select-none ${
                   isCurrent
-                    ? 'bg-sky-600 text-white shadow-sm'
+                    ? 'bg-[#003A70] text-white font-bold shadow-2xs'
                     : isPassed
-                      ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/40'
-                      : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                      ? 'bg-slate-200/70 text-slate-800'
+                      : 'text-slate-500 hover:bg-white hover:text-slate-800'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -315,60 +311,60 @@ export function PortalFichaCadastralModal({
           })}
         </div>
 
-        {/* CONTEÚDO DOS PASSOS */}
-        <div className="py-2 text-xs space-y-4">
+        {/* CONTEÚDO DOS PASSOS (Rolável) */}
+        <div className="p-4 sm:p-5 text-xs space-y-4 overflow-y-auto flex-1">
           {/* PASSO 1: DADOS DA EMPRESA */}
           {activeStep === 1 && (
             <div className="space-y-3">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#003A70] uppercase tracking-wider block">
                 Dados Fiscais & Cadastrais da Empresa
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">Razão Social</Label>
+                  <Label className="text-xs text-slate-700 font-semibold">Razão Social</Label>
                   <Input
                     value={razaoSocial}
                     onChange={(e) => setRazaoSocial(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">Nome Fantasia</Label>
+                  <Label className="text-xs text-slate-700 font-semibold">Nome Fantasia</Label>
                   <Input
                     value={nomeFantasia}
                     onChange={(e) => setNomeFantasia(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">CNPJ</Label>
+                  <Label className="text-xs text-slate-700 font-semibold">CNPJ</Label>
                   <Input
                     value={cnpj}
                     onChange={(e) => setCnpj(e.target.value)}
                     placeholder="00.000.000/0000-00"
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl font-mono"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl font-mono focus:ring-[#003A70]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">
+                  <Label className="text-xs text-slate-700 font-semibold">
                     Inscrição Estadual (IE)
                   </Label>
                   <Input
                     value={inscricaoEstadual}
                     onChange={(e) => setInscricaoEstadual(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl font-mono"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl font-mono focus:ring-[#003A70]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">Regime Tributário</Label>
+                  <Label className="text-xs text-slate-700 font-semibold">Regime Tributário</Label>
                   <Select value={regimeTributario} onValueChange={setRegimeTributario}>
-                    <SelectTrigger className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl">
+                    <SelectTrigger className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+                    <SelectContent className="bg-white border-slate-200 text-slate-800 text-xs">
                       <SelectItem value="Lucro Real">Lucro Real</SelectItem>
                       <SelectItem value="Lucro Presumido">Lucro Presumido</SelectItem>
                       <SelectItem value="Simples Nacional">Simples Nacional</SelectItem>
@@ -379,22 +375,22 @@ export function PortalFichaCadastralModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">CNAE Principal</Label>
+                  <Label className="text-xs text-slate-700 font-semibold">CNAE Principal</Label>
                   <Input
                     value={cnae}
                     onChange={(e) => setCnae(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">
+                  <Label className="text-xs text-slate-700 font-semibold">
                     Website / Portal Corporativo
                   </Label>
                   <Input
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     placeholder="https://suaempresa.com.br"
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
               </div>
@@ -405,14 +401,14 @@ export function PortalFichaCadastralModal({
           {activeStep === 2 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#003A70] uppercase tracking-wider">
                   Endereços (Sede, Cobrança e Entrega)
                 </span>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-7 text-[11px] border-slate-800 bg-slate-900 text-slate-300 rounded-lg"
+                  className="h-7 text-xs border-slate-200 bg-white text-slate-700 rounded-lg"
                   onClick={() => {
                     const newAddr = {
                       id: `addr-${Date.now()}`,
@@ -437,14 +433,12 @@ export function PortalFichaCadastralModal({
                 {enderecos.map((addr, i) => (
                   <div
                     key={addr.id || i}
-                    className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-2"
+                    className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2"
                   >
                     <div className="flex items-center justify-between">
-                      <Badge className="bg-sky-950 text-sky-300 border-sky-800 text-[10px]">
-                        Tipo: {addr.tipo}
-                      </Badge>
+                      <StatusBadge label={`Tipo: ${addr.tipo}`} variant="default" />
                       {addr.is_padrao && (
-                        <span className="text-[10px] text-emerald-400 font-semibold">
+                        <span className="text-[10px] text-emerald-800 font-semibold">
                           Endereço Principal
                         </span>
                       )}
@@ -458,7 +452,7 @@ export function PortalFichaCadastralModal({
                           setEnderecos(cp)
                         }}
                         placeholder="Logradouro"
-                        className="h-8 bg-slate-950 border-slate-800 text-xs sm:col-span-2 rounded-xl"
+                        className="h-8 bg-white border-slate-200 text-xs sm:col-span-2 rounded-xl focus:ring-[#003A70]"
                       />
                       <Input
                         value={addr.cidade}
@@ -468,7 +462,7 @@ export function PortalFichaCadastralModal({
                           setEnderecos(cp)
                         }}
                         placeholder="Cidade"
-                        className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl"
+                        className="h-8 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                       />
                       <Input
                         value={addr.uf}
@@ -478,7 +472,7 @@ export function PortalFichaCadastralModal({
                           setEnderecos(cp)
                         }}
                         placeholder="UF"
-                        className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl"
+                        className="h-8 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                       />
                     </div>
                   </div>
@@ -487,10 +481,10 @@ export function PortalFichaCadastralModal({
             </div>
           )}
 
-          {/* PASSO 3: CONTATOS POR CLASSIFICAÇÃO (Compras, Financeiro, Fiscal, Logística) */}
+          {/* PASSO 3: CONTATOS POR CLASSIFICAÇÃO */}
           {activeStep === 3 && (
             <div className="space-y-3">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#003A70] uppercase tracking-wider block">
                 Contatos Classificados (Compras, Financeiro, Fiscal, Logística)
               </span>
 
@@ -498,7 +492,7 @@ export function PortalFichaCadastralModal({
                 {contatos.map((cont, i) => (
                   <div
                     key={cont.id || i}
-                    className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 grid grid-cols-1 sm:grid-cols-4 gap-2"
+                    className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 grid grid-cols-1 sm:grid-cols-4 gap-2"
                   >
                     <Input
                       value={cont.nome}
@@ -508,7 +502,7 @@ export function PortalFichaCadastralModal({
                         setContatos(cp)
                       }}
                       placeholder="Nome completo"
-                      className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl"
+                      className="h-8 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                     />
                     <Select
                       value={cont.funcao_classificacao}
@@ -518,10 +512,10 @@ export function PortalFichaCadastralModal({
                         setContatos(cp)
                       }}
                     >
-                      <SelectTrigger className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl">
+                      <SelectTrigger className="h-8 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+                      <SelectContent className="bg-white border-slate-200 text-slate-800 text-xs">
                         <SelectItem value="Compras">Compras</SelectItem>
                         <SelectItem value="Financeiro">Financeiro</SelectItem>
                         <SelectItem value="Fiscal">Fiscal</SelectItem>
@@ -539,7 +533,7 @@ export function PortalFichaCadastralModal({
                         setContatos(cp)
                       }}
                       placeholder="WhatsApp"
-                      className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl font-mono"
+                      className="h-8 bg-white border-slate-200 text-xs rounded-xl font-mono focus:ring-[#003A70]"
                     />
                     <Input
                       value={cont.email}
@@ -549,7 +543,7 @@ export function PortalFichaCadastralModal({
                         setContatos(cp)
                       }}
                       placeholder="E-mail"
-                      className="h-8 bg-slate-950 border-slate-800 text-xs rounded-xl"
+                      className="h-8 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                     />
                   </div>
                 ))}
@@ -557,69 +551,69 @@ export function PortalFichaCadastralModal({
             </div>
           )}
 
-          {/* PASSO 4: INFORMAÇÕES COMERCIAIS & LOGÍSTICAS */}
+          {/* PASSO 4: COMERCIAL & LOGÍSTICA */}
           {activeStep === 4 && (
             <div className="space-y-3">
-              <span className="text-xs font-bold text-sky-400 uppercase tracking-wider block">
+              <span className="text-xs font-bold text-[#003A70] uppercase tracking-wider block">
                 Condições Comerciais, Modalidade de Frete & Logística
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">
+                  <Label className="text-xs text-slate-700 font-semibold">
                     Condição de Pagamento Pretendida
                   </Label>
                   <Input
                     value={condicaoPretendida}
                     onChange={(e) => setCondicaoPretendida(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-300 font-semibold">
+                  <Label className="text-xs text-slate-700 font-semibold">
                     Modalidade de Frete
                   </Label>
                   <Input
                     value={modalidadeFrete}
                     onChange={(e) => setModalidadeFrete(e.target.value)}
-                    className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                    className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   Restrições de Descarregamento / Veículo
                 </Label>
                 <Input
                   value={restricoesDescarga}
                   onChange={(e) => setRestricoesDescarga(e.target.value)}
                   placeholder="Ex: Apenas carreta prancha ou caminhão truck..."
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                 />
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-300 font-semibold">
+                <Label className="text-xs text-slate-700 font-semibold">
                   Janela de Recebimento
                 </Label>
                 <Input
                   value={janelaRecebimento}
                   onChange={(e) => setJanelaRecebimento(e.target.value)}
                   placeholder="Ex: Segunda a Sexta, 08h às 16h"
-                  className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl"
+                  className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]"
                 />
               </div>
             </div>
           )}
 
-          {/* PASSO 5: DOCUMENTOS COM VERSIONAMENTO (Regra 15) */}
+          {/* PASSO 5: DOCUMENTOS COM VERSIONAMENTO */}
           {activeStep === 5 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-sky-400 uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#003A70] uppercase tracking-wider">
                   Documentação Cadastral (Versionada V1, V2...)
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-500">
                   Documentos não são apagados; mantêm versões e auditoria.
                 </span>
               </div>
@@ -654,23 +648,24 @@ export function PortalFichaCadastralModal({
                   return (
                     <div
                       key={docItem.tipo}
-                      className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 flex items-center justify-between"
+                      className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between"
                     >
                       <div className="space-y-1 pr-2">
-                        <span className="font-semibold text-slate-200 block text-xs">
+                        <span className="font-semibold text-slate-800 block text-xs">
                           {docItem.label}
                         </span>
                         {hasDoc ? (
                           <div className="flex items-center gap-1.5">
-                            <Badge className="bg-emerald-950 text-emerald-300 border-emerald-800 text-[10px]">
-                              V{latest.versao} · {latest.status}
-                            </Badge>
-                            <span className="text-[10px] text-slate-400">
+                            <StatusBadge
+                              label={`V${latest.versao} · ${latest.status}`}
+                              variant="positive"
+                            />
+                            <span className="text-[10px] text-slate-500">
                               {latest.nome_arquivo}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-amber-400">Pendente de anexo</span>
+                          <span className="text-[10px] text-amber-700">Pendente de anexo</span>
                         )}
                       </div>
 
@@ -679,7 +674,7 @@ export function PortalFichaCadastralModal({
                         size="sm"
                         variant="outline"
                         onClick={() => handleSimulateDocUpload(docItem.tipo)}
-                        className="h-8 text-xs border-slate-700 bg-slate-950 text-sky-300 hover:bg-sky-950/40 rounded-xl gap-1 shrink-0"
+                        className="h-7 text-xs border-slate-200 bg-white text-[#003A70] hover:bg-slate-100 rounded-lg gap-1 shrink-0"
                       >
                         <Upload className="w-3.5 h-3.5" /> Anexar V{hasDoc ? latest.versao + 1 : 1}
                       </Button>
@@ -690,51 +685,50 @@ export function PortalFichaCadastralModal({
             </div>
           )}
 
-          {/* PASSO 6: REVISÃO & ENVIO COM IA VALIDATION (Regra 16) */}
+          {/* PASSO 6: REVISÃO & ENVIO COM IA VALIDATION */}
           {activeStep === 6 && (
             <div className="space-y-3">
-              <div className="p-4 bg-sky-950/40 rounded-2xl border border-sky-800/40 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-sky-400" />
-                  <strong className="text-xs font-bold text-sky-300 uppercase tracking-wider">
-                    Validação Inteligente IA (Alertas Preventivos)
-                  </strong>
-                </div>
-                <div className="space-y-1.5">
-                  {aiAlerts.map((al, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 text-[11px] text-slate-300 bg-slate-950/60 p-2 rounded-xl"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <span>{al.msg}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <AlertBlock
+                variant="info"
+                icon={Sparkles}
+                title="Validação Inteligente IA (Alertas Preventivos)"
+                message={
+                  <div className="space-y-1.5 mt-1">
+                    {aiAlerts.map((al, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 text-[11px] text-slate-700 bg-white p-2 rounded-lg border border-slate-200"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                        <span>{al.msg}</span>
+                      </div>
+                    ))}
+                  </div>
+                }
+              />
 
-              <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-2 text-xs">
-                <strong className="text-slate-300 block font-bold">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+                <strong className="text-slate-800 block font-bold">
                   Resumo do Cadastro Mestre
                 </strong>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                   <div>
                     <span className="text-slate-500 block">Razão Social</span>
-                    <span className="text-white font-semibold">{razaoSocial}</span>
+                    <span className="text-slate-900 font-semibold">{razaoSocial}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">CNPJ</span>
-                    <span className="font-mono text-sky-300">{cnpj}</span>
+                    <span className="font-mono text-[#003A70]">{cnpj}</span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Cidade / UF</span>
-                    <span className="text-slate-200">
+                    <span className="text-slate-700">
                       {party.cidade} / {party.uf}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-500 block">Documentos</span>
-                    <span className="text-emerald-400 font-bold">
+                    <span className="text-emerald-800 font-bold">
                       {party.documentos?.length || 0} versões anexadas
                     </span>
                   </div>
@@ -744,15 +738,16 @@ export function PortalFichaCadastralModal({
           )}
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-slate-800">
+        {/* Footer fixo */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => handleSaveStep()}
-            className="h-9 text-xs border-slate-800 bg-slate-900 text-slate-300 hover:text-white rounded-xl"
+            className="h-8 text-xs border-slate-200 bg-white text-slate-700 rounded-xl"
           >
-            [ Salvar e Continuar Depois ]
+            Salvar e Continuar Depois
           </Button>
 
           <div className="flex gap-2">
@@ -762,7 +757,7 @@ export function PortalFichaCadastralModal({
                 variant="outline"
                 size="sm"
                 onClick={() => setActiveStep(activeStep - 1)}
-                className="h-9 text-xs border-slate-800 text-slate-300 rounded-xl"
+                className="h-8 text-xs border-slate-200 bg-white text-slate-700 rounded-xl"
               >
                 Passo Anterior
               </Button>
@@ -773,7 +768,7 @@ export function PortalFichaCadastralModal({
                 type="button"
                 size="sm"
                 onClick={() => handleSaveStep(activeStep + 1)}
-                className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl"
+                className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white font-semibold rounded-xl"
               >
                 Salvar e Avançar
               </Button>
@@ -788,13 +783,13 @@ export function PortalFichaCadastralModal({
                   })
                   onOpenChange(false)
                 }}
-                className="h-9 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl gap-1.5 shadow-sm"
+                className="h-8 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-xl gap-1.5 shadow-2xs"
               >
                 <CheckCircle2 className="w-4 h-4" /> Enviar Cadastro para Análise Financeira
               </Button>
             )}
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )

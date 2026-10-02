@@ -32,6 +32,7 @@ import {
 import type { CustomerManagementItem } from '@/types/customer_management'
 import { customerManagementService } from '@/services/customer_management_service'
 import { toast } from 'sonner'
+import { StatusBadge, AlertBlock } from './shared/GestaoClientesUiKit'
 
 interface Client360ExecutiveModalProps {
   cliente: CustomerManagementItem | null
@@ -96,43 +97,37 @@ export function Client360ExecutiveModal({
         )}
 
         {/* HEADER MODAL */}
-        <div className="p-6 border-b border-border/60 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Building2 className="w-5 h-5 text-primary" />
-              <h2 className="font-serif text-xl font-bold text-primary tracking-tight">
+              <Building2 className="w-5 h-5 text-[#003A70]" />
+              <h2 className="font-serif text-lg sm:text-xl font-bold text-[#003A70] tracking-tight">
                 {cliente.razaoSocial}
               </h2>
-              <Badge className="bg-[#003A70] text-sky-200 border-[#005a9c] text-xs">
-                {cliente.nomeFantasia}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={`text-[10px] font-mono ${
-                  cliente.classificacao === 'ESTRATEGICO'
-                    ? 'border-purple-500 text-purple-300 bg-purple-950/40'
-                    : cliente.classificacao === 'CLIENTE_A'
-                      ? 'border-emerald-500 text-emerald-300 bg-emerald-950/40'
-                      : cliente.classificacao === 'EM_RISCO'
-                        ? 'border-rose-500 text-rose-300 bg-rose-950/40'
-                        : 'border-slate-500 text-slate-300'
-                }`}
-              >
-                {cliente.classificacao.replace('_', ' ')}
-              </Badge>
+              <StatusBadge label={cliente.nomeFantasia} variant="default" />
+              <StatusBadge
+                label={cliente.classificacao.replace('_', ' ')}
+                variant={
+                  cliente.classificacao === 'ESTRATEGICO' || cliente.classificacao === 'CLIENTE_A'
+                    ? 'positive'
+                    : cliente.classificacao === 'EM_RISCO'
+                      ? 'warning'
+                      : 'default'
+                }
+              />
             </div>
-            <p className="text-xs text-slate-400 flex items-center gap-3">
+            <p className="text-xs text-slate-500 flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-slate-500" /> {cliente.cidade} - {cliente.uf} (
+                <MapPin className="w-3 h-3 text-slate-400" /> {cliente.cidade} - {cliente.uf} (
                 {cliente.regiao})
               </span>
               <span>•</span>
               <span>
-                Vendedor: <strong className="text-slate-200">{cliente.vendedorNome}</strong>
+                Vendedor: <strong className="text-slate-800">{cliente.vendedorNome}</strong>
               </span>
               <span>•</span>
               <span>
-                Segmento: <strong className="text-slate-200">{cliente.segmento}</strong>
+                Segmento: <strong className="text-slate-800">{cliente.segmento}</strong>
               </span>
             </p>
           </div>
@@ -141,7 +136,7 @@ export function Client360ExecutiveModal({
             <Button
               size="sm"
               onClick={() => setActiveTab('contato')}
-              className="h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white rounded-xl gap-1.5 font-semibold"
+              className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white rounded-xl gap-1.5 font-semibold shadow-2xs"
             >
               <PhoneCall className="w-3.5 h-3.5" /> Registrar Interação
             </Button>
@@ -149,13 +144,17 @@ export function Client360ExecutiveModal({
         </div>
 
         {/* Métricas Rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-4 bg-slate-900/30 border-b border-slate-800 text-xs">
-          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] text-slate-400 block uppercase font-bold">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 sm:p-4 bg-white border-b border-slate-200 text-xs">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Cobertura Carteira
             </span>
             <div className="flex items-center justify-between mt-1">
-              <strong className={cliente.coberto ? 'text-emerald-400' : 'text-rose-400'}>
+              <strong
+                className={
+                  cliente.coberto ? 'text-emerald-800 font-semibold' : 'text-red-700 font-semibold'
+                }
+              >
                 {cliente.coberto
                   ? 'Coberto (No Prazo)'
                   : `Atrasado há ${cliente.coberturaVencidaDias}d`}
@@ -166,36 +165,42 @@ export function Client360ExecutiveModal({
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] text-slate-400 block uppercase font-bold">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Índice ISC Oficial
             </span>
             <div className="flex items-center justify-between mt-1">
-              <strong className={cliente.isc >= 75 ? 'text-sky-400' : 'text-amber-400'}>
+              <strong className={cliente.isc >= 75 ? 'text-[#003A70]' : 'text-amber-800'}>
                 {cliente.isc} / 100
               </strong>
               <span className="text-[10px] text-slate-500">Satisfação</span>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] text-slate-400 block uppercase font-bold">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] text-slate-500 block uppercase font-bold">
               OTIF CIAFAL
             </span>
             <div className="flex items-center justify-between mt-1">
-              <strong className={cliente.otif >= 90 ? 'text-emerald-400' : 'text-orange-400'}>
+              <strong
+                className={
+                  cliente.otif >= 90
+                    ? 'text-emerald-800 font-semibold'
+                    : 'text-amber-800 font-semibold'
+                }
+              >
                 {cliente.otif}%
               </strong>
               <span className="text-[10px] text-slate-500">On Time In Full</span>
             </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] text-slate-400 block uppercase font-bold">
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
+            <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Faturamento 12M
             </span>
             <div className="flex items-center justify-between mt-1">
-              <strong className="text-white">
+              <strong className="text-slate-900 font-semibold">
                 R$ {(cliente.faturamento12m / 1000).toFixed(0)}k
               </strong>
               <span className="text-[10px] text-slate-500">{cliente.toneladas12m} t</span>
@@ -206,34 +211,34 @@ export function Client360ExecutiveModal({
         {/* Tabs Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-            <TabsList className="bg-slate-100 border border-border p-1 rounded-2xl w-full grid grid-cols-5 text-xs mb-4">
+            <TabsList className="bg-slate-100 border border-slate-200 p-1 rounded-xl w-full grid grid-cols-5 text-xs mb-4">
               <TabsTrigger
                 value="diagnostico_ia"
-                className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"
+                className="rounded-lg gap-1.5 data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> IA 360
+                <Sparkles className="w-3.5 h-3.5" /> IA 360
               </TabsTrigger>
               <TabsTrigger
                 value="produtos"
-                className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"
+                className="rounded-lg gap-1.5 data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold"
               >
-                <Layers className="w-3.5 h-3.5" /> Produtos & Cross-Sell
+                <Layers className="w-3.5 h-3.5" /> Cross-Sell
               </TabsTrigger>
               <TabsTrigger
                 value="timeline"
-                className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"
+                className="rounded-lg gap-1.5 data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold"
               >
                 <Clock className="w-3.5 h-3.5" /> Timeline
               </TabsTrigger>
               <TabsTrigger
                 value="datas"
-                className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"
+                className="rounded-lg gap-1.5 data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold"
               >
-                <Calendar className="w-3.5 h-3.5" /> Datas Importantes
+                <Calendar className="w-3.5 h-3.5" /> Datas
               </TabsTrigger>
               <TabsTrigger
                 value="contato"
-                className="rounded-xl gap-1.5 data-[state=active]:bg-sky-600 data-[state=active]:text-white"
+                className="rounded-lg gap-1.5 data-[state=active]:bg-[#003A70] data-[state=active]:text-white data-[state=active]:font-bold"
               >
                 <PhoneCall className="w-3.5 h-3.5" /> + Interação
               </TabsTrigger>
@@ -442,7 +447,6 @@ export function Client360ExecutiveModal({
                   Contatos válidos (ligação, WhatsApp, e-mail, visita presencial) renovam a
                   Cobertura Comercial da Carteira.
                 </p>
-
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold text-slate-400">
                     Canal Utilizado
@@ -450,27 +454,24 @@ export function Client360ExecutiveModal({
                   <div className="flex gap-2 flex-wrap">
                     {(['WhatsApp', 'Telefone', 'E-mail', 'Visita', 'Reunião'] as const).map(
                       (canal) => (
-                        <Button
+                        <button
                           key={canal}
                           type="button"
-                          size="sm"
-                          variant={contactChannel === canal ? 'default' : 'outline'}
                           onClick={() => setContactChannel(canal)}
-                          className={`h-8 text-xs rounded-xl ${
+                          className={`h-7 px-3 text-xs rounded-lg font-medium border transition-colors ${
                             contactChannel === canal
-                              ? 'bg-sky-600 text-white'
-                              : 'border-slate-800 text-slate-300'
+                              ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-2xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                           }`}
                         >
                           {canal}
-                        </Button>
+                        </button>
                       ),
                     )}
                   </div>
                 </div>
-
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400">
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
                     Resumo da Conversa
                   </label>
                   <textarea
@@ -478,12 +479,11 @@ export function Client360ExecutiveModal({
                     value={contactSummary}
                     onChange={(e) => setContactSummary(e.target.value)}
                     placeholder="Ex.: Alinhado envio de proposta de 25t de perfis W e confirmação de estoque..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-sky-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#003A70]"
                   />
                 </div>
-
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-400">
+                  <label className="text-[10px] uppercase font-bold text-slate-500">
                     Próxima Ação Definida
                   </label>
                   <input
@@ -491,19 +491,18 @@ export function Client360ExecutiveModal({
                     value={nextActionInput}
                     onChange={(e) => setNextActionInput(e.target.value)}
                     placeholder="Ex.: Retornar na quinta-feira após reunião de suprimentos"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-sky-500"
+                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#003A70]"
                   />
                 </div>
-
                 <Button
                   onClick={handleSaveContact}
                   disabled={isRegistering}
-                  className="w-full h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl mt-2"
+                  className="w-full h-8 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-xl mt-2 shadow-2xs"
                 >
                   {isRegistering
                     ? 'Salvando na Carteira...'
                     : 'Salvar Interação & Atualizar Cobertura'}
-                </Button>
+                </Button>{' '}
               </div>
             </TabsContent>
           </Tabs>

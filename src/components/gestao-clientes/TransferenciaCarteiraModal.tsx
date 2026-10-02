@@ -22,6 +22,7 @@ import { UserCheck, ShieldAlert, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { crmPartyService } from '@/services/crm_party_service'
 import type { CrmPartyMaster } from '@/types/crm_party'
 import { toast } from 'sonner'
+import { StatusBadge } from './shared/GestaoClientesUiKit'
 
 interface TransferenciaCarteiraModalProps {
   party: CrmPartyMaster | null
@@ -63,44 +64,49 @@ export function TransferenciaCarteiraModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl bg-slate-950 text-slate-100 border border-slate-800 rounded-3xl p-6">
-        <DialogHeader className="border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-500/30">
+      <DialogContent className="max-w-xl bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        {/* Header fixo */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20">
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <DialogTitle className="font-serif text-xl font-bold text-white tracking-tight">
+              <DialogTitle className="font-serif text-lg font-bold text-[#003A70] tracking-tight">
                 Transferência Administrativa de Carteira
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogDescription className="text-xs text-slate-500 mt-0.5">
                 O registro comercial ({party.friendly_code}) e todo o histórico permanecem intactos.
               </DialogDescription>
             </div>
           </div>
-        </DialogHeader>
+          <StatusBadge label={party.friendly_code} variant="default" />
+        </div>
 
-        <div className="space-y-4 py-2 text-xs">
-          <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-1 text-xs">
-            <span className="text-slate-400 block text-[10px] uppercase font-bold">
+        {/* Corpo rolável */}
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1">
+            <span className="text-slate-500 block text-[10px] uppercase font-bold">
               Cliente Selecionado
             </span>
-            <strong className="text-white text-sm block">{party.razao_social}</strong>
-            <span className="text-slate-400 block">
+            <strong className="text-slate-900 text-sm block font-semibold">
+              {party.razao_social}
+            </strong>
+            <span className="text-slate-600 block text-xs">
               Vendedor Atual:{' '}
-              <strong className="text-amber-400">{party.vendedor_atual_nome}</strong>
+              <strong className="text-[#003A70]">{party.vendedor_atual_nome}</strong>
             </span>
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-300 font-semibold">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-700 font-semibold">
               Novo Vendedor Responsável
             </Label>
             <Select value={newSeller} onValueChange={setNewSeller}>
-              <SelectTrigger className="h-9 bg-slate-900 border-slate-800 text-xs rounded-xl">
+              <SelectTrigger className="h-9 bg-white border-slate-200 text-xs rounded-xl focus:ring-[#003A70]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-800 text-slate-100 text-xs">
+              <SelectContent className="bg-white border-slate-200 text-slate-800 text-xs">
                 <SelectItem value="Carlos Mendonça (Minas Centro)">
                   Carlos Mendonça (Minas Centro)
                 </SelectItem>
@@ -120,8 +126,8 @@ export function TransferenciaCarteiraModal({
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs text-slate-300 font-semibold">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-700 font-semibold">
               Motivo da Transferência (Trilha de Auditoria Obrigatória) *
             </Label>
             <textarea
@@ -130,18 +136,19 @@ export function TransferenciaCarteiraModal({
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               placeholder="Descreva o motivo administrativo para a auditoria..."
-              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-hidden focus:border-sky-500"
+              className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#003A70]"
             />
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between pt-3 border-t border-slate-800">
+        {/* Footer fixo */}
+        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="h-9 text-xs border-slate-800 bg-slate-900 text-slate-300 rounded-xl"
+            className="h-8 text-xs border-slate-200 bg-white text-slate-700 rounded-xl"
           >
             Cancelar
           </Button>
@@ -150,11 +157,11 @@ export function TransferenciaCarteiraModal({
             type="button"
             size="sm"
             onClick={handleTransfer}
-            className="h-9 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5"
+            className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white font-semibold rounded-xl gap-1.5 shadow-2xs"
           >
             <CheckCircle2 className="w-4 h-4" /> Confirmar Transferência
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -205,7 +205,7 @@ export default function Layout() {
                   className={cn(
                     'px-2.5 2xl:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 shrink-0 select-none',
                     isActive
-                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      ? 'bg-[#003A70] text-white font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
                   )}
                 >
@@ -276,7 +276,7 @@ export default function Layout() {
                   className={cn(
                     'px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 shrink-0 select-none',
                     isActive
-                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      ? 'bg-[#003A70] text-white font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
                   )}
                 >
@@ -366,7 +366,7 @@ export default function Layout() {
                   className={cn(
                     'px-2 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 shrink-0 select-none',
                     isActive
-                      ? 'bg-sky-50 text-[#003A70] font-bold border border-sky-200/80 shadow-2xs'
+                      ? 'bg-[#003A70] text-white font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-[#003A70] hover:bg-slate-100/70',
                   )}
                 >
@@ -594,7 +594,7 @@ export default function Layout() {
                   className={cn(
                     'flex items-center justify-between p-3 rounded-xl text-sm font-medium transition-colors',
                     active
-                      ? 'bg-sky-100/80 text-[#003A70] border border-sky-200 font-bold'
+                      ? 'bg-[#003A70] text-white font-semibold shadow-2xs'
                       : 'text-slate-700 hover:bg-slate-100',
                   )}
                 >

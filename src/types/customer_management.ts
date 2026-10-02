@@ -117,6 +117,8 @@ export interface AIClientDiagnostic {
   scoreUrgencia: number // 1 a 100
 }
 
+export type CustomerRecord = CustomerManagementItem
+
 export interface CustomerManagementItem {
   id: string
   codigo: string // SAP Code

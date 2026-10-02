@@ -331,6 +331,8 @@ export interface CommercialCycleOpportunity {
 }
 
 // REGISTRO MESTRE CRM PARTY 360º
+export type CrmPartyRecord = CrmPartyMaster
+
 export interface CrmPartyMaster {
   id: string
   crm_party_id: string // UUID imutável
