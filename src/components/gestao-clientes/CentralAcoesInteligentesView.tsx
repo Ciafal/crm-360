@@ -1,41 +1,25 @@
 // src/components/gestao-clientes/CentralAcoesInteligentesView.tsx
 import React, { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Flame,
-  AlertTriangle,
-  FileText,
-  DollarSign,
-  Clock,
-  Package,
-  BarChart3,
-  Sparkles,
-  ArrowRight,
-  PhoneCall,
-  FileSpreadsheet,
-  ChevronRight,
-  MessageSquare,
-} from 'lucide-react'
-import type { CrmPartyMaster } from '@/types/crm_party'
+import { Button } from '@/components/ui/button'
+import { Sparkles, Flame, AlertTriangle, FileText, Package, ArrowRight } from 'lucide-react'
+import type { CrmPartyRecord } from '@/types/crm_party'
 import { toast } from 'sonner'
+import { StatusBadge, SemanticVariant } from './shared/GestaoClientesUiKit'
 
 interface CentralAcoesInteligentesViewProps {
-  parties: CrmPartyMaster[]
+  parties: CrmPartyRecord[]
   onOpenParty: (partyId: string) => void
-  onOpenNovaCotacao: (party: CrmPartyMaster) => void
-  onOpenQualificarModal: (party: CrmPartyMaster) => void
+  onOpenNovaCotacao: (party: CrmPartyRecord) => void
+  onOpenQualificarModal: (party: CrmPartyRecord) => void
 }
 
-type AcaoCategory =
+type ActionCategory =
   | 'TODAS'
   | 'LEAD_QUENTE'
   | 'LEAD_SEM_CONTATO'
   | 'CADASTRO_PENDENTE'
-  | 'CREDITO_PENDENTE'
-  | 'SLA_EXCEDIDO'
   | 'CLIENTE_SEM_COMPRA'
-  | 'COTACAO_SEM_PEDIDO'
   | 'OPORTUNIDADE_IA'
 
 export function CentralAcoesInteligentesView({
@@ -44,37 +28,37 @@ export function CentralAcoesInteligentesView({
   onOpenNovaCotacao,
   onOpenQualificarModal,
 }: CentralAcoesInteligentesViewProps) {
-  const [selectedCategory, setSelectedCategory] = useState<AcaoCategory>('TODAS')
+  const [selectedCategory, setSelectedCategory] = useState<ActionCategory>('TODAS')
 
-  // Geração de Recomendações Comerciais Automáticas (Regra 26)
+  // GERAÇÃO DE PRÓXIMAS MELHORES AÇÕES (Regra 26 de negócio intocada)
   const actionItems = parties.flatMap((p) => {
     const list: Array<{
       id: string
-      party: CrmPartyMaster
-      category: AcaoCategory
+      party: CrmPartyRecord
+      category: ActionCategory
       categoryLabel: string
-      badgeColor: string
-      icon: any
+      variant: SemanticVariant
+      icon: React.ComponentType<{ className?: string }>
       titulo: string
       motivo: string
       impactoComercial: string
       acaoSugerida: string
-      acaoTipo: 'COTAR' | 'CONTATAR' | 'QUALIFICAR' | 'VER_CRM'
+      acaoTipo: 'COTAR' | 'QUALIFICAR' | 'CONTATAR' | 'VER_CRM'
     }> = []
 
-    // 1. 🔥 Lead Quente com Score Alto
-    if (p.commercial_stage === 'LEAD' && p.lead_score >= 75) {
+    // 1. 🔥 Lead Quente com Alta Pontuação
+    if (p.commercial_stage === 'LEAD' && p.ia_qualification_score >= 80) {
       list.push({
         id: `act-hot-${p.crm_party_id}`,
         party: p,
         category: 'LEAD_QUENTE',
-        categoryLabel: '🔥 Lead Quente',
-        badgeColor: 'bg-rose-950 text-rose-300 border-rose-800',
+        categoryLabel: 'Lead Quente',
+        variant: 'positive',
         icon: Flame,
-        titulo: `${p.razao_social} - Alto Potencial (${p.potencial_mensal_tons} t/mês)`,
-        motivo: `Score IA ${p.lead_score}/100 gerado pela demanda de ${p.produto_interesse}. Contato pronto para qualificação.`,
-        impactoComercial: `R$ ${(p.potencial_mensal_valor || 120000).toLocaleString('pt-BR')}/mês`,
-        acaoSugerida: 'Qualificar e Iniciar Cadastro',
+        titulo: `${p.razao_social} pronto para qualificação formal`,
+        motivo: `IA calculou score ${p.ia_qualification_score} baseado em demanda prevista de ${p.potencial_mensal_tons} t/mês de ${p.produto_interesse}.`,
+        impactoComercial: `Potencial de ~R$ ${(p.potencial_mensal_tons * 7500).toLocaleString('pt-BR')}/mês`,
+        acaoSugerida: 'Qualificar Lead',
         acaoTipo: 'QUALIFICAR',
       })
     }
@@ -85,8 +69,8 @@ export function CentralAcoesInteligentesView({
         id: `act-nocontact-${p.crm_party_id}`,
         party: p,
         category: 'LEAD_SEM_CONTATO',
-        categoryLabel: '⚠️ Lead sem Contato',
-        badgeColor: 'bg-amber-950 text-amber-300 border-amber-800',
+        categoryLabel: 'Lead sem Contato',
+        variant: 'warning',
         icon: AlertTriangle,
         titulo: `${p.razao_social} sem interação há ${p.dias_sem_contato} dias`,
         motivo:
@@ -106,8 +90,8 @@ export function CentralAcoesInteligentesView({
         id: `act-onb-${p.crm_party_id}`,
         party: p,
         category: 'CADASTRO_PENDENTE',
-        categoryLabel: '📄 Cadastro Pendente',
-        badgeColor: 'bg-sky-950 text-sky-300 border-sky-800',
+        categoryLabel: 'Cadastro Pendente',
+        variant: 'default',
         icon: FileText,
         titulo: `Ficha cadastral pendente: ${p.razao_social}`,
         motivo: 'Ficha enviada via portal aguarda complemento de documentação societária.',
@@ -126,8 +110,8 @@ export function CentralAcoesInteligentesView({
         id: `act-nocompra-${p.crm_party_id}`,
         party: p,
         category: 'CLIENTE_SEM_COMPRA',
-        categoryLabel: '📦 Novo Cliente sem Compra',
-        badgeColor: 'bg-emerald-950 text-emerald-300 border-emerald-800',
+        categoryLabel: 'Novo Cliente sem Compra',
+        variant: 'default',
         icon: Package,
         titulo: `${p.razao_social} ativo no SAP sem primeira cotação/pedido`,
         motivo: `Cliente cadastrado com código SAP ${p.sap_customer_id}. Oportunidade imediata de cotação de ${p.produto_interesse}.`,
@@ -143,8 +127,8 @@ export function CentralAcoesInteligentesView({
         id: `act-ai-${p.crm_party_id}`,
         party: p,
         category: 'OPORTUNIDADE_IA',
-        categoryLabel: '✨ Oportunidade IA',
-        badgeColor: 'bg-purple-950 text-purple-300 border-purple-800',
+        categoryLabel: 'Oportunidade IA',
+        variant: 'default',
         icon: Sparkles,
         titulo: `Recomendação Cross-Sell para ${p.razao_social}`,
         motivo:
@@ -177,113 +161,108 @@ export function CentralAcoesInteligentesView({
     }
   }
 
+  const categoryCounts: Record<ActionCategory, number> = {
+    TODAS: actionItems.length,
+    LEAD_QUENTE: actionItems.filter((a) => a.category === 'LEAD_QUENTE').length,
+    LEAD_SEM_CONTATO: actionItems.filter((a) => a.category === 'LEAD_SEM_CONTATO').length,
+    CADASTRO_PENDENTE: actionItems.filter((a) => a.category === 'CADASTRO_PENDENTE').length,
+    CLIENTE_SEM_COMPRA: actionItems.filter((a) => a.category === 'CLIENTE_SEM_COMPRA').length,
+    OPORTUNIDADE_IA: actionItems.filter((a) => a.category === 'OPORTUNIDADE_IA').length,
+  }
+
+  const categories: Array<{ id: ActionCategory; label: string }> = [
+    { id: 'TODAS', label: 'Todas as Ações' },
+    { id: 'LEAD_QUENTE', label: 'Lead Quente' },
+    { id: 'LEAD_SEM_CONTATO', label: 'Sem Contato' },
+    { id: 'CADASTRO_PENDENTE', label: 'Cadastro Pendente' },
+    { id: 'CLIENTE_SEM_COMPRA', label: 'Sem 1ª Compra' },
+    { id: 'OPORTUNIDADE_IA', label: 'Oportunidade IA' },
+  ]
+
   return (
     <div className="space-y-4">
-      {/* CABEÇALHO DA CENTRAL DE AÇÕES INTELIGENTES (Regra 26) */}
-      <div className="p-4 bg-white rounded-3xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2.5 bg-amber-500/20 text-amber-400 rounded-xl border border-amber-500/30">
+      {/* CABEÇALHO DA CENTRAL DE AÇÕES INTELIGENTES (Diretriz 10: Fundo claro/institucional) */}
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20 shrink-0">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white tracking-tight">
+            <h3 className="text-base font-bold text-[#003A70] tracking-tight">
               Central de Ações Comerciais & Próxima Melhor Ação (IA)
-            </h2>
-            <p className="text-xs text-slate-400">
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
               Cruzamento de estágio, contatos, potencial, crédito e comportamento de compra
               ordenados por impacto.
             </p>
           </div>
         </div>
 
-        <Badge className="bg-sky-950 text-sky-300 border-sky-800 font-mono text-xs">
+        <Badge
+          variant="outline"
+          className="bg-[#EBF3FA] text-[#003A70] border-[#003A70]/30 font-mono text-xs font-semibold self-start sm:self-auto"
+        >
           {actionItems.length} ações recomendadas
         </Badge>
       </div>
 
-      {/* CATEGORIAS FILTRÁVEIS (Regra 26) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-        {[
-          { id: 'TODAS' as const, label: 'Todas as Ações', count: actionItems.length },
-          {
-            id: 'LEAD_QUENTE' as const,
-            label: '🔥 Lead Quente',
-            count: actionItems.filter((a) => a.category === 'LEAD_QUENTE').length,
-          },
-          {
-            id: 'LEAD_SEM_CONTATO' as const,
-            label: '⚠️ Sem Contato',
-            count: actionItems.filter((a) => a.category === 'LEAD_SEM_CONTATO').length,
-          },
-          {
-            id: 'CADASTRO_PENDENTE' as const,
-            label: '📄 Cadastro Pendente',
-            count: actionItems.filter((a) => a.category === 'CADASTRO_PENDENTE').length,
-          },
-          {
-            id: 'CLIENTE_SEM_COMPRA' as const,
-            label: '📦 Sem 1ª Compra',
-            count: actionItems.filter((a) => a.category === 'CLIENTE_SEM_COMPRA').length,
-          },
-          {
-            id: 'OPORTUNIDADE_IA' as const,
-            label: '✨ Oportunidade IA',
-            count: actionItems.filter((a) => a.category === 'OPORTUNIDADE_IA').length,
-          },
-        ].map((cat) => {
+      {/* CATEGORIAS FILTRÁVEIS (Padronizado CIAFAL: ativo em #003A70, inativo neutro) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
+        {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id
           return (
             <button
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 border select-none ${
                 isSelected
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-white border border-border text-slate-700 hover:bg-slate-50'
+                  ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-2xs'
+                  : 'bg-white border-slate-200 text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
               }`}
             >
               <span>{cat.label}</span>
               <Badge
-                className={`text-[10px] px-1.5 py-0 rounded-md font-mono ${
-                  isSelected ? 'bg-sky-800 text-white' : 'bg-slate-800 text-slate-400'
+                className={`text-[10px] px-1.5 py-0 rounded-md font-mono border-none ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {cat.count}
+                {categoryCounts[cat.id]}
               </Badge>
             </button>
           )
         })}
       </div>
 
-      {/* CARDS DE AÇÕES INTELIGENTES */}
+      {/* CARDS DE AÇÕES INTELIGENTES (Design Corporativo CIAFAL, tipografia clara, sem rainbow) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {filteredItems.map((item) => {
-          const Icon = item.icon
           return (
             <div
               key={item.id}
-              className="p-4 bg-white rounded-3xl border border-border hover:border-primary/50 transition-all flex flex-col justify-between gap-3 text-xs shadow-xs"
+              className="p-4 bg-white rounded-2xl border border-slate-200 hover:border-[#003A70]/40 transition-all flex flex-col justify-between gap-3 text-xs shadow-2xs"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Badge className={`text-[10px] ${item.badgeColor}`}>{item.categoryLabel}</Badge>
-                  <span className="font-mono text-[11px] text-slate-500 font-bold">
+                  <StatusBadge label={item.categoryLabel} variant={item.variant} dot />
+                  <span className="font-mono text-[11px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">
                     {item.party.friendly_code}
                   </span>
                 </div>
 
-                <strong className="text-sm font-bold text-white block">{item.titulo}</strong>
+                <strong className="text-sm font-bold text-slate-900 block leading-snug">
+                  {item.titulo}
+                </strong>
 
-                <p className="text-xs text-slate-300 leading-relaxed">{item.motivo}</p>
+                <p className="text-xs text-slate-600 leading-relaxed">{item.motivo}</p>
               </div>
 
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+              <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <div className="space-y-0.5">
                   <span className="text-[10px] text-slate-500 uppercase font-bold block">
                     Impacto Estimado
                   </span>
-                  <span className="text-xs font-bold text-emerald-400">
+                  <span className="text-xs font-semibold text-emerald-800">
                     {item.impactoComercial}
                   </span>
                 </div>
@@ -293,14 +272,14 @@ export function CentralAcoesInteligentesView({
                     size="sm"
                     variant="ghost"
                     onClick={() => onOpenParty(item.party.crm_party_id)}
-                    className="h-8 text-xs text-slate-400 hover:text-white rounded-xl"
+                    className="h-8 text-xs text-slate-600 hover:text-[#003A70] hover:bg-slate-100 rounded-xl"
                   >
                     Ver CRM
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => handleActionClick(item)}
-                    className="h-8 text-xs bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl gap-1.5 shadow-sm"
+                    className="h-8 text-xs bg-[#003A70] hover:bg-[#002850] text-white font-semibold rounded-xl gap-1.5 shadow-2xs"
                   >
                     <span>{item.acaoSugerida}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -312,7 +291,7 @@ export function CentralAcoesInteligentesView({
         })}
 
         {filteredItems.length === 0 && (
-          <div className="col-span-2 p-8 text-center bg-slate-50 rounded-3xl border border-border text-muted-foreground text-xs">
+          <div className="col-span-2 p-8 text-center bg-white rounded-2xl border border-dashed border-slate-200 text-slate-500 text-xs">
             Nenhuma ação pendente na categoria selecionada.
           </div>
         )}

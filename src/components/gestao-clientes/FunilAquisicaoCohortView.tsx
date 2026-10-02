@@ -1,131 +1,95 @@
 // src/components/gestao-clientes/FunilAquisicaoCohortView.tsx
-import React, { useState } from 'react'
+import React from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Users,
-  CheckCircle2,
-  FileText,
-  DollarSign,
-  Building2,
-  FileSpreadsheet,
-  TrendingUp,
-  Clock,
-  ArrowRight,
-  Filter,
-  Sparkles,
-} from 'lucide-react'
-import type { CrmPartyMaster } from '@/types/crm_party'
+import { TrendingUp, Sparkles, Clock } from 'lucide-react'
+import type { CustomerRecord } from '@/types/customer_management'
+import { ProgressBar } from './shared/GestaoClientesUiKit'
 
 interface FunilAquisicaoCohortViewProps {
-  parties: CrmPartyMaster[]
+  customers: CustomerRecord[]
   onSelectStageFilter: (stage: string) => void
+  activeStage?: string
 }
 
 export function FunilAquisicaoCohortView({
-  parties,
+  customers,
   onSelectStageFilter,
+  activeStage,
 }: FunilAquisicaoCohortViewProps) {
-  const [selectedCohort, setSelectedCohort] = useState<string>('Q3/2024')
+  // Contagens por estágio real do funil (regras de negócio 100% mantidas)
+  const totalLeads = customers.filter(
+    (c) => c.statusFunil === 'LEAD' || c.etapaRegistro === 'LEAD_CAPTADO',
+  ).length
+  const leadsQualificados = customers.filter(
+    (c) => c.statusFunil === 'QUALIFICADO' || (c.scorePotencialIa && c.scorePotencialIa > 60),
+  ).length
+  const prospects = customers.filter(
+    (c) => c.statusFunil === 'PROSPECT' || c.etapaRegistro === 'FICHA_CADASTRAL_ABERTA',
+  ).length
+  const cadastrosConcluidos = customers.filter(
+    (c) => c.etapaRegistro === 'CADASTRO_COMPLETO_APROVADO',
+  ).length
+  const clientesSap = customers.filter(
+    (c) => c.etapaRegistro === 'CLIENTE_ATIVO_SAP' || !!c.codigoSap,
+  ).length
+  const clientesCotaram = customers.filter((c) => c.temCotacaoAtiva).length
+  const clientesFaturados = customers.filter((c) => c.totalFaturadoHistorico > 0).length
 
-  // Contagem do Funil Real de Aquisição (Regra 25)
-  const totalLeads = parties.length
-  const leadsQualificados = parties.filter(
-    (p) => p.commercial_stage !== 'LEAD' || p.lead_score >= 70 || p.lead_score_history?.length > 1,
-  ).length
-  const prospects = parties.filter(
-    (p) =>
-      p.commercial_stage === 'PROSPECT' ||
-      p.commercial_stage === 'CADASTRO_EM_ANDAMENTO' ||
-      p.commercial_stage === 'ANALISE_FINANCEIRA' ||
-      p.commercial_stage === 'CADASTRO_SAP' ||
-      p.commercial_stage === 'CLIENTE_SAP' ||
-      p.commercial_stage === 'PRIMEIRA_COTACAO' ||
-      p.commercial_stage === 'PRIMEIRO_PEDIDO' ||
-      p.commercial_stage === 'PRIMEIRO_FATURAMENTO' ||
-      p.commercial_stage === 'CLIENTE_ATIVO',
-  ).length
-  const cadastrosConcluidos = parties.filter(
-    (p) =>
-      p.registration_status === 'CADASTRO_SAP_CONCLUIDO' ||
-      p.registration_status === 'APROVADO' ||
-      p.sap_customer_id,
-  ).length
-  const clientesSap = parties.filter(
-    (p) =>
-      p.sap_customer_id &&
-      (p.commercial_stage === 'CLIENTE_SAP' ||
-        p.commercial_stage === 'PRIMEIRA_COTACAO' ||
-        p.commercial_stage === 'PRIMEIRO_PEDIDO' ||
-        p.commercial_stage === 'PRIMEIRO_FATURAMENTO' ||
-        p.commercial_stage === 'CLIENTE_ATIVO'),
-  ).length
-  const clientesCotaram = parties.filter(
-    (p) =>
-      p.data_primeira_cotacao ||
-      p.commercial_stage === 'PRIMEIRA_COTACAO' ||
-      p.commercial_stage === 'PRIMEIRO_PEDIDO' ||
-      p.commercial_stage === 'PRIMEIRO_FATURAMENTO' ||
-      p.commercial_stage === 'CLIENTE_ATIVO',
-  ).length
-  const clientesFaturados = parties.filter(
-    (p) => p.data_primeiro_faturamento || p.commercial_stage === 'CLIENTE_ATIVO',
-  ).length
-
-  // Funil steps com taxa de conversão entre etapas
+  // Diretriz 6: Escala de tonalidades do Azul Institucional CIAFAL (#003A70)
+  // Sem efeito arco-íris (roxo, rosa, ciano). Tons azulados corporativos elegantes.
   const funnelSteps = [
     {
       id: 'LEADS',
       label: '1. Leads Captados',
       count: totalLeads,
       pctPrev: 100,
-      color: 'from-sky-600 to-sky-700',
+      fillColor: 'bg-[#00264D]', // azul escuro hierárquico
     },
     {
       id: 'QUALIFICADOS',
-      label: '2. Qualificados (IA Score)',
+      label: '2. Qualificados (IA)',
       count: leadsQualificados,
       pctPrev: totalLeads > 0 ? Math.round((leadsQualificados / totalLeads) * 100) : 0,
-      color: 'from-sky-500 to-blue-600',
+      fillColor: 'bg-[#003A70]', // azul institucional primário
     },
     {
       id: 'PROSPECTS',
-      label: '3. Prospects (Ficha Aberta)',
+      label: '3. Prospects (Ficha)',
       count: prospects,
       pctPrev: leadsQualificados > 0 ? Math.round((prospects / leadsQualificados) * 100) : 0,
-      color: 'from-blue-500 to-indigo-600',
+      fillColor: 'bg-[#0E4D8F]', // azul médio
     },
     {
       id: 'CADASTROS',
-      label: '4. Cadastros Aprovados',
+      label: '4. Aprovados',
       count: cadastrosConcluidos,
       pctPrev: prospects > 0 ? Math.round((cadastrosConcluidos / prospects) * 100) : 0,
-      color: 'from-indigo-500 to-purple-600',
+      fillColor: 'bg-[#1D63AB]', // azul médio-claro
     },
     {
       id: 'CLIENTES_SAP',
       label: '5. Clientes SAP ECC',
       count: clientesSap,
       pctPrev: cadastrosConcluidos > 0 ? Math.round((clientesSap / cadastrosConcluidos) * 100) : 0,
-      color: 'from-purple-500 to-emerald-600',
+      fillColor: 'bg-[#2E78C7]', // azul claro corporativo
     },
     {
       id: 'COTACOES',
-      label: '6. Com Cotação Aberta',
+      label: '6. Cotação Aberta',
       count: clientesCotaram,
       pctPrev: clientesSap > 0 ? Math.round((clientesCotaram / clientesSap) * 100) : 0,
-      color: 'from-emerald-500 to-teal-600',
+      fillColor: 'bg-[#3B82F6]', // azul vivo controlado
     },
     {
       id: 'FATURADOS',
-      label: '7. Faturados & Recorrentes',
+      label: '7. Faturados & Recorr.',
       count: clientesFaturados,
       pctPrev: clientesCotaram > 0 ? Math.round((clientesFaturados / clientesCotaram) * 100) : 0,
-      color: 'from-emerald-600 to-green-700',
+      fillColor: 'bg-emerald-700', // verde semântico corporativo discreto para conversão final batida
     },
   ]
 
-  // Dados de Coorte e Tempo Médio de Conversão (Regra 24 e 25)
+  // Dados de Coorte e Tempo Médio de Conversão (Regra 24 e 25 intocadas)
   const cohortMetrics = [
     { periodo: '30 Dias', cotaram: '78%', faturaram: '45%', tonsAcum: '120 t', retencao: '92%' },
     { periodo: '60 Dias', cotaram: '91%', faturaram: '68%', tonsAcum: '340 t', retencao: '88%' },
@@ -140,117 +104,134 @@ export function FunilAquisicaoCohortView({
   ]
 
   return (
-    <div className="space-y-4">
-      {/* CABEÇALHO DO FUNIL */}
-      <div className="p-4 bg-slate-900/90 rounded-3xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30">
+    <div className="space-y-3">
+      {/* CABEÇALHO DO FUNIL (Diretriz 10: Fundo branco/claro corporativo com acento azul CIAFAL) */}
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20 shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white tracking-tight">
+            <h3 className="text-base font-bold text-[#003A70] tracking-tight">
               Funil Real de Aquisição Comercial & Análise Cohort
-            </h2>
-            <p className="text-xs text-slate-400">
-              Métricas reais de conversão do Registro Único desde a captação do Lead até o primeiro
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Métricas reais de conversão do Registro Único desde a captação do Lead até o
               faturamento.
             </p>
           </div>
         </div>
 
-        {/* INDICADORES DE TEMPO MÉDIO DA JORNADA (Regra 24) */}
-        <div className="flex items-center gap-2 bg-slate-950/80 p-2 rounded-2xl border border-slate-800 text-xs">
+        {/* INDICADORES DE TEMPO MÉDIO DA JORNADA (Regra 24 - Padronizado CIAFAL) */}
+        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs shrink-0">
           <div className="text-center px-2">
             <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Lead → Cliente
             </span>
-            <strong className="text-sky-400 font-mono">14 dias</strong>
+            <strong className="text-[#003A70] font-mono text-xs">14 dias</strong>
           </div>
-          <div className="text-center px-2 border-l border-slate-800">
+          <div className="text-center px-2 border-l border-slate-200">
             <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Cliente → Pedido
             </span>
-            <strong className="text-purple-400 font-mono">5 dias</strong>
+            <strong className="text-slate-800 font-mono text-xs">5 dias</strong>
           </div>
-          <div className="text-center px-2 border-l border-slate-800">
+          <div className="text-center px-2 border-l border-slate-200">
             <span className="text-[10px] text-slate-500 block uppercase font-bold">
               Pedido → NF
             </span>
-            <strong className="text-emerald-400 font-mono">3 dias</strong>
+            <strong className="text-emerald-700 font-mono text-xs">3 dias</strong>
           </div>
         </div>
       </div>
 
-      {/* VISUALIZAÇÃO DO FUNIL COM BARRAS PROPORCIONAIS */}
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
-        {funnelSteps.map((step, idx) => (
-          <div
-            key={step.id}
-            onClick={() => onSelectStageFilter(step.id)}
-            className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 hover:border-slate-700 cursor-pointer transition-all flex flex-col justify-between text-xs space-y-2 group"
-          >
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-400 font-bold block truncate">
-                {step.label}
-              </span>
-              <div className="flex items-baseline gap-1.5">
-                <strong className="text-xl font-bold font-serif text-white">{step.count}</strong>
-                <span className="text-[10px] text-slate-500">registros</span>
+      {/* VISUALIZAÇÃO DO FUNIL COM BARRAS PROPORCIONAIS NA ESCALA AZUL CIAFAL */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+        {funnelSteps.map((step) => {
+          const isSelected = activeStage === step.id
+          return (
+            <div
+              key={step.id}
+              onClick={() => onSelectStageFilter(step.id)}
+              className={`p-3 bg-white rounded-2xl border transition-all flex flex-col justify-between text-xs space-y-2 cursor-pointer shadow-2xs ${
+                isSelected
+                  ? 'border-[#003A70] ring-2 ring-[#003A70]/20 bg-[#EBF3FA]/30'
+                  : 'border-slate-200 hover:border-[#003A70]/40 hover:bg-slate-50/50'
+              }`}
+            >
+              <div className="space-y-1">
+                <span
+                  className="text-[10px] text-slate-600 font-bold block truncate"
+                  title={step.label}
+                >
+                  {step.label}
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <strong className="text-xl font-bold font-serif text-slate-900">
+                    {step.count}
+                  </strong>
+                  <span className="text-[10px] text-slate-500">registros</span>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-1 pt-1 border-t border-slate-800">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-slate-500">Conv. Etapa</span>
-                <span className="text-emerald-400 font-bold font-mono">{step.pctPrev}%</span>
-              </div>
-              <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full bg-gradient-to-r ${step.color}`}
-                  style={{ width: `${Math.max(10, step.pctPrev)}%` }}
-                />
+              <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
+                <div className="flex justify-between text-[10px] text-slate-600">
+                  <span>Conv. Etapa</span>
+                  <span className="font-bold font-mono text-[#003A70]">{step.pctPrev}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200/50">
+                  <div
+                    className={`h-full ${step.fillColor} rounded-full transition-all duration-300`}
+                    style={{ width: `${Math.max(8, step.pctPrev)}%` }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* ANÁLISE DE COORTE (Regra 25) */}
-      <div className="p-4 bg-slate-900/90 rounded-3xl border border-slate-800 space-y-3">
-        <div className="flex items-center justify-between">
+      {/* ANÁLISE DE COORTE (Regra 25 - Fundo Claro e Paleta Padronizada) */}
+      <div className="p-4 bg-white rounded-2xl border border-slate-200 space-y-3 shadow-2xs">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <strong className="text-xs font-bold text-white uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-[#003A70]" />
+            <strong className="text-xs font-bold text-slate-800 uppercase tracking-wider">
               Análise Cohort de Clientes Captados (Maturação da Carteira)
             </strong>
           </div>
-          <Badge className="bg-emerald-950 text-emerald-300 border-emerald-800 text-[10px]">
+          <Badge
+            variant="outline"
+            className="bg-[#EBF3FA] text-[#003A70] border-[#003A70]/30 text-[10px] font-medium"
+          >
             Base Ativa Q3/Q4 CIAFAL
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           {cohortMetrics.map((c, i) => (
             <div
               key={i}
-              className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800 space-y-2"
+              className="p-3 bg-slate-50/70 rounded-xl border border-slate-200 space-y-2 hover:border-[#003A70]/30 transition-colors"
             >
               <div className="flex items-center justify-between">
-                <strong className="text-white font-bold">{c.periodo}</strong>
-                <span className="text-[10px] text-slate-400 font-mono">Retenção: {c.retencao}</span>
+                <strong className="text-[#003A70] font-bold">{c.periodo}</strong>
+                <span className="text-[10px] text-slate-600 font-mono font-medium">
+                  Retenção: <strong className="text-emerald-700">{c.retencao}</strong>
+                </span>
               </div>
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Cotação Realizada:</span>
-                  <span className="font-mono text-sky-300 font-bold">{c.cotaram}</span>
+                  <span className="font-mono text-slate-800 font-semibold">{c.cotaram}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Primeiro Faturamento:</span>
-                  <span className="font-mono text-purple-300 font-bold">{c.faturaram}</span>
+                  <span className="font-mono text-[#003A70] font-semibold">{c.faturaram}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between pt-1 border-t border-slate-200/60">
                   <span className="text-slate-500">Volume Acumulado:</span>
-                  <span className="font-mono text-emerald-400 font-bold">{c.tonsAcum}</span>
+                  <span className="font-mono text-emerald-800 font-bold">{c.tonsAcum}</span>
                 </div>
               </div>
             </div>

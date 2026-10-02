@@ -11,46 +11,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Search,
-  Filter,
-  ArrowUpDown,
-  Building2,
-  PhoneCall,
-  MessageSquare,
-  Sparkles,
-  Layers,
-  ChevronRight,
-  FileSpreadsheet,
-  AlertTriangle,
-  Clock,
-  ShieldCheck,
-} from 'lucide-react'
-import type {
-  CustomerManagementItem,
-  CustomerStatusKey,
-  ClassificationType,
-} from '@/types/customer_management'
+import { Search, FileSpreadsheet, ShieldCheck, AlertTriangle, ChevronRight } from 'lucide-react'
+import type { CustomerRecord } from '@/types/customer_management'
 import { exportToCsv } from '@/lib/utils'
 import { toast } from 'sonner'
+import { StatusBadge, SemanticVariant } from './shared/GestaoClientesUiKit'
 
 interface ClientManagementTableProps {
-  clientes: CustomerManagementItem[]
-  onSelectClient: (cliente: CustomerManagementItem) => void
-  onQuickContact?: (cliente: CustomerManagementItem) => void
-  userRole?: string
+  clientes: CustomerRecord[]
+  onSelectClient: (cliente: CustomerRecord) => void
+  initialFilter?: string
 }
 
 export function ClientManagementTable({
   clientes,
   onSelectClient,
-  onQuickContact,
-  userRole = 'gestor',
+  initialFilter = 'todos',
 }: ClientManagementTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('todos')
-  const [classFilter, setClassFilter] = useState<string>('todos')
-  const [coverageFilter, setCoverageFilter] = useState<string>('todos')
+  const [statusFilter, setStatusFilter] = useState('todos')
+  const [classFilter, setClassFilter] = useState('todos')
+  const [coverageFilter, setCoverageFilter] = useState(initialFilter)
   const [sortBy, setSortBy] = useState<'cobertura' | 'faturamento' | 'isc' | 'diasContato'>(
     'cobertura',
   )
@@ -58,24 +39,32 @@ export function ClientManagementTable({
   const filteredData = useMemo(() => {
     return clientes
       .filter((c) => {
-        if (statusFilter !== 'todos' && !c.status.includes(statusFilter as CustomerStatusKey)) {
-          return false
-        }
-        if (classFilter !== 'todos' && c.classificacao !== classFilter) {
-          return false
-        }
-        if (coverageFilter === 'cobertos' && !c.coberto) return false
+        // Filtro de Cobertura
         if (coverageFilter === 'descobertos' && c.coberto) return false
-        if (coverageFilter === 'vencidos' && c.coberturaVencidaDias === 0) return false
+        if (coverageFilter === 'cobertos' && !c.coberto) return false
+        if (coverageFilter === 'vencidos' && c.coberturaVencidaDias <= 0) return false
+        if (coverageFilter === 'estrategicos' && c.classificacao !== 'ESTRATEGICO') return false
+        if (coverageFilter === 'clientes_a' && c.classificacao !== 'CLIENTE_A') return false
+        if (coverageFilter === 'em_risco' && c.classificacao !== 'EM_RISCO') return false
+        if (coverageFilter === 'prospects' && c.classificacao !== 'PROSPECT') return false
 
-        if (searchTerm.trim()) {
-          const q = searchTerm.toLowerCase()
-          const matchCode = c.codigo.toLowerCase().includes(q)
-          const matchName = c.razaoSocial.toLowerCase().includes(q)
-          const matchFant = c.nomeFantasia.toLowerCase().includes(q)
-          const matchCity = c.cidade.toLowerCase().includes(q)
-          const matchVend = c.vendedorNome.toLowerCase().includes(q)
-          if (!matchCode && !matchName && !matchFant && !matchCity && !matchVend) return false
+        // Filtro de Status
+        if (statusFilter !== 'todos' && !c.status.includes(statusFilter as any)) return false
+
+        // Filtro de Classificação
+        if (classFilter !== 'todos' && c.classificacao !== classFilter) return false
+
+        // Busca textual
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase()
+          const matchCodigo = c.codigo.toLowerCase().includes(term)
+          const matchRazao = c.razaoSocial.toLowerCase().includes(term)
+          const matchFantasia = c.nomeFantasia.toLowerCase().includes(term)
+          const matchCidade = c.cidade.toLowerCase().includes(term)
+          const matchVendedor = c.vendedorNome.toLowerCase().includes(term)
+          if (!matchCodigo && !matchRazao && !matchFantasia && !matchCidade && !matchVendedor) {
+            return false
+          }
         }
 
         return true
@@ -120,26 +109,26 @@ export function ClientManagementTable({
   }
 
   return (
-    <Card className="p-5 rounded-3xl bg-white border border-border space-y-4 shadow-sm text-slate-900">
-      {/* 1. BARRA DE FILTROS E BUSCA */}
+    <Card className="p-4 rounded-2xl bg-white border border-slate-200 space-y-4 shadow-2xs text-slate-900">
+      {/* 1. BARRA DE FILTROS E BUSCA (Design Limpo e Responsivo) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <Input
             placeholder="Buscar por código, cliente, fantasia, cidade ou vendedor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9 bg-white border-border text-xs text-foreground placeholder:text-muted-foreground rounded-xl"
+            className="pl-9 h-9 bg-white border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 rounded-xl focus-visible:ring-[#003A70]"
           />
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Filtro Status */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-slate-200 text-slate-700 rounded-xl">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border text-slate-900 text-xs">
+            <SelectContent className="bg-white border-slate-200 text-slate-900 text-xs">
               <SelectItem value="todos">Status (Todos)</SelectItem>
               <SelectItem value="Ativo">Ativos</SelectItem>
               <SelectItem value="Pedido em Carteira">Pedido em Carteira</SelectItem>
@@ -155,10 +144,10 @@ export function ClientManagementTable({
 
           {/* Filtro Classificação */}
           <Select value={classFilter} onValueChange={setClassFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-slate-200 text-slate-700 rounded-xl">
               <SelectValue placeholder="Classificação" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border text-slate-900 text-xs">
+            <SelectContent className="bg-white border-slate-200 text-slate-900 text-xs">
               <SelectItem value="todos">Classificação (Todas)</SelectItem>
               <SelectItem value="ESTRATEGICO">Estratégicos</SelectItem>
               <SelectItem value="CLIENTE_A">Clientes A</SelectItem>
@@ -171,10 +160,10 @@ export function ClientManagementTable({
 
           {/* Filtro Cobertura */}
           <Select value={coverageFilter} onValueChange={setCoverageFilter}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-slate-200 text-slate-700 rounded-xl">
               <SelectValue placeholder="Cobertura" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border text-slate-900 text-xs">
+            <SelectContent className="bg-white border-slate-200 text-slate-900 text-xs">
               <SelectItem value="todos">Cobertura (Todas)</SelectItem>
               <SelectItem value="cobertos">Cobertos</SelectItem>
               <SelectItem value="descobertos">Sem Cobertura</SelectItem>
@@ -184,10 +173,10 @@ export function ClientManagementTable({
 
           {/* Ordenação */}
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-            <SelectTrigger className="h-9 w-36 text-xs bg-white border-border text-slate-700 rounded-xl">
+            <SelectTrigger className="h-9 w-36 text-xs bg-white border-slate-200 text-slate-700 rounded-xl">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-border text-slate-900 text-xs">
+            <SelectContent className="bg-white border-slate-200 text-slate-900 text-xs">
               <SelectItem value="cobertura">Mais Vencidos</SelectItem>
               <SelectItem value="faturamento">Maior Faturamento</SelectItem>
               <SelectItem value="isc">Menor ISC (Risco)</SelectItem>
@@ -199,17 +188,18 @@ export function ClientManagementTable({
             variant="outline"
             size="sm"
             onClick={handleExport}
-            className="h-9 text-xs bg-white border-border text-slate-700 hover:text-slate-900 rounded-xl gap-1.5"
+            className="h-9 text-xs bg-white border-slate-200 text-slate-700 hover:text-[#003A70] hover:bg-slate-50 rounded-xl gap-1.5 font-medium"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" /> Exportar
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Exportar</span>
           </Button>
         </div>
       </div>
 
-      {/* 2. TABELA COMPLETA EXECUTIVA (Regra 9) */}
-      <div className="overflow-x-auto border border-border rounded-2xl">
+      {/* 2. TABELA COMPLETA EXECUTIVA (Diretriz 9: Nítida, Alto Contraste, Sem Cores Circenses) */}
+      <div className="overflow-x-auto border border-slate-200 rounded-2xl">
         <table className="w-full text-left text-xs text-slate-700">
-          <thead className="bg-slate-50 text-slate-600 font-mono text-[10px] uppercase border-b border-border">
+          <thead className="bg-slate-50 text-slate-600 font-mono text-[10px] uppercase border-b border-slate-200">
             <tr>
               <th className="p-3">Código</th>
               <th className="p-3">Cliente / Fantasia</th>
@@ -226,136 +216,139 @@ export function ClientManagementTable({
               <th className="p-3 text-right">Ação</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/60">
-            {filteredData.map((cliente) => (
-              <tr
-                key={cliente.id}
-                className="hover:bg-slate-50 transition-colors cursor-pointer"
-                onClick={() => onSelectClient(cliente)}
-              >
-                <td className="p-3 font-mono font-bold text-primary">{cliente.codigo}</td>
+          <tbody className="divide-y divide-slate-100">
+            {filteredData.map((cliente) => {
+              const classVariant: SemanticVariant =
+                cliente.classificacao === 'ESTRATEGICO'
+                  ? 'default' // azul CIAFAL (Diretriz 3: sem roxo decorativo)
+                  : cliente.classificacao === 'CLIENTE_A'
+                    ? 'positive'
+                    : cliente.classificacao === 'EM_RISCO'
+                      ? 'warning' // âmbar corporativo
+                      : 'neutral'
 
-                <td className="p-3">
-                  <div className="font-bold text-slate-900 leading-tight">
-                    {cliente.nomeFantasia}
-                  </div>
-                  <span className="text-[10px] text-muted-foreground block truncate max-w-[180px]">
-                    {cliente.razaoSocial}
-                  </span>
-                </td>
+              return (
+                <tr
+                  key={cliente.id}
+                  className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                  onClick={() => onSelectClient(cliente)}
+                >
+                  <td className="p-3 font-mono font-bold text-[#003A70]">{cliente.codigo}</td>
 
-                <td className="p-3">
-                  <span>{cliente.cidade}</span>
-                  <span className="text-muted-foreground block text-[10px]">
-                    {cliente.uf} ({cliente.regiao})
-                  </span>
-                </td>
+                  <td className="p-3">
+                    <div className="font-bold text-slate-900 leading-tight">
+                      {cliente.nomeFantasia}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block truncate max-w-[180px]">
+                      {cliente.razaoSocial}
+                    </span>
+                  </td>
 
-                <td className="p-3 font-medium text-slate-800">{cliente.vendedorNome}</td>
+                  <td className="p-3">
+                    <span className="text-slate-800">{cliente.cidade}</span>
+                    <span className="text-slate-500 block text-[10px]">
+                      {cliente.uf} ({cliente.regiao})
+                    </span>
+                  </td>
 
-                <td className="p-3 text-center">
-                  <Badge
-                    variant="outline"
-                    className={`text-[9px] font-mono ${
-                      cliente.classificacao === 'ESTRATEGICO'
-                        ? 'border-purple-500 text-purple-300 bg-purple-950/40'
-                        : cliente.classificacao === 'CLIENTE_A'
-                          ? 'border-emerald-500 text-emerald-300 bg-emerald-950/40'
-                          : cliente.classificacao === 'EM_RISCO'
-                            ? 'border-rose-500 text-rose-300 bg-rose-950/40'
-                            : 'border-slate-600 text-slate-300'
-                    }`}
-                  >
-                    {cliente.classificacao.replace('_', ' ')}
-                  </Badge>
-                </td>
+                  <td className="p-3 font-medium text-slate-800">{cliente.vendedorNome}</td>
 
-                <td className="p-3 text-center">
-                  <div className="flex flex-wrap gap-1 justify-center max-w-[120px]">
-                    {cliente.status.slice(0, 2).map((st, i) => (
-                      <span
-                        key={i}
-                        className="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 whitespace-nowrap"
-                      >
-                        {st}
+                  <td className="p-3 text-center">
+                    <StatusBadge
+                      label={cliente.classificacao.replace('_', ' ')}
+                      variant={classVariant}
+                    />
+                  </td>
+
+                  <td className="p-3 text-center">
+                    <div className="flex flex-wrap gap-1 justify-center max-w-[120px]">
+                      {cliente.status.slice(0, 2).map((st, i) => (
+                        <span
+                          key={i}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/60 whitespace-nowrap"
+                        >
+                          {st}
+                        </span>
+                      ))}
+                      {cliente.status.length > 2 && (
+                        <span className="text-[9px] text-slate-500">
+                          +{cliente.status.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  <td className="p-3 text-center">
+                    <span className="font-mono text-slate-800 block text-[11px] font-medium">
+                      {cliente.ultimoContatoData || 'Sem registro'}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {cliente.diasSemContato}d atrás · {cliente.ultimoContatoCanal}
+                    </span>
+                  </td>
+
+                  {/* Cobertura (Diretriz 2: Sem Cobertura em vermelho discreto, não estridente) */}
+                  <td className="p-3 text-center">
+                    {cliente.coberto ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <ShieldCheck className="w-3 h-3 text-emerald-700" /> Coberto
                       </span>
-                    ))}
-                    {cliente.status.length > 2 && (
-                      <span className="text-[9px] text-slate-500">
-                        +{cliente.status.length - 2}
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-800 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                        <AlertTriangle className="w-3 h-3 text-red-700" /> Vencida{' '}
+                        {cliente.coberturaVencidaDias}d
                       </span>
                     )}
-                  </div>
-                </td>
+                  </td>
 
-                <td className="p-3 text-center">
-                  <span className="font-mono text-slate-200 block text-[11px]">
-                    {cliente.ultimoContatoData || 'Sem registro'}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    {cliente.diasSemContato}d atrás · {cliente.ultimoContatoCanal}
-                  </span>
-                </td>
-
-                <td className="p-3 text-center">
-                  {cliente.coberto ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-800/60">
-                      <ShieldCheck className="w-3 h-3" /> Coberto
+                  <td className="p-3 text-center">
+                    <span className="font-mono text-slate-800 block text-[11px]">
+                      {cliente.ultimaCompraData || 'Sem compra'}
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-400 bg-rose-950/50 px-2 py-0.5 rounded-full border border-rose-800/60">
-                      <AlertTriangle className="w-3 h-3" /> Vencida {cliente.coberturaVencidaDias}d
+                    <span className="text-[10px] text-slate-500">
+                      {cliente.diasSemCompra < 999 ? `${cliente.diasSemCompra}d atrás` : '-'}
                     </span>
-                  )}
-                </td>
+                  </td>
 
-                <td className="p-3 text-center">
-                  <span className="font-mono text-slate-200 block text-[11px]">
-                    {cliente.ultimaCompraData || 'Sem compra'}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    {cliente.diasSemCompra < 999 ? `${cliente.diasSemCompra}d atrás` : '-'}
-                  </span>
-                </td>
+                  <td className="p-3 text-center">
+                    <strong
+                      className={`font-mono text-[11px] ${
+                        cliente.isc >= 75 ? 'text-[#003A70]' : 'text-amber-800'
+                      }`}
+                    >
+                      {cliente.isc}
+                    </strong>
+                  </td>
 
-                <td className="p-3 text-center">
-                  <strong
-                    className={`font-mono text-[11px] ${
-                      cliente.isc >= 75 ? 'text-sky-400' : 'text-amber-400'
-                    }`}
-                  >
-                    {cliente.isc}
-                  </strong>
-                </td>
+                  <td className="p-3 text-center">
+                    <strong
+                      className={`font-mono text-[11px] ${
+                        cliente.otif >= 90 ? 'text-emerald-800' : 'text-amber-800'
+                      }`}
+                    >
+                      {cliente.otif}%
+                    </strong>
+                  </td>
 
-                <td className="p-3 text-center">
-                  <strong
-                    className={`font-mono text-[11px] ${
-                      cliente.otif >= 90 ? 'text-emerald-400' : 'text-orange-400'
-                    }`}
-                  >
-                    {cliente.otif}%
-                  </strong>
-                </td>
+                  <td className="p-3 max-w-[200px]">
+                    <p className="text-[11px] text-slate-600 truncate" title={cliente.proximaAcao}>
+                      {cliente.proximaAcao}
+                    </p>
+                  </td>
 
-                <td className="p-3 max-w-[200px]">
-                  <p className="text-[11px] text-slate-300 truncate" title={cliente.proximaAcao}>
-                    {cliente.proximaAcao}
-                  </p>
-                </td>
-
-                <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onSelectClient(cliente)}
-                    className="h-7 text-xs text-sky-400 hover:text-white p-1"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
+                  <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onSelectClient(cliente)}
+                      className="h-7 text-xs text-[#003A70] hover:bg-[#EBF3FA] p-1 rounded-lg"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </td>
+                </tr>
+              )
+            })}
 
             {filteredData.length === 0 && (
               <tr>

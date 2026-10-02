@@ -6,10 +6,22 @@
 
 @layer base {
   :root {
-    /* Tokens Globais CIAFAL Design System */
+    /* Tokens Globais CIAFAL Design System (Diretriz 1) */
     --ciafal-primary: #003a70;
     --ciafal-primary-hover: #002850;
+    --ciafal-primary-dark: #00264d;
     --ciafal-primary-light: #ebf3fa;
+    --ciafal-surface: #ffffff;
+    --ciafal-background: #f8fafc;
+    --ciafal-border: #e2e8f0;
+    --ciafal-text-primary: #0f172a;
+    --ciafal-text-secondary: #64748b;
+    --ciafal-success: #15803d;
+    --ciafal-success-light: #f0fdf4;
+    --ciafal-warning: #b45309;
+    --ciafal-warning-light: #fffbeb;
+    --ciafal-danger: #b91c1c;
+    --ciafal-danger-light: #fef2f2;
     --ciafal-navy: #0a2647;
     --ciafal-gray-surface: #f8fafc;
     --ciafal-gray-border: #e2e8f0;

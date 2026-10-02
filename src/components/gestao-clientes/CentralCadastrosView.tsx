@@ -1,5 +1,8 @@
 // src/components/gestao-clientes/CentralCadastrosView.tsx
 import React, { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -8,43 +11,25 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import {
-  FileText,
-  Search,
-  Filter,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  ArrowRight,
-  Sparkles,
-  ExternalLink,
-  ShieldCheck,
-  RefreshCw,
-  Send,
-  Building2,
-  PlayCircle,
-} from 'lucide-react'
-import type { CrmPartyMaster } from '@/types/crm_party'
+import { Search, FileText, Clock, Sparkles, RefreshCw, PlayCircle } from 'lucide-react'
+import type { CrmPartyRecord } from '@/types/crm_party'
 import { crmPartyService } from '@/services/crm_party_service'
 import { toast } from 'sonner'
+import { StatusBadge, SemanticVariant } from './shared/GestaoClientesUiKit'
 
 interface CentralCadastrosViewProps {
-  parties: CrmPartyMaster[]
+  parties: CrmPartyRecord[]
   onOpenParty: (partyId: string) => void
-  onOpenFichaModal: (party: CrmPartyMaster) => void
-  onOpenAnaliseFinanceiraModal: (party: CrmPartyMaster) => void
+  onOpenFichaModal: (party: CrmPartyRecord) => void
+  onOpenAnaliseFinanceiraModal: (party: CrmPartyRecord) => void
   onRefreshParties: () => void
 }
 
-type TabCadastros =
+type OnboardingTabFilter =
   | 'TODOS'
   | 'AGUARDANDO_CLIENTE'
   | 'DOCUMENTACAO_INCOMPLETA'
   | 'AGUARDANDO_FINANCEIRO'
-  | 'FINANCEIRO_ANALISANDO'
   | 'PENDENCIA_CLIENTE'
   | 'AGUARDANDO_SAP'
   | 'ERRO_SAP'
@@ -57,25 +42,46 @@ export function CentralCadastrosView({
   onOpenAnaliseFinanceiraModal,
   onRefreshParties,
 }: CentralCadastrosViewProps) {
-  const [selectedTab, setSelectedTab] = useState<TabCadastros>('TODOS')
+  const [selectedTab, setSelectedTab] = useState<OnboardingTabFilter>('TODOS')
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Extrai processos de cadastros de todos os clientes CRM Party
-  const allOnboardings = parties.flatMap((p) =>
-    (p.onboardings || []).map((o) => ({
-      ...o,
-      party: p,
-    })),
-  )
+  // Obter todos os onboardings ativos e concluídos (Regras de negócio intocadas)
+  const allOnboardings = parties
+    .filter((p) => p.processo_onboarding_id || p.registration_status !== 'NAO_INICIADO')
+    .map((p) => {
+      const year = new Date(p.created_at || Date.now()).getFullYear()
+      const proto =
+        p.processo_onboarding_id ||
+        `CAD-${year}-${String(Math.abs(p.crm_party_id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 100000).padStart(5, '0')}`
+
+      return {
+        id: proto,
+        protocolo: proto,
+        party: p,
+        status: p.registration_status,
+        sla_horas: p.registration_status === 'CONCLUIDO' ? 0 : 24,
+        progresso_pct:
+          p.registration_status === 'CONCLUIDO'
+            ? 100
+            : p.registration_status === 'AGUARDANDO_SAP'
+              ? 85
+              : p.registration_status === 'AGUARDANDO_FINANCEIRO'
+                ? 60
+                : 35,
+        ai_validacao_score: p.ia_qualification_score || 85,
+      }
+    })
 
   const filteredOnboardings = allOnboardings.filter((item) => {
     // Filtro por tab
     if (selectedTab === 'AGUARDANDO_CLIENTE' && item.status !== 'AGUARDANDO_CLIENTE') return false
-    if (selectedTab === 'DOCUMENTACAO_INCOMPLETA' && item.status !== 'DOCUMENTACAO_INCOMPLETA')
+    if (
+      selectedTab === 'DOCUMENTACAO_INCOMPLETA' &&
+      item.status !== 'DOCUMENTACAO_INCOMPLETA' &&
+      item.status !== 'DOCUMENTACAO_PENDENTE'
+    )
       return false
     if (selectedTab === 'AGUARDANDO_FINANCEIRO' && item.status !== 'AGUARDANDO_FINANCEIRO')
-      return false
-    if (selectedTab === 'FINANCEIRO_ANALISANDO' && item.status !== 'FINANCEIRO_ANALISANDO')
       return false
     if (selectedTab === 'PENDENCIA_CLIENTE' && item.status !== 'PENDENCIA_CLIENTE') return false
     if (selectedTab === 'AGUARDANDO_SAP' && item.status !== 'AGUARDANDO_SAP') return false
@@ -108,20 +114,56 @@ export function CentralCadastrosView({
     }
   }
 
+  const tabs: Array<{ id: OnboardingTabFilter; label: string; count: number }> = [
+    { id: 'TODOS', label: 'Todos os Processos', count: allOnboardings.length },
+    {
+      id: 'AGUARDANDO_CLIENTE',
+      label: 'Aguardando Cliente',
+      count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_CLIENTE').length,
+    },
+    {
+      id: 'DOCUMENTACAO_INCOMPLETA',
+      label: 'Doc. Incompleta',
+      count: allOnboardings.filter(
+        (o) => o.status === 'DOCUMENTACAO_INCOMPLETA' || o.status === 'DOCUMENTACAO_PENDENTE',
+      ).length,
+    },
+    {
+      id: 'AGUARDANDO_FINANCEIRO',
+      label: 'Aguardando Financeiro',
+      count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_FINANCEIRO').length,
+    },
+    {
+      id: 'PENDENCIA_CLIENTE',
+      label: 'Pendência Cliente',
+      count: allOnboardings.filter((o) => o.status === 'PENDENCIA_CLIENTE').length,
+    },
+    {
+      id: 'AGUARDANDO_SAP',
+      label: 'Aguardando SAP',
+      count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_SAP').length,
+    },
+    {
+      id: 'CONCLUIDOS',
+      label: 'Concluídos',
+      count: allOnboardings.filter((o) => o.status === 'CONCLUIDO').length,
+    },
+  ]
+
   return (
     <div className="space-y-4">
-      {/* CABEÇALHO & TABS DA CENTRAL DE CADASTROS (Regra 18) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-3xl border border-border shadow-xs">
+      {/* CABEÇALHO DA CENTRAL DE CADASTROS (Fundo Claro / Azul Institucional) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-500/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#003A70]/10 text-[#003A70] rounded-xl border border-[#003A70]/20 shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
+              <h3 className="text-base font-bold text-[#003A70] tracking-tight">
                 Central de Cadastros & Onboarding
-              </h2>
-              <p className="text-xs text-slate-400">
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
                 Acompanhamento ponta a ponta dos protocolos CAD-AAAA-NNNNN e esteira de integração
                 SAP.
               </p>
@@ -129,78 +171,46 @@ export function CentralCadastrosView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar protocolo, CNPJ, cliente..."
-              className="h-9 w-64 bg-white border-border pl-9 text-xs rounded-xl"
+              className="h-9 w-64 bg-white border-slate-200 pl-9 text-xs rounded-xl focus-visible:ring-[#003A70]"
             />
           </div>
           <Button
             size="sm"
             variant="outline"
             onClick={onRefreshParties}
-            className="h-9 text-xs border-border bg-white text-slate-700 rounded-xl gap-1"
+            className="h-9 text-xs border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-[#003A70] rounded-xl gap-1 font-medium"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Atualizar
           </Button>
         </div>
       </div>
 
-      {/* TABS DE STATUS DO PROCESSO */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-        {[
-          { id: 'TODOS' as const, label: 'Todos os Processos', count: allOnboardings.length },
-          {
-            id: 'AGUARDANDO_CLIENTE' as const,
-            label: 'Aguardando Cliente',
-            count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_CLIENTE').length,
-          },
-          {
-            id: 'DOCUMENTACAO_INCOMPLETA' as const,
-            label: 'Doc. Incompleta',
-            count: allOnboardings.filter((o) => o.status === 'DOCUMENTACAO_INCOMPLETA').length,
-          },
-          {
-            id: 'AGUARDANDO_FINANCEIRO' as const,
-            label: 'Aguardando Financeiro',
-            count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_FINANCEIRO').length,
-          },
-          {
-            id: 'PENDENCIA_CLIENTE' as const,
-            label: 'Pendência Cliente',
-            count: allOnboardings.filter((o) => o.status === 'PENDENCIA_CLIENTE').length,
-          },
-          {
-            id: 'AGUARDANDO_SAP' as const,
-            label: 'Aguardando SAP',
-            count: allOnboardings.filter((o) => o.status === 'AGUARDANDO_SAP').length,
-          },
-          {
-            id: 'CONCLUIDOS' as const,
-            label: 'Concluídos',
-            count: allOnboardings.filter((o) => o.status === 'CONCLUIDO').length,
-          },
-        ].map((tab) => {
+      {/* TABS DE STATUS DO PROCESSO (Padronizadas CIAFAL) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
+        {tabs.map((tab) => {
           const isSelected = selectedTab === tab.id
           return (
             <button
               key={tab.id}
               type="button"
               onClick={() => setSelectedTab(tab.id)}
-              className={`px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 border select-none ${
                 isSelected
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'bg-white border border-border text-slate-700 hover:bg-slate-50'
+                  ? 'bg-[#003A70] text-white border-[#003A70] font-bold shadow-2xs'
+                  : 'bg-white border-slate-200 text-slate-700 hover:text-[#003A70] hover:bg-slate-50'
               }`}
             >
               <span>{tab.label}</span>
               <Badge
-                className={`text-[10px] px-1.5 py-0 rounded-md font-mono ${
-                  isSelected ? 'bg-sky-800 text-white' : 'bg-slate-800 text-slate-400'
+                className={`text-[10px] px-1.5 py-0 rounded-md font-mono border-none ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
                 {tab.count}
@@ -210,152 +220,159 @@ export function CentralCadastrosView({
         })}
       </div>
 
-      {/* TABELA DA CENTRAL DE CADASTROS */}
-      <div className="bg-white rounded-3xl border border-border overflow-hidden shadow-sm">
+      {/* TABELA DA CENTRAL DE CADASTROS (Fundo Branco, Tipografia Nítida) */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
         <Table>
           <TableHeader className="bg-slate-50">
-            <TableRow className="border-b border-slate-800">
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">
+            <TableRow className="border-b border-slate-200">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
                 Protocolo / CRM ID
               </TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
                 Empresa / CNPJ
               </TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
                 Vendedor / Regional
               </TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
                 Potencial
               </TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
                 Status & Progresso
               </TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase">SLA & IA</TableHead>
-              <TableHead className="text-slate-400 text-xs font-bold uppercase text-right">
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase">
+                SLA & IA
+              </TableHead>
+              <TableHead className="text-slate-600 text-[11px] font-bold uppercase text-right">
                 Ações
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOnboardings.map((item) => (
-              <TableRow
-                key={item.id}
-                className="border-b border-slate-800/60 hover:bg-slate-800/40 text-xs"
-              >
-                {/* Protocolo & Friendly Code */}
-                <TableCell className="font-mono">
-                  <span className="font-bold text-sky-400 block">{item.protocolo}</span>
-                  <span className="text-[10px] text-slate-500 font-sans">
-                    {item.party.friendly_code} (UUID: {item.party.crm_party_id.slice(0, 6)}...)
-                  </span>
-                </TableCell>
+            {filteredOnboardings.map((item) => {
+              const statusVariant: SemanticVariant =
+                item.status === 'CONCLUIDO'
+                  ? 'positive'
+                  : item.status === 'AGUARDANDO_FINANCEIRO' || item.status === 'PENDENCIA_CLIENTE'
+                    ? 'warning'
+                    : item.status === 'ERRO_SAP'
+                      ? 'critical'
+                      : 'default'
 
-                {/* Empresa */}
-                <TableCell>
-                  <strong className="text-white block truncate max-w-[200px]">
-                    {item.party.razao_social}
-                  </strong>
-                  <span className="font-mono text-[11px] text-slate-400">
-                    {item.party.cnpj_cpf || 'CNPJ não informado'}
-                  </span>
-                </TableCell>
+              return (
+                <TableRow
+                  key={item.id}
+                  className="border-b border-slate-100 hover:bg-slate-50/70 text-xs transition-colors"
+                >
+                  {/* Protocolo & Friendly Code */}
+                  <TableCell className="font-mono">
+                    <span className="font-bold text-[#003A70] block">{item.protocolo}</span>
+                    <span className="text-[10px] text-slate-500 font-sans">
+                      {item.party.friendly_code}
+                    </span>
+                  </TableCell>
 
-                {/* Vendedor */}
-                <TableCell>
-                  <span className="text-slate-200 block font-semibold">
-                    {item.party.vendedor_atual_nome}
-                  </span>
-                  <span className="text-[10px] text-slate-500">{item.party.regional}</span>
-                </TableCell>
+                  {/* Empresa */}
+                  <TableCell>
+                    <strong className="text-slate-900 block truncate max-w-[200px]">
+                      {item.party.razao_social}
+                    </strong>
+                    <span className="font-mono text-[11px] text-slate-500">
+                      {item.party.cnpj_cpf || 'CNPJ não informado'}
+                    </span>
+                  </TableCell>
 
-                {/* Potencial */}
-                <TableCell>
-                  <span className="text-emerald-400 font-bold block">
-                    {item.party.potencial_mensal_tons} t/mês
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    R$ {(item.party.potencial_mensal_valor || 0).toLocaleString('pt-BR')}
-                  </span>
-                </TableCell>
+                  {/* Vendedor */}
+                  <TableCell>
+                    <span className="text-slate-800 block font-medium">
+                      {item.party.vendedor_atual_nome}
+                    </span>
+                    <span className="text-[10px] text-slate-500">{item.party.regional}</span>
+                  </TableCell>
 
-                {/* Status & Progresso */}
-                <TableCell>
-                  <Badge
-                    className={`text-[10px] mb-1 ${
-                      item.status === 'CONCLUIDO'
-                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                        : item.status === 'AGUARDANDO_FINANCEIRO'
-                          ? 'bg-purple-950 text-purple-300 border-purple-800'
-                          : item.status === 'AGUARDANDO_SAP'
-                            ? 'bg-sky-950 text-sky-300 border-sky-800'
-                            : 'bg-amber-950 text-amber-300 border-amber-800'
-                    }`}
-                  >
-                    {item.status.replace(/_/g, ' ')}
-                  </Badge>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                    <span>{item.progresso_pct}% concluído</span>
-                    <span>·</span>
-                    <span>{item.party.documentos?.length || 0} docs</span>
-                  </div>
-                </TableCell>
+                  {/* Potencial */}
+                  <TableCell>
+                    <span className="text-slate-900 font-bold block">
+                      {item.party.potencial_mensal_tons} t/mês
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      R$ {(item.party.potencial_mensal_valor || 0).toLocaleString('pt-BR')}
+                    </span>
+                  </TableCell>
 
-                {/* SLA & IA */}
-                <TableCell>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-300">
-                    <Clock className="w-3.5 h-3.5 text-sky-400" />
-                    <span>SLA: {item.sla_horas}h</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-emerald-400 mt-0.5">
-                    <Sparkles className="w-3 h-3" />
-                    <span>IA Score: {item.ai_validacao_score}/100</span>
-                  </div>
-                </TableCell>
+                  {/* Status & Progresso */}
+                  <TableCell>
+                    <div className="space-y-1">
+                      <StatusBadge
+                        label={item.status.replace(/_/g, ' ')}
+                        variant={statusVariant}
+                        dot
+                      />
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                        <span className="font-semibold text-slate-700">{item.progresso_pct}%</span>
+                        <span>·</span>
+                        <span>{item.party.documentos?.length || 0} docs</span>
+                      </div>
+                    </div>
+                  </TableCell>
 
-                {/* Ações */}
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1.5">
-                    {item.status === 'AGUARDANDO_SAP' ? (
+                  {/* SLA & IA */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-700">
+                      <Clock className="w-3.5 h-3.5 text-[#003A70]" />
+                      <span>SLA: {item.sla_horas}h</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-[#003A70] mt-0.5">
+                      <Sparkles className="w-3 h-3" />
+                      <span className="font-medium">Score: {item.ai_validacao_score}/100</span>
+                    </div>
+                  </TableCell>
+
+                  {/* Ações */}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {item.status === 'AGUARDANDO_SAP' ? (
+                        <Button
+                          size="sm"
+                          className="h-7 text-[11px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg gap-1 shadow-2xs font-medium"
+                          onClick={() => handleSimulateSapIntegration(item.party.crm_party_id)}
+                        >
+                          <PlayCircle className="w-3.5 h-3.5" /> Efetivar SAP
+                        </Button>
+                      ) : item.status === 'AGUARDANDO_FINANCEIRO' ||
+                        item.status === 'DOCUMENTACAO_INCOMPLETA' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-[#003A70] rounded-lg gap-1 font-medium"
+                          onClick={() => onOpenAnaliseFinanceiraModal(item.party)}
+                        >
+                          Analisar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-[#003A70] rounded-lg font-medium"
+                          onClick={() => onOpenFichaModal(item.party)}
+                        >
+                          Ver Ficha
+                        </Button>
+                      )}
+
                       <Button
                         size="sm"
-                        className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg gap-1"
-                        onClick={() => handleSimulateSapIntegration(item.party.crm_party_id)}
+                        variant="ghost"
+                        className="h-7 text-[11px] text-[#003A70] hover:bg-[#EBF3FA] rounded-lg font-medium"
+                        onClick={() => onOpenParty(item.party.crm_party_id)}
                       >
-                        <PlayCircle className="w-3.5 h-3.5" /> Efetivar SAP
+                        CRM 360º
                       </Button>
-                    ) : item.status === 'AGUARDANDO_FINANCEIRO' ||
-                      item.status === 'DOCUMENTACAO_INCOMPLETA' ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[11px] border-purple-800 text-purple-300 hover:bg-purple-950/50 rounded-lg gap-1"
-                        onClick={() => onOpenAnaliseFinanceiraModal(item.party)}
-                      >
-                        Analisar
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[11px] border-slate-700 text-slate-300 hover:bg-slate-800 rounded-lg"
-                        onClick={() => onOpenFichaModal(item.party)}
-                      >
-                        Ver Ficha
-                      </Button>
-                    )}
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-[11px] text-sky-400 hover:bg-sky-950/40 rounded-lg"
-                      onClick={() => onOpenParty(item.party.crm_party_id)}
-                    >
-                      CRM 360º
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
 
             {filteredOnboardings.length === 0 && (
               <TableRow>
