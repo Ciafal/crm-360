@@ -1,39 +1,80 @@
 // src/components/gestao-clientes/FunilAquisicaoCohortView.tsx
 import React from 'react'
 import { Badge } from '@/components/ui/badge'
-import { TrendingUp, Sparkles, Clock } from 'lucide-react'
+import { TrendingUp, Sparkles } from 'lucide-react'
+import type { CrmPartyRecord } from '@/types/crm_party'
 import type { CustomerRecord } from '@/types/customer_management'
-import { ProgressBar } from './shared/GestaoClientesUiKit'
 
 interface FunilAquisicaoCohortViewProps {
-  customers: CustomerRecord[]
+  parties?: CrmPartyRecord[]
+  customers?: CustomerRecord[]
   onSelectStageFilter: (stage: string) => void
   activeStage?: string
 }
 
 export function FunilAquisicaoCohortView({
+  parties,
   customers,
   onSelectStageFilter,
   activeStage,
 }: FunilAquisicaoCohortViewProps) {
-  // Contagens por estágio real do funil (regras de negócio 100% mantidas)
-  const totalLeads = customers.filter(
-    (c) => c.statusFunil === 'LEAD' || c.etapaRegistro === 'LEAD_CAPTADO',
-  ).length
-  const leadsQualificados = customers.filter(
-    (c) => c.statusFunil === 'QUALIFICADO' || (c.scorePotencialIa && c.scorePotencialIa > 60),
-  ).length
-  const prospects = customers.filter(
-    (c) => c.statusFunil === 'PROSPECT' || c.etapaRegistro === 'FICHA_CADASTRAL_ABERTA',
-  ).length
-  const cadastrosConcluidos = customers.filter(
-    (c) => c.etapaRegistro === 'CADASTRO_COMPLETO_APROVADO',
-  ).length
-  const clientesSap = customers.filter(
-    (c) => c.etapaRegistro === 'CLIENTE_ATIVO_SAP' || !!c.codigoSap,
-  ).length
-  const clientesCotaram = customers.filter((c) => c.temCotacaoAtiva).length
-  const clientesFaturados = customers.filter((c) => c.totalFaturadoHistorico > 0).length
+  // Contagens baseadas prioritariamente em CrmPartyRecord (Registro Único Mestre) ou fallback em CustomerRecord
+  const totalLeads = parties
+    ? parties.filter(
+        (p) => p.commercial_stage === 'LEAD' || p.commercial_stage === 'LEAD_QUALIFICADO',
+      ).length
+    : (customers || []).filter((c) => c.classificacao === 'PROSPECT').length
+
+  const leadsQualificados = parties
+    ? parties.filter(
+        (p) => p.commercial_stage === 'LEAD_QUALIFICADO' || (p.lead_score && p.lead_score > 60),
+      ).length
+    : (customers || []).filter((c) => c.classificacao === 'PROSPECT' && c.oportunidadesCount > 0)
+        .length
+
+  const prospects = parties
+    ? parties.filter(
+        (p) => p.commercial_stage === 'PROSPECT' || p.commercial_stage === 'CADASTRO_EM_ANDAMENTO',
+      ).length
+    : (customers || []).filter((c) => c.classificacao === 'PROSPECT').length
+
+  const cadastrosConcluidos = parties
+    ? parties.filter(
+        (p) =>
+          p.registration_status === 'CADASTRO_SAP_CONCLUIDO' ||
+          p.registration_status === 'APROVADO',
+      ).length
+    : (customers || []).filter(
+        (c) => c.status.includes('Ativo') || c.status.includes('Pedido em Carteira'),
+      ).length
+
+  const clientesSap = parties
+    ? parties.filter(
+        (p) =>
+          p.commercial_stage === 'CLIENTE_SAP' ||
+          p.commercial_stage === 'CLIENTE_ATIVO' ||
+          !!p.sap_customer_id,
+      ).length
+    : (customers || []).filter((c) => !!c.codigo).length
+
+  const clientesCotaram = parties
+    ? parties.filter(
+        (p) =>
+          !!p.data_primeira_cotacao ||
+          p.oportunidades_ciclos?.some((o) => o.estagio === 'COTACAO') ||
+          p.commercial_stage === 'PRIMEIRA_COTACAO',
+      ).length
+    : (customers || []).filter((c) => c.cotacoesAbertasCount > 0).length
+
+  const clientesFaturados = parties
+    ? parties.filter(
+        (p) =>
+          (p.valor_primeiro_faturamento || 0) > 0 ||
+          !!p.data_primeiro_faturamento ||
+          p.commercial_stage === 'CLIENTE_ATIVO' ||
+          p.commercial_stage === 'PRIMEIRO_FATURAMENTO',
+      ).length
+    : (customers || []).filter((c) => c.faturamento12m > 0 || c.faturamentoMes > 0).length
 
   // Diretriz 6: Escala de tonalidades do Azul Institucional CIAFAL (#003A70)
   // Sem efeito arco-íris (roxo, rosa, ciano). Tons azulados corporativos elegantes.

@@ -20,17 +20,18 @@ import { CreateBulkTasksModal } from '@/components/central-acoes/CreateBulkTasks
 import { StatusBadge } from './shared/GestaoClientesUiKit'
 
 interface SuggestionItem {
-  id: string
+  id?: string
   cliente: CustomerRecord
-  motivo: string
+  motivo?: string
+  motivoOrdem?: string
   produtoSugerido: {
     codigo: string
     descricao: string
     motivo: string
   }
-  acaoRecomendada: 'Ligar' | 'WhatsApp' | 'E-mail' | 'Enviar Catálogo'
-  score: number
-  prioridade: 'URGENTE' | 'ALTA' | 'MEDIA'
+  acaoRecomendada: 'Ligar' | 'WhatsApp' | 'E-mail' | 'Enviar Catálogo' | 'Visita'
+  score?: number
+  prioridade: string
 }
 
 interface WhoToContactPanelProps {
@@ -48,6 +49,8 @@ export function WhoToContactPanel({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
 
+  const getItemId = (s: SuggestionItem, idx: number) => s.id || `sug-${s.cliente.id || idx}`
+
   const handleToggleSingle = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
@@ -55,7 +58,7 @@ export function WhoToContactPanel({
   }
 
   const handleSelectTop10 = () => {
-    const top10 = suggestions.slice(0, 10).map((s) => s.id)
+    const top10 = suggestions.slice(0, 10).map((s, idx) => getItemId(s, idx))
     setSelectedIds(top10)
   }
 
@@ -63,12 +66,12 @@ export function WhoToContactPanel({
     if (selectedIds.length === suggestions.length) {
       setSelectedIds([])
     } else {
-      setSelectedIds(suggestions.map((s) => s.id))
+      setSelectedIds(suggestions.map((s, idx) => getItemId(s, idx)))
     }
   }
 
   const selectedCustomers = suggestions
-    .filter((s) => selectedIds.includes(s.id))
+    .filter((s, idx) => selectedIds.includes(getItemId(s, idx)))
     .map((s) => s.cliente)
 
   const handleAction = (sug: SuggestionItem) => {
@@ -164,18 +167,19 @@ export function WhoToContactPanel({
 
       {/* Grid de Recomendações (Padronizado CIAFAL: Fundo branco, bordas neutras, sem neon) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {suggestions.map((sug) => {
-          const isSelected = selectedIds.includes(sug.id)
+        {suggestions.map((sug, idx) => {
+          const itemId = getItemId(sug, idx)
+          const isSelected = selectedIds.includes(itemId)
           const prioridadeVariant =
-            sug.prioridade === 'URGENTE'
+            sug.prioridade === 'URGENTE' || sug.prioridade === 'Prioridade 1'
               ? 'critical'
-              : sug.prioridade === 'ALTA'
+              : sug.prioridade === 'ALTA' || sug.prioridade === 'Prioridade 2'
                 ? 'warning'
                 : 'neutral'
 
           return (
             <Card
-              key={sug.id}
+              key={itemId}
               className={`p-4 bg-white border rounded-2xl space-y-3 flex flex-col justify-between transition-all shadow-2xs ${
                 isSelected
                   ? 'border-[#003A70] ring-2 ring-[#003A70]/20 bg-[#EBF3FA]/20'
@@ -188,13 +192,13 @@ export function WhoToContactPanel({
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => handleToggleSingle(sug.id)}
+                      onChange={() => handleToggleSingle(itemId)}
                       className="rounded border-slate-300 text-[#003A70] focus:ring-[#003A70] cursor-pointer w-4 h-4"
                     />
                     <StatusBadge label={sug.prioridade} variant={prioridadeVariant} dot />
                   </div>
                   <span className="font-mono text-[10px] text-[#003A70] font-bold bg-[#EBF3FA] px-2 py-0.5 rounded-md border border-[#003A70]/20">
-                    Score {sug.score}
+                    Score {sug.score ?? 0}
                   </span>
                 </div>
 

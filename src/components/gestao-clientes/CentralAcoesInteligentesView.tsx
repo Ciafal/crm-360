@@ -47,7 +47,7 @@ export function CentralAcoesInteligentesView({
     }> = []
 
     // 1. 🔥 Lead Quente com Alta Pontuação
-    if (p.commercial_stage === 'LEAD' && p.ia_qualification_score >= 80) {
+    if (p.commercial_stage === 'LEAD' && p.lead_score >= 80) {
       list.push({
         id: `act-hot-${p.crm_party_id}`,
         party: p,
@@ -56,7 +56,7 @@ export function CentralAcoesInteligentesView({
         variant: 'positive',
         icon: Flame,
         titulo: `${p.razao_social} pronto para qualificação formal`,
-        motivo: `IA calculou score ${p.ia_qualification_score} baseado em demanda prevista de ${p.potencial_mensal_tons} t/mês de ${p.produto_interesse}.`,
+        motivo: `IA calculou score ${p.lead_score} baseado em demanda prevista de ${p.potencial_mensal_tons} t/mês de ${p.produto_interesse}.`,
         impactoComercial: `Potencial de ~R$ ${(p.potencial_mensal_tons * 7500).toLocaleString('pt-BR')}/mês`,
         acaoSugerida: 'Qualificar Lead',
         acaoTipo: 'QUALIFICAR',

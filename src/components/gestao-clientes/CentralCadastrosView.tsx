@@ -47,28 +47,41 @@ export function CentralCadastrosView({
 
   // Obter todos os onboardings ativos e concluídos (Regras de negócio intocadas)
   const allOnboardings = parties
-    .filter((p) => p.processo_onboarding_id || p.registration_status !== 'NAO_INICIADO')
+    .filter(
+      (p) =>
+        (p.onboardings && p.onboardings.length > 0) || p.registration_status !== 'NAO_INICIADO',
+    )
     .map((p) => {
+      const activeOnb = p.onboardings?.[0]
       const year = new Date(p.created_at || Date.now()).getFullYear()
       const proto =
-        p.processo_onboarding_id ||
+        activeOnb?.protocolo ||
         `CAD-${year}-${String(Math.abs(p.crm_party_id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 100000).padStart(5, '0')}`
+
+      const onbStatus =
+        activeOnb?.status ||
+        (p.registration_status === 'CADASTRO_SAP_CONCLUIDO'
+          ? 'CONCLUIDO'
+          : 'DOCUMENTACAO_INCOMPLETA')
+      const isConcluido =
+        p.registration_status === 'CADASTRO_SAP_CONCLUIDO' || onbStatus === 'CONCLUIDO'
 
       return {
         id: proto,
         protocolo: proto,
         party: p,
-        status: p.registration_status,
-        sla_horas: p.registration_status === 'CONCLUIDO' ? 0 : 24,
-        progresso_pct:
-          p.registration_status === 'CONCLUIDO'
-            ? 100
-            : p.registration_status === 'AGUARDANDO_SAP'
-              ? 85
-              : p.registration_status === 'AGUARDANDO_FINANCEIRO'
-                ? 60
-                : 35,
-        ai_validacao_score: p.ia_qualification_score || 85,
+        onboarding: activeOnb,
+        status: onbStatus,
+        registrationStatus: p.registration_status,
+        sla_horas: isConcluido ? 0 : (activeOnb?.sla_horas ?? 24),
+        progresso_pct: isConcluido
+          ? 100
+          : onbStatus === 'AGUARDANDO_SAP' || p.registration_status === 'CADASTRO_SAP_PENDENTE'
+            ? 85
+            : onbStatus === 'AGUARDANDO_FINANCEIRO' || p.registration_status === 'EM_ANALISE'
+              ? 60
+              : (activeOnb?.progresso_pct ?? 35),
+        ai_validacao_score: activeOnb?.ai_validacao_score ?? p.lead_score ?? 85,
       }
     })
 
@@ -78,15 +91,29 @@ export function CentralCadastrosView({
     if (
       selectedTab === 'DOCUMENTACAO_INCOMPLETA' &&
       item.status !== 'DOCUMENTACAO_INCOMPLETA' &&
-      item.status !== 'DOCUMENTACAO_PENDENTE'
+      item.registrationStatus !== 'DOCUMENTACAO_PENDENTE'
     )
       return false
-    if (selectedTab === 'AGUARDANDO_FINANCEIRO' && item.status !== 'AGUARDANDO_FINANCEIRO')
+    if (
+      selectedTab === 'AGUARDANDO_FINANCEIRO' &&
+      item.status !== 'AGUARDANDO_FINANCEIRO' &&
+      item.registrationStatus !== 'EM_ANALISE'
+    )
       return false
     if (selectedTab === 'PENDENCIA_CLIENTE' && item.status !== 'PENDENCIA_CLIENTE') return false
-    if (selectedTab === 'AGUARDANDO_SAP' && item.status !== 'AGUARDANDO_SAP') return false
+    if (
+      selectedTab === 'AGUARDANDO_SAP' &&
+      item.status !== 'AGUARDANDO_SAP' &&
+      item.registrationStatus !== 'CADASTRO_SAP_PENDENTE'
+    )
+      return false
     if (selectedTab === 'ERRO_SAP' && item.status !== 'ERRO_SAP') return false
-    if (selectedTab === 'CONCLUIDOS' && item.status !== 'CONCLUIDO') return false
+    if (
+      selectedTab === 'CONCLUIDOS' &&
+      item.status !== 'CONCLUIDO' &&
+      item.registrationStatus !== 'CADASTRO_SAP_CONCLUIDO'
+    )
+      return false
 
     // Filtro por texto
     if (searchTerm) {
@@ -125,7 +152,9 @@ export function CentralCadastrosView({
       id: 'DOCUMENTACAO_INCOMPLETA',
       label: 'Doc. Incompleta',
       count: allOnboardings.filter(
-        (o) => o.status === 'DOCUMENTACAO_INCOMPLETA' || o.status === 'DOCUMENTACAO_PENDENTE',
+        (o) =>
+          o.status === 'DOCUMENTACAO_INCOMPLETA' ||
+          o.registrationStatus === 'DOCUMENTACAO_PENDENTE',
       ).length,
     },
     {
@@ -250,14 +279,18 @@ export function CentralCadastrosView({
           </TableHeader>
           <TableBody>
             {filteredOnboardings.map((item) => {
-              const statusVariant: SemanticVariant =
-                item.status === 'CONCLUIDO'
-                  ? 'positive'
-                  : item.status === 'AGUARDANDO_FINANCEIRO' || item.status === 'PENDENCIA_CLIENTE'
-                    ? 'warning'
-                    : item.status === 'ERRO_SAP'
-                      ? 'critical'
-                      : 'default'
+              const isConcluido =
+                item.status === 'CONCLUIDO' || item.registrationStatus === 'CADASTRO_SAP_CONCLUIDO'
+              const statusVariant: SemanticVariant = isConcluido
+                ? 'positive'
+                : item.status === 'AGUARDANDO_FINANCEIRO' ||
+                    item.status === 'PENDENCIA_CLIENTE' ||
+                    item.registrationStatus === 'EM_ANALISE' ||
+                    item.registrationStatus === 'DOCUMENTACAO_PENDENTE'
+                  ? 'warning'
+                  : item.status === 'ERRO_SAP'
+                    ? 'critical'
+                    : 'default'
 
               return (
                 <TableRow
@@ -331,7 +364,8 @@ export function CentralCadastrosView({
                   {/* Ações */}
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {item.status === 'AGUARDANDO_SAP' ? (
+                      {item.status === 'AGUARDANDO_SAP' ||
+                      item.registrationStatus === 'CADASTRO_SAP_PENDENTE' ? (
                         <Button
                           size="sm"
                           className="h-7 text-[11px] bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg gap-1 shadow-2xs font-medium"
@@ -340,7 +374,9 @@ export function CentralCadastrosView({
                           <PlayCircle className="w-3.5 h-3.5" /> Efetivar SAP
                         </Button>
                       ) : item.status === 'AGUARDANDO_FINANCEIRO' ||
-                        item.status === 'DOCUMENTACAO_INCOMPLETA' ? (
+                        item.status === 'DOCUMENTACAO_INCOMPLETA' ||
+                        item.registrationStatus === 'EM_ANALISE' ||
+                        item.registrationStatus === 'DOCUMENTACAO_PENDENTE' ? (
                         <Button
                           size="sm"
                           variant="outline"
